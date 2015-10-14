@@ -1,0 +1,41 @@
+## input file for ResolvedStellarPops.padova_tracks.parsec2match
+##  python -m ResolvedStellarPops.padova_tracks.parsec2match {{this input file}}
+
+tracks_dir          /home/rosenfield/research/stel_evo/tracks/CAF09_S12D_NS_MAS/tracks
+ptcrifile_loc       /home/rosenfield/research/stel_evo/tracks/CAF09_S12D_NS_MAS/data
+
+## default = tracks_dir/plots
+plot_dir            default
+
+## default = tracks_dir/match
+outfile_dir         default
+
+## make plots
+## summary (~12 plots per prefix)
+diag_plot           True
+## individual (1-2 plots per track)
+track_diag_plot     False
+
+## only do a subset of masses (string (using eval, float or many floats)
+#masses          %f <= .5
+
+## interpolate the HB files (if False, PMS)
+hb                  True
+
+## use pdb
+debug               True
+
+## make the files for match
+do_interpolation    True
+
+## read from already made ptcri file (don't find the ptcirs)
+from_p2m            False
+
+## print the header for makemod.c
+prepare_makemod     True
+
+## artificially boost the age of HB lifetimes
+hb_age_offset_fraction 0.0
+
+## which directories is tracks_dir to operate on
+prefixs             S12D_NS_MAS_Z0.0001_Y0.249, S12D_NS_MAS_Z0.0002_Y0.249, S12D_NS_MAS_Z0.0005_Y0.249, S12D_NS_MAS_Z0.001_Y0.25, S12D_NS_MAS_Z0.002_Y0.252, S12D_NS_MAS_Z0.004_Y0.256, S12D_NS_MAS_Z0.006_Y0.259, S12D_NS_MAS_Z0.008_Y0.263, S12D_NS_MAS_Z0.014_Y0.273, S12D_NS_MAS_Z0.017_Y0.279, S12D_NS_MAS_Z0.02_Y0.284
