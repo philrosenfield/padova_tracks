@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 from interpolate import Interpolator
-from .. import fileio
+import fileio
 from eep import critical_point, DefineEeps
 from tracks import TrackSet, Track, TrackDiag
 from scipy.interpolate import splev

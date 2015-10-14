@@ -7,11 +7,10 @@ from matplotlib.ticker import MaxNLocator, NullFormatter
 import numpy as np
 from copy import deepcopy
 import os
-from ...graphics.GraphicsUtils import arrow_on_line
-from ...graphics.GraphicsUtils import setup_multiplot
-from ...graphics.GraphicsUtils import discrete_colors
-from ... import utils
+from ..graphics.GraphicsUtils import arrow_on_line, setup_multiplot, discrete_colors
 from ..eep.critical_point import Eep
+from ..utils import closest_match
+
 
 def offset_axlims(track, xcol, ycol, ax, inds=None):
     xmax, xmin = track.maxmin(xcol, inds=inds)
@@ -43,7 +42,7 @@ def quick_hrd(track, ax=None, inds=None, reverse='x', plt_kw={}):
         reverse = 'x'
 
     ax.plot(track.data.LOG_TE, track.data.LOG_L, **plt_kw)
-    
+
     if inds is not None:
         ax.plot(track.data.LOG_TE[inds], track.data.LOG_L[inds], 'o')
 
@@ -104,7 +103,7 @@ def column_to_data(track, xcol, ycol, xdata=None, ydata=None, cmd=False,
     if xdata is None:
         if cmd:
             if len(convert_mag_kw) != 0:
-                import astronomy_utils
+                from ResolvedStellarPops import astronomy_utils
                 photsys = convert_mag_kw['photsys']
                 dmod = convert_mag_kw.get('dmod', 0.)
                 Av = convert_mag_kw.get('Av', 0.)
@@ -211,7 +210,7 @@ def plot_track(track, xcol, ycol, reverse='', ax=None, inds=None, plt_kw=None,
         inds, = np.nonzero(track.data.AGE > 0.2)
         ages = np.linspace(np.min(track.data.AGE[inds]),
                            np.max(track.data.AGE[inds]), 10)
-        indz, _ = zip(*[utils.closest_match(i, track.data.AGE[inds])
+        indz, _ = zip(*[closest_match(i, track.data.AGE[inds])
                         for i in ages])
         # I LOVE IT arrow on line... AOL BUHSHAHAHAHAHA
         aol_kw = deepcopy(plt_kw)

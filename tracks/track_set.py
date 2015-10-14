@@ -6,8 +6,8 @@ import os
 import numpy as np
 import scipy
 
-from ...fileio import fileIO
-from ...utils import sort_dict
+from ..fileio import get_files
+from ..utils import sort_dict
 
 from .track import Track
 from .track_diag import TrackDiag
@@ -60,7 +60,7 @@ class TrackSet(object):
 
 
     def find_masses(self, track_search_term, agb=False):
-        track_names = fileIO.get_files(self.tracks_base, track_search_term)
+        track_names = get_files(self.tracks_base, track_search_term)
         mstr = '_M'
         if agb:
             # Paola's tracks agb_0.66_Z0.00010000_ ... .dat
@@ -169,7 +169,7 @@ class TrackSet(object):
         new_keys = []
         for i, track in enumerate(self.tracks):
             pt_search =  '%s*%s*Z%g_*' % (search_term, search_extra , track.Z)
-            ptcri_files = fileIO.get_files(ptcri_loc, pt_search)
+            ptcri_files = get_files(ptcri_loc, pt_search)
 
             if hb:
                 ptcri_files = [p for p in ptcri_files if 'hb' in p]

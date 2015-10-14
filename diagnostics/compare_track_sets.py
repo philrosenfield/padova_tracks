@@ -1,7 +1,7 @@
 from __future__ import print_function
 from ..tracks import TrackSet, Track
 from .. import parsec2match
-from ...fileio import InputParameters
+from ..fileio import InputParameters
 import numpy as np
 import os
 

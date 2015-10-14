@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from ...fileio.fileIO import get_files
+from ..fileio import get_files
 from astroML.stats import binned_statistic_2d
 import matplotlib.pylab as plt
 

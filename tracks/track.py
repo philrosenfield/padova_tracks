@@ -4,8 +4,6 @@ padova track files
 from __future__ import print_function
 import os
 import numpy as np
-from ...utils import is_numeric
-#from .fileio import *
 
 class Track(object):
     '''
@@ -131,7 +129,7 @@ class Track(object):
         except:
             xi = np.array(['H_CEN', 'HE_CEN', 'C_cen', 'O_cen'])
             self.muc = 1. / (np.sum((self.data[xi[i]] / ai[i]) * (1 + qi[i])
-                                     for i in range(len(xi))))            
+                                     for i in range(len(xi))))
         return self.muc
 
     def calc_lifetimes(self):
@@ -162,7 +160,7 @@ class Track(object):
                 self.ALFOV, = np.unique([float(l.replace('ALFOV', '').strip())
                                          for l in self.header if ' ALFOV ' in l])
             except:
-                pass        
+                pass
 
         if hasattr(self.data, 'QHEL'):
             if self.hb:
@@ -229,7 +227,7 @@ class Track(object):
         else:
             header = ['']
             begin_track = 0
-            
+
         self.header = header
 
         if begin_track == -1:
@@ -256,7 +254,7 @@ class Track(object):
                 'No footer unfinished track? %s' % filename
 
         # find ndarray titles (column keys)
-        
+
         col_keys = lines[begin_track].replace('#', '').strip().split()
         begin_track += 1
 
@@ -406,7 +404,7 @@ class Track(object):
             arg_dict = {}
             for arg in args:
                 k, v = arg.split('=')
-                v = is_numeric(v)
+                v = add_new_code_phil_this_is_stupid(v)
                 arg_dict[k] = v
             return arg_dict
 

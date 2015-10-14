@@ -5,7 +5,7 @@ import os
 import pdb
 from critical_point import critical_point, Eep
 from scipy.interpolate import splev, splprep
-from ...utils import utils
+import utils
 from ..interpolate import Interpolator
 # from low mass and below XCEN = 0.3 for MS_TMIN
 low_mass = 1.25

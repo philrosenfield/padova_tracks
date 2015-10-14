@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import splev, splprep
-from ... import utils
+from .. import utils
 
 
 class Interpolator(object):
