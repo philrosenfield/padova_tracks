@@ -3,6 +3,8 @@ padova track files
 '''
 from __future__ import print_function
 import os
+import sys
+
 import numpy as np
 
 class Track(object):
@@ -79,7 +81,9 @@ class Track(object):
             return self.mass
         try:
             self.mass, = self.data.MASS[good_age[0]]
-        except TypeError:
+        except:
+            e = sys.exc_info()[0]
+            print('Problem with Mass in {0}, {1}'.format(self.name, e))
             self.mass = self.data.MASS[good_age[0]]
 
         try:
@@ -219,14 +223,12 @@ class Track(object):
                 begin_track = i
                 break
 
+        header = ['']
         if begin_track > -1:
             header = lines[:begin_track]
             if type(header) is not list:
                 header = [header]
             begin_track += 1
-        else:
-            header = ['']
-            begin_track = 0
 
         self.header = header
 
@@ -270,7 +272,12 @@ class Track(object):
 
         data = np.ndarray(shape=(nrows,), dtype=dtype)
         for row, i in enumerate(range(begin_track, iend)):
-            data[row] = tuple(lines[i].split())
+            try:
+                data[row] = tuple(lines[i].split())
+            except:
+                e = sys.exc_info()[0]
+                print('Problem with line {0} of {1}, {2}'.format(i, filename, e))
+                break
 
         self.data = data.view(np.recarray)
         self.col_keys = col_keys
@@ -400,12 +407,9 @@ class Track(object):
     def add_header_args_dict(self):
         def parse_args(header_line):
             header_line = header_line.replace('*', '')
-            args = [l for l in header_line.split() if '=' in l]
-            arg_dict = {}
-            for arg in args:
-                k, v = arg.split('=')
-                v = add_new_code_phil_this_is_stupid(v)
-                arg_dict[k] = v
+            k, v = zip(*[a.split('=') for a in [l for l in header_line.split()
+                                                if '=' in l and 'RESTART' not in l]])
+            arg_dict = dict(zip(k, map(float, v)))
             return arg_dict
 
         def update_args(header_line, old_dict):

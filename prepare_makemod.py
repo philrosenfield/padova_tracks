@@ -6,8 +6,18 @@ import sys
 
 from ResolvedStellarPops import fileio
 from eep.critical_point import Eep
-
-
+"""
+MIST debug
+dirs = [d for d in os.listdir('.') if d.startswith('Z')]
+zsun = 0.0172
+zs = np.array([(d.split('_')[0].split('Z')[1]) for d in dirs], dtype=float)
+logZs = np.log10(zs/zsun)
+logZstr = ','.join(['%.2f' % z for z in logZs])
+FNZ = np.max([len(d) for d in dirs])
+files = np.concatenate([glob.glob1(d, '*') for d in dirs])
+masses = [float(f.replace('.dat', '').split('M')[1]) for f in files]
+massstr = ','.join(['%.2f' % m for m in np.unique(masses)])
+"""
 def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
     ext = '.PMS'
     ext = '.DAT'
@@ -62,11 +72,11 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
         while len(np.nonzero(all_masses == min_mass)[0]) != len(zs):
             imin += 1
             min_mass = umasses[imin]
-    
+
         while len(np.nonzero(all_masses == max_mass)[0]) != len(zs):
             imax -= 1
             max_mass = umasses[imax]
-    
+
         if imax == -1 and imin == 0:
             masses = umasses
         elif imax == -1:
@@ -75,9 +85,9 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
             masses = umasses[imin: imax + 1]
         else:
             masses = umasses[imin - 1: imax + 1]
-    
+
         masses_str = ','.join(map(str, masses))
-    
+
         eep = Eep()
         mdict = {'npt_low': eep.nlow,
                  'npt_hb': eep.nhb,
@@ -94,7 +104,7 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
                  'mod_l1': mod_l1,
                  'mod_t0': mod_t0,
                  'mod_t1': mod_t1}
-    
+
         if sub is None:
             fname = 'makemod_%s_%s.txt' % (tracks_dir.split('/')[-2], p.split('_Z')[0])
         else:
@@ -149,14 +159,14 @@ that the value for mass is found by a character offset.
 
 def main(argv):
     parser = argparse.ArgumentParser(description="Prepare header for makemod.cpp")
-    
+
     parser.add_argument('sub', type=str,
                         help='subdirectory with match track dirs (not mods)')
 
     args = parser.parse_args(argv)
-    
+
     prepare_makemod(sub=args.sub)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])    
+    main(sys.argv[1:])
