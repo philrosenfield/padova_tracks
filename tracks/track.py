@@ -85,6 +85,7 @@ class Track(object):
             e = sys.exc_info()[0]
             print('Problem with Mass in {0}, {1}'.format(self.name, e))
             self.mass = self.data.MASS[good_age[0]]
+            import pdb; pdb.set_trace()
 
         try:
             ind = self.name.lower().split('.').index('dat')
