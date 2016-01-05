@@ -409,7 +409,7 @@ class Track(object):
             header_line = header_line.replace('*', '')
             k, v = zip(*[a.split('=') for a in [l for l in header_line.split()
                                                 if '=' in l and 'RESTART' not in l]])
-            arg_dict = dict(zip(k, map(float, v.replace('.D', '.E'))))
+            arg_dict = dict(zip(k, map(float, map(replace('.D', '.E'), v))))
             return arg_dict
 
         def update_args(header_line, old_dict):
