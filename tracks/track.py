@@ -405,11 +405,14 @@ class Track(object):
         return (ma, mi)
 
     def add_header_args_dict(self):
+        def rep(s):
+            return s.replace('.D', '.E')
+
         def parse_args(header_line):
             header_line = header_line.replace('*', '')
             k, v = zip(*[a.split('=') for a in [l for l in header_line.split()
                                                 if '=' in l and 'RESTART' not in l]])
-            arg_dict = dict(zip(k, map(float, map(str.replace('.D', '.E'), v))))
+            arg_dict = dict(zip(k, map(float, map(rep, v))))
             return arg_dict
 
         def update_args(header_line, old_dict):
