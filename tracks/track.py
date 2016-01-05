@@ -53,6 +53,7 @@ class Track(object):
             bads, = np.nonzero(np.diff(age) < 0)
             try:
                 print('Parsec track: offensive MODEs:', self.data.MODE[bads])
+                self.flag += 'track has age decreasing near MODEs {}'.format(self.data.MODE[bads])
             except AttributeError:
                 from ..eep.critical_point import Eep
                 eep = Eep()
