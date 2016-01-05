@@ -97,7 +97,12 @@ class Track(object):
 
         ext = self.name.split('.')[ind]
 
-        fmass = float(self.name.split('_M')[1].split('.' + ext)[0])
+        ftmpmass = self.name.split('_M')[1]
+        npts = ftmpmass.count('.')
+        while npts != 1:
+            ftmpmass = ftmpmass[:-1]
+            npts = ftmpmass.count('.')
+        fmass = float(ftmpmass)
         if self.mass >= 12:
             self.mass = fmass
         elif np.abs(self.mass - fmass) > 0.005:
