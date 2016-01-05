@@ -80,7 +80,7 @@ class Track(object):
             self.mass = self.data.MASS[-1]
             return self.mass
         try:
-            self.mass, = self.data.MASS[good_age[0]]
+            self.mass = self.data.MASS[good_age[0]]
         except:
             e = sys.exc_info()[0]
             print('Problem with Mass in {0}, {1}'.format(self.name, e))
