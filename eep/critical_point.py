@@ -136,7 +136,6 @@ class critical_point(object):
         with open(filename, 'r') as f:
             lines = f.readlines()
 
-
         # the lines have the path name, and the path has F7.
         begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
                   and 'F7' in lines[i]]
@@ -313,7 +312,7 @@ class critical_point(object):
             """
             go_on = 1
 
-            outmsg = '%s MODE: %i' % (ptname, track.data[MODE][pt])            
+            outmsg = '%s MODE: %i' % (ptname, track.data[MODE][pt])
             if pt is not None:
                 # plot guess first
                 print(outmsg)
