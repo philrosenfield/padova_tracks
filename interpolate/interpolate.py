@@ -7,7 +7,7 @@ class Interpolator(object):
     def __init__(self):
         pass
 
-    def _interpolate(self, track, inds, k=3, s=0., min_step=1e-4,
+    def interpolate_(self, track, inds, k=3, s=0., min_step=1e-4,
                      parametric=True, xfunc=None, yfunc=None,
                      parafunc=None, xcol='LOG_TE', ycol='LOG_L',
                      paracol='AGE'):
@@ -137,7 +137,7 @@ class Interpolator(object):
         return non_dupes
 
 
-    def peak_finder(self, track, col, eep1, eep2, get_max=False, sandro=True,
+    def peak_finder(self, track, col, eep1, eep2, get_max=False,
                     more_than_one='max of max', mess_err=None, ind_tol=3,
                     dif_tol=0.01, less_linear_fit=False,
                     parametric_interp=True):
@@ -150,8 +150,7 @@ class Interpolator(object):
         if type(eep1) != str:
             inds = np.arange(eep1, eep2)
         else:
-            inds = self.ptcri.inds_between_ptcris(track, eep1, eep2,
-                                                  sandro=sandro)
+            inds = self.ptcri.inds_between_ptcris(track, eep1, eep2)
 
         if len(inds) < ind_tol:
             # sometimes there are not enough inds to interpolate
@@ -161,7 +160,7 @@ class Interpolator(object):
 
         # use age, so logl(age), logte(age) for parametric interpolation
         tckp, step_size, non_dupes = \
-            self._interpolate(track, inds, parametric=parametric_interp)
+            self.interpolate_(track, inds, parametric=parametric_interp)
 
         if step_size == -1:
             # sometimes there are not enough inds to interpolate

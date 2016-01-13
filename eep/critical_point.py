@@ -34,6 +34,8 @@ class Eep(object):
         self.nticks = eep_lengths
         self.eep_list_hb = eep_list_hb
         self.nticks_hb = eep_lengths_hb
+        self.key_dict = dict(zip(eep_list, range(len(eep_list))))
+        self.key_dict_hb = dict(zip(eep_list_hb, range(len(eep_list_hb))))
 
         # usefull to check match compatibility
         ims = eep_list.index('MS_TO')
@@ -313,7 +315,7 @@ class critical_point(object):
             """
             go_on = 1
 
-            outmsg = '%s MODE: %i' % (ptname, track.data[MODE][pt])            
+            outmsg = '%s MODE: %i' % (ptname, track.data[MODE][pt])
             if pt is not None:
                 # plot guess first
                 print(outmsg)
