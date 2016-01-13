@@ -18,6 +18,9 @@ from match import TracksForMatch
 from match import CheckMatchTracks
 from prepare_makemod import prepare_makemod
 
+import logging
+logger = logging.getLogger()
+
 __all__ = ['initialize_inputs']
 
 
@@ -64,8 +67,8 @@ def parsec2match(input_obj, loud=False):
 
         if not inps.from_p2m:
             # find the parsec2match eeps for these tracks.
-            if not inps.hb:
-                ptcri_file = load_ptcri(inps, find=True, from_p2m=True)
+            #if not inps.hb:
+            #    ptcri_file = load_ptcri(inps, find=True, from_p2m=True)
 
             if not inps.overwrite_ptcri and os.path.isfile(ptcri_file):
                 print('not overwriting %s' % ptcri_file)

@@ -23,9 +23,9 @@ XCEN = 'XCEN'
 YCEN = 'YCEN'
 MODE = 'MODE'
 
-XCEN = 'H_CEN'
-YCEN = 'HE_CEN'
-MODE = 'MODELL'
+#XCEN = 'H_CEN'
+#YCEN = 'HE_CEN'
+#MODE = 'MODELL'
 
 class DefineEeps(Interpolator):
     '''

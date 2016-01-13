@@ -3,11 +3,14 @@ import os
 import numpy as np
 import sys
 
+import logging
+logger = logging.getLogger()
+
 high_mass = 19.
 inte_mass = 12.
 
 MODE = 'MODE'
-MODE = 'MODELL'
+#MODE = 'MODELL'
 
 
 class Eep(object):

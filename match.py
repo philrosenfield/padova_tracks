@@ -10,6 +10,9 @@ from tracks import TrackSet, Track, TrackDiag
 from scipy.interpolate import splev
 from scipy.interpolate import interp1d
 import pdb
+import logging
+
+logger = logging.getLogger()
 
 class CheckMatchTracks(critical_point.Eep, TrackSet, TrackDiag):
     """a simple check of the output from TracksForMatch."""
@@ -304,7 +307,12 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         # CO place holder!
         CO = np.zeros(len(logL))
         mass_arr = np.repeat(track.mass, len(logL))
-        logger.warning('mass array is a copy of the track.mass is that kosher?')
+
+        inds, = np.nonzero(track.data['AGE'] > 0.2)
+        umass = np.unique(track.data['MASS'][inds])
+        if len(umass) > 1 or umass[0] != mass_arr[0]:
+            logger.warning('mass array is a copy of the track.mass is that kosher?')
+            pdb.set_trace()
         eep = critical_point.Eep()
         if len(logL) not in [eep.nms, eep.nhb, eep.nlow, eep.ntot]:
             print('array size is wrong')

@@ -13,6 +13,9 @@ from .track import Track
 from .track_diag import TrackDiag
 from ..eep.critical_point import critical_point
 
+import logging
+logger = logging.getLogger()
+
 max_mass = 1000.
 td = TrackDiag()
 

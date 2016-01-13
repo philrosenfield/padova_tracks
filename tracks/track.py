@@ -6,6 +6,8 @@ import os
 import sys
 
 import numpy as np
+import logging
+logger = logging.getLogger()
 
 class Track(object):
     '''
@@ -20,7 +22,7 @@ class Track(object):
         if 'hb' in self.name.lower():
             self.hb = True
         # will house error string(s)
-        self.flag = ''
+        self.flag = None
         self.info = {}
         self.match = False
         if match:
@@ -33,10 +35,10 @@ class Track(object):
         else:
             self.load_track(filename)
             self.filename_info()
-            if len(self.flag) == 0:
+            if self.flag is None:
                 self.track_mass()
 
-        if len(self.flag) == 0:
+        if self.flag is None:
             self.check_track()
             if not match:
                 self.check_header_arg(loud=True)
@@ -68,9 +70,10 @@ class Track(object):
                 print('Near:', np.array(names)[inds])
                 import pdb; pdb.set_trace()
 
-        ycen_end = self.data.YCEN[-1]
-        if ycen_end != 0:
-            self.flag += 'YCEN at final MODE {:.4f}'.format(ycen_end)
+        if not self.match:
+            ycen_end = self.data.YCEN[-1]
+            if ycen_end != 0:
+                self.info['Warning'] = 'YCEN at final MODE {:.4f}'.format(ycen_end)
         return
 
     def track_mass(self):
@@ -92,7 +95,10 @@ class Track(object):
             self.mass = self.data.MASS[good_age[0]]
             import pdb; pdb.set_trace()
 
-        ind = self.name.lower().split('.').index('pms')
+        try:
+            ind = self.name.lower().split('.').index('pms')
+        except ValueError:
+            ind = self.name.lower().split('.').index('dat')
 
         ext = self.name.split('.')[ind]
 
