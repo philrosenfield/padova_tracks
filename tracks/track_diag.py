@@ -48,6 +48,9 @@ def quick_hrd(track, ax=None, inds=None, reverse='x', plt_kw={}):
 
     if 'x' in reverse:
         ax.set_xlim(ax.get_xlim()[::-1])
+    
+    ax.set_ylabel(r'$\rm{L} (\rm{L}_\odot)$')
+    ax.set_xlabel(r'$\log\ T_{eff}$')
     return ax
 
 def check_eep_hrd(tracks, ptcri_loc, between_ptcris=[0, -2], sandro=True):

@@ -20,7 +20,7 @@ class Track(object):
         if 'hb' in self.name.lower():
             self.hb = True
         # will house error string(s)
-        self.flag = None
+        self.flag = ''
         self.info = {}
         self.match = False
         if match:
@@ -33,10 +33,10 @@ class Track(object):
         else:
             self.load_track(filename)
             self.filename_info()
-            if self.flag is None:
+            if len(self.flag) == 0:
                 self.track_mass()
 
-        if self.flag is None:
+        if len(self.flag) == 0:
             self.check_track()
             if not match:
                 self.check_header_arg(loud=True)
@@ -49,10 +49,11 @@ class Track(object):
             age = np.round(self.data.logAge, 6)
         test = np.diff(age) >= 0
         if False in test:
-            print('Track.__init__: track has age decreasing!!', self.mass)
+            print('track has age decreasing!!', self.mass)
             bads, = np.nonzero(np.diff(age) < 0)
             try:
                 print('Parsec track: offensive MODEs:', self.data.MODE[bads])
+                self.flag += 'track has age decreasing near MODEs {}'.format(self.data.MODE[bads])
             except AttributeError:
                 from ..eep.critical_point import Eep
                 eep = Eep()
@@ -66,6 +67,10 @@ class Track(object):
                 print('Match track: offensive inds:', bads)
                 print('Near:', np.array(names)[inds])
                 import pdb; pdb.set_trace()
+
+        ycen_end = self.data.YCEN[-1]
+        if ycen_end != 0:
+            self.flag += 'YCEN at final MODE {:.4f}'.format(ycen_end)
         return
 
     def track_mass(self):
@@ -85,13 +90,18 @@ class Track(object):
             e = sys.exc_info()
             print('Problem with Mass in {0}, {1}'.format(self.name, e))
             self.mass = self.data.MASS[good_age[0]]
+            import pdb; pdb.set_trace()
 
         ind = self.name.lower().split('.').index('pms')
 
         ext = self.name.split('.')[ind]
 
-        fmass = float(self.name.split('_M')[1].split('.' + ext)[0])
-
+        ftmpmass = self.name.split('_M')[1]
+        npts = ftmpmass.count('.')
+        while npts != 1:
+            ftmpmass = ftmpmass[:-1]
+            npts = ftmpmass.count('.')
+        fmass = float(ftmpmass)
         if self.mass >= 12:
             self.mass = fmass
         elif np.abs(self.mass - fmass) > 0.005:
@@ -230,10 +240,10 @@ class Track(object):
         if begin_track == -1:
             self.data = np.array([])
             self.col_keys = None
-            self.flag = 'load_track error: no begin track'
+            self.flag += 'load_track error: no begin track '
             self.mass = float(self.name.split('_M')[1].replace('.PMS', '').replace('.HB', ''))
             return
-        
+
         if len(lines) - begin_track <= 2:
             self.data = np.array([])
             self.col_keys = None
@@ -308,11 +318,11 @@ class Track(object):
             or a comment: self.Z self.name self.flag
         """
 
-        if self.flag is None:
+        if len(self.flag) == 0:
             self.calc_lifetimes()
         fmt = '%i %.3f %5.3f %.2f %.3f %.4g %.4g\n'
         efmt = '# %.3f %s: %s \n'
-        if self.flag is not None:
+        if len(self.flag) > 0:
             line += efmt % (self.Z, self.name, self.flag)
         elif self.hb:
             line += fmt % (0, self.Z, self.mass, self.ALFOV,
@@ -372,7 +382,7 @@ class Track(object):
         self.data = data.view(np.recarray)
 
         if self.data.NTP.size == 1:
-            self.flag = 'no abg tracks'
+            self.flag += 'no abg tracks'
             return
         self.Z = self.data.Z[0]
         self.Y = self.data.Y[0]
@@ -407,11 +417,14 @@ class Track(object):
         return (ma, mi)
 
     def add_header_args_dict(self):
+        def rep(s):
+            return s.replace('.D', '.E')
+
         def parse_args(header_line):
             header_line = header_line.replace('*', '')
             k, v = zip(*[a.split('=') for a in [l for l in header_line.split()
                                                 if '=' in l and 'RESTART' not in l]])
-            arg_dict = dict(zip(k, map(float, v)))
+            arg_dict = dict(zip(k, map(float, map(rep, v))))
             return arg_dict
 
         def update_args(header_line, old_dict):
