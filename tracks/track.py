@@ -80,23 +80,18 @@ class Track(object):
             self.mass = self.data.MASS[-1]
             return self.mass
         try:
-            self.mass, = self.data.MASS[good_age[0]]
+            self.mass = self.data.MASS[good_age[0]]
         except:
-            e = sys.exc_info()[0]
+            e = sys.exc_info()
             print('Problem with Mass in {0}, {1}'.format(self.name, e))
             self.mass = self.data.MASS[good_age[0]]
 
-        try:
-            ind = self.name.lower().split('.').index('dat')
-        except:
-            ind = -1
-        if self.hb:
-            #extension is .PMS.HB
-            ind = self.name.lower().split('.').index('hb')
+        ind = self.name.lower().split('.').index('pms')
 
         ext = self.name.split('.')[ind]
 
         fmass = float(self.name.split('_M')[1].split('.' + ext)[0])
+
         if self.mass >= 12:
             self.mass = fmass
         elif np.abs(self.mass - fmass) > 0.005:
@@ -236,6 +231,13 @@ class Track(object):
             self.data = np.array([])
             self.col_keys = None
             self.flag = 'load_track error: no begin track'
+            self.mass = float(self.name.split('_M')[1].replace('.PMS', '').replace('.HB', ''))
+            return
+        
+        if len(lines) - begin_track <= 2:
+            self.data = np.array([])
+            self.col_keys = None
+            self.flag = 'load_track error: no data after begin track'
             self.mass = float(self.name.split('_M')[1].replace('.PMS', '').replace('.HB', ''))
             return
 
