@@ -948,6 +948,7 @@ class DefineEeps(Interpolator):
                           if a in eep_list])
 
             # they may all be replaced!
+            import pdb; pdb.set_trace()
             if len(pinds) > 0 and len(sinds) > 0:
                 lineind = mptcri[sinds] - 2
                 while lineind >= len(track.data.LX):
