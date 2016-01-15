@@ -147,7 +147,7 @@ class critical_point(object):
         else:
             begin = -1
             hb = True
-        import pdb; pdb.set_trace()
+        
         if sandro and not hb:
             try:
                 self.fnames = [l.strip().split('../F7/')[1]
