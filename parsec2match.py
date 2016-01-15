@@ -170,7 +170,7 @@ def load_ptcri(inputs, find=False, from_p2m=False):
             ptcri_file, = [p for p in ptcri_files if not 'hb' in p]
         except:
             pass
-    assert os.path.isfile(ptcri_file), 'ptcri file not found.'
+    #assert os.path.isfile(ptcri_file), 'ptcri file not found.'
     if find:
         return ptcri_file, ptcri_file_hb
     else:
