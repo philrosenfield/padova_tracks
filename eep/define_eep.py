@@ -313,7 +313,7 @@ class DefineEeps(Interpolator):
         self.add_eep(track, 'RG_BMP1', rg_bmp1, message=msg)
         self.add_eep(track, 'RG_BMP2', rg_bmp2, message=msg)
         self.add_eep(track, 'RG_TIP', rg_tip, message=msg)
-
+        self.add_agb_eeps(track)
         # there is a switch for high mass tracks in the add_cen_eeps and
         # add_quiesscent_he_eep functions. If the mass is higher than
         # high_mass the functions use MS_TO as the initial EEP for peak_finder.
