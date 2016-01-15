@@ -414,7 +414,7 @@ class DefineEeps(Interpolator):
             msg2 = msg + 'linspace between YCEN_0.000 and final track point'
 
             agb_ly1, agb_ly2 = np.round(np.linspace(track.iycen_0000,
-                                        track.itpagb, 4))[1:3]
+                                        track.iptcri[-1], 4))[1:3]
         else:
             # the two deepest mins are the ly == lx match
             min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
