@@ -940,7 +940,7 @@ class DefineEeps(Interpolator):
         #                           diag_plot=diag_plot, debug=debug)
         #else:
             # Sandro's definitions. (I don't use his HB EEPs)
-        import pdb; pdb.set_trace()
+        
         try:
             mptcri = ptcri.data_dict['M%.3f' % track.mass]
         except KeyError:
