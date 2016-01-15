@@ -948,14 +948,8 @@ class DefineEeps(Interpolator):
                           if a in eep_list])
 
             # they may all be replaced!
-            import pdb; pdb.set_trace()
             if len(pinds) > 0 and len(sinds) > 0:
-                lineind = mptcri[sinds] - 2
-                while lineind >= len(track.data.LX):
-                    print('adjusting!! {} {}'.format(track.mass, lineind))
-                    lineind -= 1
-                track.iptcri[pinds] = lineind
-
+                track.iptcri[pinds] = mptcri[sinds] - 2
 
             # but if the track did not actually make it to that EEP, no -2!
             track.iptcri[track.iptcri < 0] = 0
