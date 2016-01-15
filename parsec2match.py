@@ -196,13 +196,15 @@ def define_eeps(tfm, inputs):
         track_str = 'hbtracks'
         defined = Eep().eep_list_hb
         filename = 'define_eeps_hb_%s.log'
+        ptcri = inputs.ptcri_hb
     else:
         track_str = 'tracks'
         #defined = inputs.ptcri.please_define
         defined = Eep().eep_list
         filename = 'define_eeps_%s.log'
+        ptcri = inputs.ptcri
     # load critical points calls de.define_eep
-    tracks = [de.load_critical_points(track, ptcri=inputs.ptcri, **crit_kw)
+    tracks = [de.load_critical_points(track, ptcri=ptcri, **crit_kw)
               for track in tfm.__getattribute__(track_str)]
 
     # write log file

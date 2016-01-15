@@ -144,8 +144,8 @@ class critical_point(object):
             begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
                     and 'F7' in lines[i]]
         else:
-            begin = 0
-
+            begin = -1
+        import pdb; pdb.set_trace()
         if sandro and not 'hb' in filename:
             try:
                 self.fnames = [l.strip().split('../F7/')[1]
@@ -153,6 +153,7 @@ class critical_point(object):
             except IndexError:
                 self.fnames = [l.strip().split('../F7/')[1]
                                for l in lines[(begin+2):-2]]
+
 
         # the final column is a filename.
         all_keys = lines[begin + 1].replace('#', '').strip().split()
