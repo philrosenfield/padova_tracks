@@ -917,6 +917,12 @@ class DefineEeps(Interpolator):
         self.ptcri = ptcri
         eep_obj = self.ptcri.eep
 
+        please_define = ptcri.please_define
+        eep_list = eep_obj.eep_list
+        if track.hb:
+            please_define = ptcri.please_define_hb
+            eep_list = eep_obj.eep_list_hb
+
         if hasattr(ptcri, 'Z'):
             assert ptcri.Z == track.Z, \
                 'Zs do not match between track and ptcri file %f != %f' % (ptcri.Z,
@@ -947,17 +953,17 @@ class DefineEeps(Interpolator):
                             for m in mptcri])
         if len(track.sptcri) != len(np.nonzero(mptcri)[0]):
             track.flag = 'ptcri file does not match track, not enough MODEs'
-        if len(ptcri.please_define) > 0:
+        if len(please_define) > 0:
             # Initialize iptcri
-            track.iptcri = np.zeros(len(eep_obj.eep_list), dtype=int)
+            track.iptcri = np.zeros(len(eep_list), dtype=int)
 
             # Get the values that we won't be replacing.
-            pinds = np.array([i for i, a in enumerate(eep_obj.eep_list)
+            pinds = np.array([i for i, a in enumerate(eep_list)
                               if a in self.ptcri.sandro_eeps])
 
             sinds = \
                 np.array([i for i, a in enumerate(self.ptcri.sandro_eeps)
-                          if a in eep_obj.eep_list])
+                          if a in eep_list])
             track.iptcri[pinds] = mptcri[sinds] - 2
 
             # but if the track did not actually make it to that EEP, no -2!
