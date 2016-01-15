@@ -7,7 +7,7 @@ from StringIO import StringIO
 def parse_plist(plist):
     """Parse dbert files grep'd by EEP with M= formatting cut out"""
     # genfromtext will not allow "." in column name
-    ptcriname = plist[0].strip().split()[-1].replace('.', '')
+    ptcriname = plist[0].strip().split()[-1].replace('.', '').replace('#','')
     col_keys = ['age', 'logl', 'logte', 'idx', ptcriname, 'ptcriname']
     dtype = [(c, '<f8') for c in col_keys]
     dtype[-1] = (col_keys[-1], '|S15')
@@ -17,6 +17,9 @@ def parse_plist(plist):
 
 def format_ptcriHB(filename, nptcri=5):
     """ reformat ptcri*.dat.HB (from dbert/) file to a ptcri*.dat file (from data/) """
+    # ../F7/CAF09_MC_S15/OV0.6_Z0.0005_Y0.249/Z0.0005Y0.249OUTA1.74_F7_M20.0.PMS
+    pref = filename.replace('ptcri_','').split('.dat')[0]
+    pref = "../F7/" + pref
     outfile = filename.replace('.HB', '').replace('ptcri_', 'ptcri_hb_')
     with open(filename, 'r') as inp:
         lines = inp.readlines()
