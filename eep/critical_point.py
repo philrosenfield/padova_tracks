@@ -122,8 +122,6 @@ class critical_point(object):
         '''
         if sandro:
             pdict = self.sandros_dict
-        elif hb:
-            pdict = self.key_dict_hb
         else:
             pdict = self.key_dict
 
@@ -189,9 +187,7 @@ class critical_point(object):
 
         eep_obj = Eep()
         eep_list = eep_obj.eep_list
-        eep_list_hb = eep_obj.eep_list_hb
         self.key_dict = dict(zip(eep_list, range(len(eep_list))))
-        self.key_dict_hb = dict(zip(eep_list_hb, range(len(eep_list_hb))))
 
         if sandro:
             # loading sandro's eeps means they will be used for match
@@ -232,11 +228,7 @@ class critical_point(object):
             if hb:
                 filename = filename.replace('p2m', 'p2m_hb')
 
-        if hb:
-            key_dict = self.key_dict_hb
-        else:
-            key_dict = self.key_dict
-        sorted_keys, inds = zip(*sorted(key_dict.items(),
+        sorted_keys, inds = zip(*sorted(self.key_dict.items(),
                                         key=lambda (k, v): (v, k)))
 
         header = '# critical points in F7 files defined by sandro, basti, and phil \n'
