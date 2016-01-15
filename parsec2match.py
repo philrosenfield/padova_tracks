@@ -157,7 +157,7 @@ def load_ptcri(inputs, find=False, from_p2m=False):
     search_term = 'pt*'
     if inputs.from_p2m or from_p2m:
         sandro = False
-        search_term = 'p2m_p*'
+        search_term = 'p2m*'
 
     search_term += '%sY*dat' % inputs.prefix.split('Y')[0]
     if inputs.ptcri_file is not None:

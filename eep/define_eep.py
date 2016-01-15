@@ -412,7 +412,6 @@ class DefineEeps(Interpolator):
             msg = 'no eagb '
             msg1 = msg + 'linspace between YCEN_0.000 and final track point'
             msg2 = msg + 'linspace between YCEN_0.000 and final track point'
-
             agb_ly1, agb_ly2 = np.round(np.linspace(track.iycen_0000,
                                         track.iptcri[-1], 4))[1:3]
         else:
@@ -450,8 +449,6 @@ class DefineEeps(Interpolator):
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
         self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True, message=msg1)
         self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
-        #self.add_eep(track, 'TPAGB', agb_ly2, hb=True, message=msg2)
-        #import pdb; pdb.set_trace()
 
         if diag_plot:
             agb_ly1c = 'red'
