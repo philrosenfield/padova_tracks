@@ -152,6 +152,7 @@ def load_ptcri(inputs, find=False, from_p2m=False):
     '''
 
     # find the ptcri file
+    ptcri_file = None
     ptcri_file_hb = None
     sandro = True
     search_term = 'pt*'
