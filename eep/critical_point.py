@@ -20,14 +20,39 @@ class Eep(object):
     The lengths are then used in match.py
     '''
     def __init__(self):
-        '''hard coded default eep_list and lengths'''
+        '''hard coded default eep_list and lengths
+        eeps = {'PMS_BEG': 60,
+                    'PMS_MIN': 60,
+                    'PMS_END': 80,
+                    'MS_BEG': 199,
+                    'MS_TMIN': 100,
+                    'MS_TO': 100,
+                    'SG_MAXL': 70,
+                    'RG_MINL': 370,
+                    'RG_BMP1': 30,
+                    'RG_BMP2': 400,
+                    'RG_TIP': 40,
+                    'HE_BEG': 150,
+                    'YCEN_0.550': 100,
+                    'YCEN_0.500': 60,
+                    'YCEN_0.400': 100,
+                    'YCEN_0.200': 80,
+                    'YCEN_0.100': 80,
+                    'YCEN_0.005': 80,
+                    'YCEN_0.000': 40,
+                    'AGB_LY1': 40,
+                    'AGB_LY2': 20,
+                    'TPAGB': -1}
+        eep_list = eeps.keys()
+        eep_lengths = eeps.values()
+        '''
         eep_list = ['PMS_BEG', 'PMS_MIN', 'PMS_END', 'MS_BEG', 'MS_TMIN',
                     'MS_TO', 'SG_MAXL', 'RG_MINL', 'RG_BMP1', 'RG_BMP2',
                     'RG_TIP', 'HE_BEG', 'YCEN_0.550', 'YCEN_0.500',
                     'YCEN_0.400', 'YCEN_0.200', 'YCEN_0.100', 'YCEN_0.005',
                     'YCEN_0.000', 'AGB_LY1', 'AGB_LY2', 'TPAGB']
         eep_lengths = [60, 60, 80, 199, 100, 100, 70, 370, 30, 400, 40, 150,
-                       100, 60, 100, 80, 80, 80, 40, 40, 100]
+                       100, 60, 100, 80, 80, 80, 40, 40, 20]
 
         ihb = eep_list.index('HE_BEG')
         eep_list_hb = np.copy(eep_list[ihb:])
