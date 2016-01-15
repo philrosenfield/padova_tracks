@@ -28,6 +28,7 @@ def format_ptcriHB(filename, nptcri=5):
     plists = [lines[i::nptcri] for i in range(nptcri)]
 
     ptcrinames = []
+    import pdb; pdb.set_trace()
     for plist in plists:
         # first EEP has different formatting:
         # e.g., after EEP: M= 0.49500000 npt=771  kind=1.0000000
