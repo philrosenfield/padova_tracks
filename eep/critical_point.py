@@ -198,11 +198,10 @@ class critical_point(object):
             self.sandro_eeps = col_keys
             self.sandros_dict = dict(zip(col_keys, range(len(col_keys))))
             self.please_define = [c for c in eep_list if c not in col_keys]
-
+            self.please_define_hb = [c for c in eep_list_hb if c not in col_keys]
             # there is no mixture between Sandro's HB eeps since there
             # are no HB eeps in the ptcri files. Define them all here.
-            self.please_define_hb = eep_obj.eep_list_hb
-
+            #self.please_define_hb = eep_obj.eep_list_hb
 
         self.eep = eep_obj
         if sandro:
