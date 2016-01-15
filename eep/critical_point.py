@@ -171,7 +171,10 @@ class critical_point(object):
             begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
                     and 'F7' in lines[i]]
         else:
-            begin = -1
+            if 'p2m' in filename:
+                begin = 0
+            else:
+                begin = -1
 
         if sandro and not hb:
             try:
@@ -187,7 +190,7 @@ class critical_point(object):
         col_keys = all_keys[3:-1]
         # ptcri file has filename as col #19 so skip the last column
         usecols = range(0, len(all_keys) - 1)
-        if hb:
+        if hb and not 'p2m' in filename:
             col_keys = all_keys[3:]
             usecols = range(0, len(all_keys))
         try:
