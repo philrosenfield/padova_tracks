@@ -62,8 +62,10 @@ class TrackSet(object):
                              masses=inputs.masses, match=inputs.match)
 
 
-    def find_masses(self, track_search_term, agb=False):
+    def find_masses(self, track_search_term, agb=False, ignore='ALFO0'):
         track_names = get_files(self.tracks_base, track_search_term)
+        if ignore is not None:
+            track_names = [t for t in track_names if not ignore in t]
         mstr = '_M'
         if agb:
             # Paola's tracks agb_0.66_Z0.00010000_ ... .dat

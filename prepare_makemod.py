@@ -28,7 +28,7 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
 
     zsun = 0.02
     #allzs = [p.split('Z')[1].split('_')[0] for p in prefixs]
-    allzs = [p.split('Z')[1].split('Y')[0] for p in prefixs]
+    allzs = [p.split('_Z')[1].split('_Y')[0] for p in prefixs]
     zs = np.unique(np.array(allzs, dtype=float))
     prefixs = np.array(prefixs)[np.argsort(allzs)]
 

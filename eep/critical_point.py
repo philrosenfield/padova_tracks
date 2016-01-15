@@ -25,9 +25,9 @@ class Eep(object):
                     'MS_TO', 'SG_MAXL', 'RG_MINL', 'RG_BMP1', 'RG_BMP2',
                     'RG_TIP', 'HE_BEG', 'YCEN_0.550', 'YCEN_0.500',
                     'YCEN_0.400', 'YCEN_0.200', 'YCEN_0.100', 'YCEN_0.005',
-                    'YCEN_0.000', 'TPAGB']
+                    'YCEN_0.000', 'AGB_LY1', 'AGB_LY2', 'TPAGB']
         eep_lengths = [60, 60, 80, 199, 100, 100, 70, 370, 30, 400, 40, 150,
-                       100, 60, 100, 80, 80, 80, 100]
+                       100, 60, 100, 80, 80, 80, 40, 40, 100]
 
         ihb = eep_list.index('HE_BEG')
         eep_list_hb = np.copy(eep_list[ihb:])

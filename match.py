@@ -255,6 +255,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         logTe = np.array([])
         logL = np.array([])
         logAge = np.array([])
+        Mass = np.array([])
 
         ptcri_kw = {'sandro': False, 'hb': hb}
         track = ptcri.load_eeps(track, sandro=False)
@@ -274,19 +275,19 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
             mess = '%.3f %s=%i %s=%i' % (track.mass, this_eep, ithis_eep,
                                          next_eep, inext_eep)
-
+            track.info[mess] = ''
             if ithis_eep == -1:
-                track.info[mess] = 'Interpolation failed. eep == -1'
+                track.info[mess] += 'Interpolation failed. eep == -1 '
                 continue
 
             inds = np.arange(ithis_eep, inext_eep + 1)
 
             if len(inds) < 1:
-                track.info[mess] = \
-                    'Interpolation failed. %i inds between eeps.' % len(inds)
+                track.info[mess] += \
+                    'Interpolation failed. %i inds between eeps. ' % len(inds)
                 continue
 
-            lagenew, lnew, tenew = \
+            lagenew, lnew, tenew, massnew = \
                 self.interpolate_along_track(track, inds, nticks[i], mess=mess)
 
             if hb is True:
@@ -301,6 +302,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             logTe = np.append(logTe, tenew)
             logL = np.append(logL, lnew)
             logAge = np.append(logAge, lagenew)
+            Mass = np.append(Mass, massnew)
 
         Mbol = 4.77 - 2.5 * logL
         logg = -10.616 + np.log10(track.mass) + 4.0 * logTe - logL
@@ -310,9 +312,9 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
         inds, = np.nonzero(track.data['AGE'] > 0.2)
         umass = np.unique(track.data['MASS'][inds])
-        if len(umass) > 1 or umass[0] != mass_arr[0]:
-            logger.warning('mass array is a copy of the track.mass is that kosher?')
-            pdb.set_trace()
+        #if len(umass) > 1 or umass[0] != mass_arr[0]:
+        #    logger.warning('mass array is a copy of the track.mass is that kosher?')
+        #    pdb.set_trace()
         eep = critical_point.Eep()
         if len(logL) not in [eep.nms, eep.nhb, eep.nlow, eep.ntot]:
             print('array size is wrong')
@@ -384,11 +386,16 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             -------
             arrays of interpolated values for Log Age, Log L, Log Te
             """
-            msg = 'Match interpolation by interp1d'
+            msg = ' Match interpolation by interp1d'
             logl = track.data.LOG_L[inds]
             logte = track.data.LOG_TE[inds]
             lage = np.log10(track.data.AGE[inds])
+            mass = track.data.MASS[inds]
             lagenew = np.linspace(lage[0], lage[-1], nticks)
+            if np.sum(np.abs(np.diff(mass))) > 0.01:
+                msg += ' with mass'
+            else:
+                massnew = np.repeat(track.data.MASS[inds][0], len(lagenew))
             if len(np.nonzero(np.diff(logl))[0]) == 0:
                 # all LOG_Ls are the same
                 lnew = np.zeros(len(lagenew)) + logl[0]
@@ -408,35 +415,55 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
                 fage_te = interp1d(lage, track.data.LOG_TE[inds],
                                    bounds_error=0)
                 tenew = fage_te(lagenew)
+                fage_m = interp1d(lage, track.data.MASS[inds],
+                                  bounds_error=0)
+                massnew = fage_m(lagenew)
+            track.info[mess] += msg
 
-            track.info[mess] = msg
-            return lagenew, lnew, tenew
+            return lagenew, lnew, tenew, massnew
 
         if len(inds) < 1:
             track.info[mess] = 'not enough points for interpolation'
-            return -1, -1, -1
+            return -1, -1, -1, -1
+
+        # need to check if mass loss is important enough to include
+        # in interopolation
+        mass = track.data.MASS[inds]
+        zcol = None
+        if np.sum(np.abs(np.diff(mass))) > 0.01:
+            frac_mloss = len(np.unique(mass))/float(len(mass))
+            if frac_mloss > 0.75:
+                zcol = 'MASS'
+            else:
+                import pdb; pdb.set_trace()
 
         # parafunc = np.log10 means np.log10(AGE)
         tckp, _, non_dupes = self._interpolate(track, inds, s=0,
-                                               parafunc='np.log10')
+                                               parafunc='np.log10',
+                                               zcol=zcol)
         arb_arr = np.linspace(0, 1, nticks)
 
         if type(non_dupes) is int:
             # if one variable doesn't change, call interp1d
-            lagenew, tenew, lnew = call_interp1d(track, inds, nticks,
+            lagenew, tenew, lnew, massnew = call_interp1d(track, inds, nticks,
                                                  mess=mess)
         else:
             if len(non_dupes) <= 3:
                 # linear interpolation is automatic in self._interpolate
-                track.info[mess] = 'linear interpolation'
+                track.info[mess] += ' linear interpolation'
             # normal intepolation
-            lagenew, tenew, lnew = splev(arb_arr, tckp)
+            if zcol is None:
+                lagenew, tenew, lnew = splev(arb_arr, tckp)
+            else:
+                track.info[mess] += ' interpolation with mass'
+                lagenew, tenew, lnew, massnew = splev(arb_arr, tckp)
 
             # if non-monotonic increase in age, call interp1d
             all_positive = np.diff(lagenew) > 0
             if False in all_positive:
                 # probably too many nticks
-                lagenew, lnew, tenew = call_interp1d(track, inds, nticks,
+                lagenew, lnew, tenew, massnew = call_interp1d(track, inds, nticks,
                                                      mess=mess)
-
-        return lagenew, lnew, tenew
+        if zcol is None:
+            massnew = np.repeat(track.data.MASS[inds][0], len(lagenew))
+        return lagenew, lnew, tenew, massnew

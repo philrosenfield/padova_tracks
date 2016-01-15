@@ -7,6 +7,9 @@ from critical_point import critical_point, Eep
 from scipy.interpolate import splev, splprep
 from .. import utils
 from ..interpolate import Interpolator
+import logging
+logger = logging.getLogger()
+
 # from low mass and below XCEN = 0.3 for MS_TMIN
 low_mass = 1.25
 
@@ -405,35 +408,56 @@ class DefineEeps(Interpolator):
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
 
-        # the two deepest mins are the ly == lx match
-        min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-        (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+        if len(mins) == 0:
+            msg = 'no eagb '
+            msg1 = msg + 'final track point'
+            msg2 = msg + 'mid mode between YCEN_0.000 and final track point'
+            agb_ly2 = len(track.data.LY) - 1
+            last_eep = track.iptcri[track.iptcri > 0][-1]
+            import pdb; pdb.set_trace()
+            agb_ly1 = (last_eep +  agb_ly2) / 2
+            if agb_ly2 == last_eep:
+                msg1 = msg
+                msg2 = msg
+                agb_ly2 = 0
+                agb_ly1 = 0
+                track.flag = 'YCEN_0.000 is final track point'
+        else:
+            # the two deepest mins are the ly == lx match
+            min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
+            (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+            msg1 = 'first deepest min when ly == lx after YCEN_0.000'
+            msg2 = 'second deepest mins when ly == lx after YCEN_0.000'
+            msg = ''
+            # most of the time, the above works, a couple times the points
+            # are instead in the thermal pulses.
 
-        # most of the time, the above works, a couple times the points
-        # are instead in the thermal pulses.
+            # if agb_ly1 is in a thermal pulse (and should be much younger)
+            # take away some mins...
+            i = 4
+            if norm_age[ex_inds[mins[0]]] < 0.89 and norm_age[agb_ly1] > 0.98:
+                while norm_age[agb_ly1] > 0.98:
+                    mins = mins[:i]
+                    min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
+                    (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+                    msg = ' adjusted to be outside of a TP'
+                    i -= 1
 
-        # if agb_ly1 is in a thermal pulse (and should be much younger)
-        # take away some mins...
-        i = 4
-        if norm_age[ex_inds[mins[0]]] < 0.89 and norm_age[agb_ly1] > 0.98:
-            while norm_age[agb_ly1] > 0.98:
-                mins = mins[:i]
-                min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-                (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
-                i -= 1
+            # if the agb_ly2 is in a thermal pulse take away some mins...
+            if norm_age[agb_ly2] > 0.999:
+                while norm_age[agb_ly2] > 0.999:
+                    mins = mins[:i]
+                    min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
+                    (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+                    msg = ' adjusted to be outside of a TP'
+                    i -= 1
 
-        # if the agb_ly2 is in a thermal pulse take away some mins...
-        if norm_age[agb_ly2] > 0.999:
-            while norm_age[agb_ly2] > 0.999:
-                mins = mins[:i]
-                min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-                (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
-                i -= 1
-
-        self.add_eep(track, 'TPAGB', agb_ly1, hb=True)
+        msg1 += msg
+        msg2 += msg
+        self.add_eep(track, 'TPAGB', agb_ly2, hb=True, message=msg2)
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
-        #self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True)
-        #self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True)
+        self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True)
+        self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True)
 
         if diag_plot:
             agb_ly1c = 'red'
@@ -441,14 +465,10 @@ class DefineEeps(Interpolator):
             fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12, 6))
             ax1.plot(norm_age, ly, label='He', color='purple')
             ax1.plot(norm_age, lx, label='H', color='orange')
-            ax1.plot(norm_age[ex_inds], diff_L, label='abs diff',
-                     color='black')
-            ax1.plot(norm_age[ex_inds[mins]], diff_L[mins], 'o',
-                     color='black')
-            ax1.plot(norm_age[agb_ly1], track.data.LX[agb_ly1], 'o',
-                     color=agb_ly1c)
-            ax1.plot(norm_age[agb_ly2], track.data.LX[agb_ly2], 'o',
-                     color=agb_ly2c)
+            ax1.plot(norm_age[ex_inds], diff_L, label='abs diff', color='black')
+            ax1.plot(norm_age[ex_inds[mins]], diff_L[mins], 'o', color='black')
+            ax1.plot(norm_age[agb_ly1], lx[agb_ly1], 'o', color=agb_ly1c)
+            ax1.plot(norm_age[agb_ly2], ly[agb_ly2], 'o', color=agb_ly2c)
 
             ax1.set_title(track.mass)
             ax1.legend(loc=0)
@@ -458,6 +478,8 @@ class DefineEeps(Interpolator):
             ax1.set_xlabel('Age/Total Age')
 
             ax2.plot(track.data.LOG_TE, track.data.LOG_L, color='green')
+            inds = track.iptcri[track.iptcri > 0]
+            ax2.plot(track.data.LOG_TE[inds], track.data.LOG_L[inds], 'o', color='green')
             ax2.plot(track.data.LOG_TE[agb_ly1], track.data.LOG_L[agb_ly1],
                      'o', color=agb_ly1c)
             ax2.plot(track.data.LOG_TE[agb_ly2], track.data.LOG_L[agb_ly2],
