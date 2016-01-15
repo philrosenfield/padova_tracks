@@ -164,9 +164,12 @@ def load_ptcri(inputs, find=False, from_p2m=False):
         ptcri_file = inputs.ptcri_file
     else:
         ptcri_files = fileio.get_files(inputs.ptcrifile_loc, search_term)
-        ptcri_file, = [p for p in ptcri_files if not 'hb' in p]
         if inputs.hb:
             ptcri_file_hb, = [p for p in ptcri_files if 'hb' in p]
+        try:
+            ptcri_file, = [p for p in ptcri_files if not 'hb' in p]
+        except:
+            pass
     assert os.path.isfile(ptcri_file), 'ptcri file not found.'
     if find:
         return ptcri_file, ptcri_file_hb
@@ -176,10 +179,11 @@ def load_ptcri(inputs, find=False, from_p2m=False):
             inputs.ptcri_hb = critical_point(inputs.ptcri_file_hb,
                                              sandro=sandro)
             inputs.ptcri_hb.name = 'ptcri_hb_%s.dat' % inputs.prefix
-        inputs.ptcri_file = ptcri_file
-        inputs.ptcri = critical_point(inputs.ptcri_file, sandro=sandro)
-        inputs.ptcri.base = inputs.ptcrifile_loc
-        inputs.ptcri.name = 'ptcri_%s.dat' % inputs.prefix
+        if ptcri_file is not None:
+            inputs.ptcri_file = ptcri_file
+            inputs.ptcri = critical_point(inputs.ptcri_file, sandro=sandro)
+            inputs.ptcri.base = inputs.ptcrifile_loc
+            inputs.ptcri.name = 'ptcri_%s.dat' % inputs.prefix
         return inputs
 
 
