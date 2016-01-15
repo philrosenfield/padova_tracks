@@ -946,7 +946,7 @@ class DefineEeps(Interpolator):
             sinds = \
                 np.array([i for i, a in enumerate(self.ptcri.sandro_eeps)
                           if a in eep_list])
-            import pdb; pdb.set_trace()
+            
             # they may all be replaced!
             if len(pinds) > 0 and len(sinds) > 0:
                 track.iptcri[pinds] = mptcri[sinds] - 2
