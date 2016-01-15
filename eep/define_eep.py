@@ -410,18 +410,11 @@ class DefineEeps(Interpolator):
 
         if len(mins) == 0:
             msg = 'no eagb '
-            msg1 = msg + 'final track point'
-            msg2 = msg + 'mid mode between YCEN_0.000 and final track point'
-            agb_ly2 = len(track.data.LY) - 1
-            last_eep = track.iptcri[track.iptcri > 0][-1]
-            import pdb; pdb.set_trace()
-            agb_ly1 = (last_eep +  agb_ly2) / 2
-            if agb_ly2 == last_eep:
-                msg1 = msg
-                msg2 = msg
-                agb_ly2 = 0
-                agb_ly1 = 0
-                track.flag = 'YCEN_0.000 is final track point'
+            msg1 = msg + 'linspace between YCEN_0.000 and final track point'
+            msg2 = msg + 'linspace between YCEN_0.000 and final track point'
+
+            agb_ly1, agb_ly2 = np.round(np.linspace(track.iycen_0000,
+                                        track.itpagb, 4))[1:3]
         else:
             # the two deepest mins are the ly == lx match
             min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
@@ -868,6 +861,7 @@ class DefineEeps(Interpolator):
             key_dict = self.ptcri.key_dict
 
         track.iptcri[key_dict[eep_name]] = ind
+        track.__setattr__(i{:s}.format(eep_name.lower().replace('.','')), ind)
         track.info['%s' %  eep_name] = message
         if loud:
             print(track.mass, eep_name, ind, message)
@@ -940,7 +934,7 @@ class DefineEeps(Interpolator):
         #                           diag_plot=diag_plot, debug=debug)
         #else:
             # Sandro's definitions. (I don't use his HB EEPs)
-        
+
         try:
             mptcri = ptcri.data_dict['M%.3f' % track.mass]
         except KeyError:
