@@ -46,7 +46,7 @@ def format_ptcriHB(filename, nptcri=5):
         data = np.column_stack((data, pdata))
         ptcrinames.append(ptcriname)
 
-    header = 'i mass kind' + ' '.join(ptcrinames)
+    header = 'i mass kind ' + ' '.join(ptcrinames)
     fmt = '%i %f %i ' + ' '.join('%i' * len(ptcrinames))
 
     np.savetxt(outfile, data, header=header, fmt=fmt)
