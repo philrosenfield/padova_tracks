@@ -197,6 +197,7 @@ class DefineEeps(Interpolator):
              for cp in self.ptcri.please_define[5:]]
 
         self.add_sg_rg_eeps(track)
+        self.add_agb_eeps(track)
         self.check_for_monotonic_increase(track)
 
     def add_ms_beg_eep(self, track, xcen=0.6):
@@ -405,7 +406,7 @@ class DefineEeps(Interpolator):
         # there are probably thermal pulses in the track, taking the first 6
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
-
+        import pdb; pdb.set_trace()
         if len(mins) == 0:
             msg = 'no eagb '
             msg1 = msg + 'linspace between YCEN_0.000 and final track point'
