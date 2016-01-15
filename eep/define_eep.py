@@ -850,12 +850,7 @@ class DefineEeps(Interpolator):
         '''
         Will add or replace the index of Track.data to track.iptcri
         '''
-        if hb:
-            key_dict = self.ptcri.key_dict_hb
-        else:
-            key_dict = self.ptcri.key_dict
-
-        track.iptcri[key_dict[eep_name]] = ind
+        track.iptcri[self.ptcri.key_dict[eep_name]] = ind
         track.__setattr__('i{:s}'.format(eep_name.lower().replace('.','')), ind)
         track.info['%s' %  eep_name] = message
         if loud:
