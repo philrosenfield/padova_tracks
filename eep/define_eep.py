@@ -406,7 +406,7 @@ class DefineEeps(Interpolator):
         # there are probably thermal pulses in the track, taking the first 6
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
-        import pdb; pdb.set_trace()
+        
         if len(mins) == 0:
             msg = 'no eagb '
             msg1 = msg + 'linspace between YCEN_0.000 and final track point'
