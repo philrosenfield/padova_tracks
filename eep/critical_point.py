@@ -53,19 +53,21 @@ class critical_point(object):
     which tells which critical points of Sandro's to ignore and which new
     ones to define. Definitions of new eeps are in the Track class.
     '''
-    def __init__(self, filename=None, sandro=True, debug=False):
+    def __init__(self, filename=None, sandro=True, debug=False, hb=False):
         self.debug = debug
         if filename is not None:
             self.base, self.name = os.path.split(filename)
-            self.load_ptcri(filename, sandro=sandro)
+            self.load_ptcri(filename, sandro=sandro, hb=False)
             self.get_args_from_name(filename)
         else:
             eep_obj = Eep()
-            eep_list = eep_obj.eep_list
-            eep_list_hb = eep_obj.eep_list_hb
+            if hb:
+                eep_list = eep_obj.eep_list_hb
+            else:
+                eep_list = eep_obj.eep_list
+
             self.key_dict = dict(zip(eep_list, range(len(eep_list))))
-            self.key_dict_hb = dict(zip(eep_list_hb, range(len(eep_list_hb))))
-            self.please_define_hb = eep_obj.eep_list_hb
+            self.please_define = eep_list
             self.eep = eep_obj
 
     def get_args_from_name(self, filename):
@@ -130,23 +132,21 @@ class critical_point(object):
         elif type(val) == str:
             return [pval for name, pval in pdict.items() if name == val][0]
 
-    def load_ptcri(self, filename, sandro=True):
+    def load_ptcri(self, filename, sandro=True, hb=False):
         '''
         Read the ptcri*dat file.
         Initialize Eep
         Flag the missing eeps in the ptcri file.
         '''
-        hb = False
         with open(filename, 'r') as f:
             lines = f.readlines()
 
         # the lines have the path name, and the path has F7.
-        if not 'hb' in filename:
+        if not hb:
             begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
                     and 'F7' in lines[i]]
         else:
             begin = -1
-            hb = True
 
         if sandro and not hb:
             try:
@@ -198,7 +198,7 @@ class critical_point(object):
             self.sandro_eeps = col_keys
             self.sandros_dict = dict(zip(col_keys, range(len(col_keys))))
             self.please_define = [c for c in eep_list if c not in col_keys]
-            self.please_define_hb = [c for c in eep_list_hb if c not in col_keys]
+
             # there is no mixture between Sandro's HB eeps since there
             # are no HB eeps in the ptcri files. Define them all here.
             #self.please_define_hb = eep_obj.eep_list_hb

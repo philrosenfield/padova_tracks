@@ -153,8 +153,6 @@ def load_ptcri(inputs, find=False, from_p2m=False):
     '''
 
     # find the ptcri file
-    ptcri_file = None
-    ptcri_file_hb = None
     sandro = True
     search_term = 'pt*'
     if inputs.from_p2m or from_p2m:
@@ -167,25 +165,17 @@ def load_ptcri(inputs, find=False, from_p2m=False):
     else:
         ptcri_files = fileio.get_files(inputs.ptcrifile_loc, search_term)
         if inputs.hb:
-            ptcri_file_hb, = [p for p in ptcri_files if 'hb' in p]
-        try:
+            ptcri_file, = [p for p in ptcri_files if 'hb' in p]
+        else:
             ptcri_file, = [p for p in ptcri_files if not 'hb' in p]
-        except:
-            pass
-    #assert os.path.isfile(ptcri_file), 'ptcri file not found.'
+
+    assert os.path.isfile(ptcri_file), 'ptcri file not found.'
     if find:
-        return ptcri_file, ptcri_file_hb
+        return ptcri_file
     else:
-        if ptcri_file_hb is not None:
-            inputs.ptcri_file_hb = ptcri_file_hb
-            inputs.ptcri_hb = critical_point(inputs.ptcri_file_hb,
-                                             sandro=sandro)
-            inputs.ptcri_hb.name = 'ptcri_hb_%s.dat' % inputs.prefix
-        if ptcri_file is not None:
-            inputs.ptcri_file = ptcri_file
-            inputs.ptcri = critical_point(inputs.ptcri_file, sandro=sandro)
-            inputs.ptcri.base = inputs.ptcrifile_loc
-            inputs.ptcri.name = 'ptcri_%s.dat' % inputs.prefix
+        inputs.ptcri_file = ptcri_file
+        inputs.ptcri = critical_point(inputs.ptcri_file, sandro=sandro,
+                                      hb=inputs.hb)
         return inputs
 
 
@@ -202,15 +192,14 @@ def define_eeps(tfm, inputs):
         track_str = 'hbtracks'
         defined = Eep().eep_list_hb
         filename = 'define_eeps_hb_%s.log'
-        ptcri = inputs.ptcri_hb
     else:
         track_str = 'tracks'
         #defined = inputs.ptcri.please_define
         defined = Eep().eep_list
         filename = 'define_eeps_%s.log'
-        ptcri = inputs.ptcri
+
     # load critical points calls de.define_eep
-    tracks = [de.load_critical_points(track, ptcri=ptcri, **crit_kw)
+    tracks = [de.load_critical_points(track, inputs.ptcri, **crit_kw)
               for track in tfm.__getattribute__(track_str)]
 
     # write log file

@@ -905,15 +905,12 @@ class DefineEeps(Interpolator):
         #    'Must supply either a ptcri file or object'
 
         if type(ptcri) is str:
-            ptcri = critical_point(ptcri)
+            ptcri = critical_point(ptcri, hb=hb)
         self.ptcri = ptcri
         eep_obj = self.ptcri.eep
 
         please_define = ptcri.please_define
         eep_list = eep_obj.eep_list
-        if track.hb:
-            please_define = ptcri.please_define_hb
-            eep_list = eep_obj.eep_list_hb
 
         if hasattr(ptcri, 'Z'):
             assert ptcri.Z == track.Z, \

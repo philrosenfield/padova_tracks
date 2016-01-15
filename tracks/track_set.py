@@ -185,7 +185,7 @@ class TrackSet(object):
                 new_key = os.path.split(ptcri_file)[1].replace('0.', '').replace('.dat', '').lower()
                 if os.path.split(track.base)[1] in os.path.split(ptcri_file)[1]:
                     if not hasattr(self, new_key):
-                        ptcri = critical_point(ptcri_file, sandro=sandro)
+                        ptcri = critical_point(ptcri_file, sandro=sandro, hb=hb)
                     else:
                         ptcri = self.__getattribute__(new_key)
                     self.tracks[i] = ptcri.load_eeps(track, sandro=sandro)
