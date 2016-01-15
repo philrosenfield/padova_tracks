@@ -60,15 +60,17 @@ class critical_point(object):
             self.load_ptcri(filename, sandro=sandro, hb=hb)
             self.get_args_from_name(filename)
         else:
-            eep_obj = Eep()
-            if hb:
-                eep_list = eep_obj.eep_list_hb
-            else:
-                eep_list = eep_obj.eep_list
+            load_eep(hb=hb)
 
-            self.key_dict = dict(zip(eep_list, range(len(eep_list))))
-            self.please_define = eep_list
-            self.eep = eep_obj
+    def load_eep(self, hb=False):
+        self.eep = Eep()
+        if hb:
+            self.eep_list = self.eep.eep_list_hb
+        else:
+            self.eep_list = self.eep.eep_list
+
+        self.key_dict = dict(zip(self.eep_list, range(len(self.eep_list))))
+        self.please_define = self.eep_list
 
     def get_args_from_name(self, filename):
         '''
@@ -185,21 +187,18 @@ class critical_point(object):
 
         self.data_dict = data_dict
 
-        eep_obj = Eep()
-        eep_list = eep_obj.eep_list
-        self.key_dict = dict(zip(eep_list, range(len(eep_list))))
+        self.load_eep(hb=hb)
 
         if sandro:
             # loading sandro's eeps means they will be used for match
             self.sandro_eeps = col_keys
             self.sandros_dict = dict(zip(col_keys, range(len(col_keys))))
-            self.please_define = [c for c in eep_list if c not in col_keys]
+            self.please_define = [c for c in self.eep_list if c not in col_keys]
 
             # there is no mixture between Sandro's HB eeps since there
             # are no HB eeps in the ptcri files. Define them all here.
             #self.please_define_hb = eep_obj.eep_list_hb
 
-        self.eep = eep_obj
         if sandro:
             [self.check_ptcri(self.masses[i], data[i][3:].astype(int))
              for i in range(len(data))]
