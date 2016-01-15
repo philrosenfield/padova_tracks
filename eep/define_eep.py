@@ -7,6 +7,20 @@ from critical_point import critical_point, Eep
 from scipy.interpolate import splev, splprep
 from .. import utils
 from ..interpolate import Interpolator
+"""
+ipython testing
+from padova_tracks.tracks import Track
+from padova_tracks.eep.define_eep import DefineEeps
+de = DefineEeps()
+ts = !! ls *PMS
+t = [Track(tt) for tt in ts]
+_ = [de.add_pms_eeps(ts) for ts in t]
+msbegs = [de.add_msbeg(ts) for ts in t]
+_ = [de.add_ms_eeps(ts) for ts in t]
+rgts = [de.add_rg_tip(ts) for ts in t]
+_ = [de.add_sg_rg_eeps(ts) for ts in t]
+"""
+
 # from low mass and below XCEN = 0.3 for MS_TMIN
 low_mass = 1.25
 
