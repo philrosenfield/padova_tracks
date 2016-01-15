@@ -861,7 +861,7 @@ class DefineEeps(Interpolator):
             key_dict = self.ptcri.key_dict
 
         track.iptcri[key_dict[eep_name]] = ind
-        track.__setattr__(i{:s}.format(eep_name.lower().replace('.','')), ind)
+        track.__setattr__('i{:s}'.format(eep_name.lower().replace('.','')), ind)
         track.info['%s' %  eep_name] = message
         if loud:
             print(track.mass, eep_name, ind, message)
