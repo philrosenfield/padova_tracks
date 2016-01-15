@@ -458,7 +458,7 @@ class DefineEeps(Interpolator):
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
         self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True)
         self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True)
-
+        import pdb; pdb.set_trace()
         if diag_plot:
             agb_ly1c = 'red'
             agb_ly2c = 'blue'

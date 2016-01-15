@@ -17,7 +17,7 @@ def parse_plist(plist):
 
 def format_ptcriHB(filename, nptcri=5):
     """ reformat ptcri*.dat.HB (from dbert/) file to a ptcri*.dat file (from data/) """
-    outfile = filename.replace('.dat.HB', '.HB.dat')
+    outfile = filename.replace('.HB', '').replace('ptcri_', 'ptcri_hb_')
     with open(filename, 'r') as inp:
         lines = inp.readlines()
 

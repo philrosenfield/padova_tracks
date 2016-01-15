@@ -30,7 +30,7 @@ def add_version_info(input_file):
 
     # create info file with time of run
     now = strftime("%Y-%m-%d %H:%M:%S", localtime())
-    fname = fileio.replace_ext(input_file, 'info')
+    fname = fileio.replace_ext(input_file, '.info')
     with open(fname, 'w') as out:
         out.write('parsec2match run started %s \n' % now)
         out.write('ResolvedStellarPops git hash: ')
@@ -152,27 +152,30 @@ def load_ptcri(inputs, find=False, from_p2m=False):
     '''
 
     # find the ptcri file
+    ptcri_file_hb = None
     sandro = True
     search_term = 'pt*'
     if inputs.from_p2m or from_p2m:
         sandro = False
         search_term = 'p2m_p*'
-        if inputs.hb:
-            search_term = 'p2m_hb*'
-        #print('reading ptcri from saved p2m file.')
 
     search_term += '%sY*dat' % inputs.prefix.split('Y')[0]
     if inputs.ptcri_file is not None:
         ptcri_file = inputs.ptcri_file
     else:
-        try:
-            ptcri_file, = fileio.get_files(inputs.ptcrifile_loc, search_term)
-        except:
-            ptcri_file = None
-    assert os.path.isfile(ptcri_file)
+        ptcri_files = fileio.get_files(inputs.ptcrifile_loc, search_term)
+        ptcri_file, = [p for p in ptcri_files if not 'hb' in p]
+        if inputs.hb:
+            ptcri_file_hb, = [p for p in ptcri_files if 'hb' in p]
+    assert os.path.isfile(ptcri_file), 'ptcri file not found.'
     if find:
-        return ptcri_file
+        return ptcri_file, ptcri_file_hb
     else:
+        if ptcri_file_hb is not None:
+            inputs.ptcri_file_hb = ptcri_file_hb
+            inputs.ptcri_hb = critical_point(inputs.ptcri_file_hb,
+                                             sandro=sandro)
+            inputs.ptcri_hb.name = 'ptcri_hb_%s.dat' % inputs.prefix
         inputs.ptcri_file = ptcri_file
         inputs.ptcri = critical_point(inputs.ptcri_file, sandro=sandro)
         inputs.ptcri.base = inputs.ptcrifile_loc
