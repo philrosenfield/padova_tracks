@@ -264,7 +264,6 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         nptcri = len(track.iptcri)
 
         for i in range(nptcri-1):
-            import pdb; pdb.set_trace()
             if track.iptcri[i+1] == 0:
                 # The end of the track
                 break
