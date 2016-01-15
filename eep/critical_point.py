@@ -136,6 +136,7 @@ class critical_point(object):
         Initialize Eep
         Flag the missing eeps in the ptcri file.
         '''
+        hb = False
         with open(filename, 'r') as f:
             lines = f.readlines()
 
@@ -145,8 +146,9 @@ class critical_point(object):
                     and 'F7' in lines[i]]
         else:
             begin = -1
+            hb = True
         import pdb; pdb.set_trace()
-        if sandro and not 'hb' in filename:
+        if sandro and not hb:
             try:
                 self.fnames = [l.strip().split('../F7/')[1]
                                for l in lines[(begin+2):]]
@@ -158,12 +160,15 @@ class critical_point(object):
         # the final column is a filename.
         all_keys = lines[begin + 1].replace('#', '').strip().split()
         col_keys = all_keys[3:-1]
+        # ptcri file has filename as col #19 so skip the last column
+        usecols = range(0, len(all_keys) - 1)
+        if hb:
+            col_keys = all_keys[3:]
+            usecols = range(0, len(all_keys))
         try:
             col_keys[col_keys.index('C_BUR')] = 'TPAGB'
         except ValueError:
             pass
-        # ptcri file has filename as col #19 so skip the last column
-        usecols = range(0, len(all_keys) - 1)
         # invalid_raise will skip the last rows that Sandro uses to fake the
         # youngest MS ages (600Msun).
         data = np.genfromtxt(filename, usecols=usecols, skip_header=begin + 2,
