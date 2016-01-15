@@ -133,12 +133,12 @@ class DefineEeps(Interpolator):
         # TP-AGB tracks
         if agb:
             self.add_tpagb_eeps(track)
-            return
+            return self.check_for_monotonic_increase(track)
 
         # ZAHB tracks
-        if hb:
+        elif hb:
             self.hb_eeps(track, diag_plot=diag_plot, plot_dir=plot_dir)
-            return
+            return self.check_for_monotonic_increase(track)
 
         self.check_pms_beg(track)
 
@@ -160,7 +160,7 @@ class DefineEeps(Interpolator):
         if track.mass >= high_mass:
             #print('M=%.4f is high mass' % track.mass)
             self.add_high_mass_eeps(track)
-            return
+            return self.check_for_monotonic_increase(track)
 
         # Low mass tracks
         if len(track.sptcri) <= 6:
@@ -177,7 +177,7 @@ class DefineEeps(Interpolator):
                 age = (track.data.AGE[ims_to] + track.data.AGE[ims_beg]) / 2.
                 ims_tmin, _ = self.add_eep_with_age(track, 'MS_TMIN', age)
 
-            return
+            return self.check_for_monotonic_increase(track)
 
         # Intermediate mass tracks
         self.add_ms_eeps(track)
