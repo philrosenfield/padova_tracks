@@ -140,8 +140,11 @@ class critical_point(object):
             lines = f.readlines()
 
         # the lines have the path name, and the path has F7.
-        begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
-                  and 'F7' in lines[i]]
+        if not 'hb' in filename:
+            begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
+                    and 'F7' in lines[i]]
+        else:
+            begin = 0
 
         if sandro:
             try:
