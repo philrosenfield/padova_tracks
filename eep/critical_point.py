@@ -57,7 +57,7 @@ class critical_point(object):
         self.debug = debug
         if filename is not None:
             self.base, self.name = os.path.split(filename)
-            self.load_ptcri(filename, sandro=sandro, hb=False)
+            self.load_ptcri(filename, sandro=sandro, hb=hb)
             self.get_args_from_name(filename)
         else:
             eep_obj = Eep()
