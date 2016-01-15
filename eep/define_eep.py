@@ -926,52 +926,52 @@ class DefineEeps(Interpolator):
                 'Ys do not match between track and ptcri file %f != %f' % (ptcri.Y,
                                                                        track.Y)
 
-        if hb and len(ptcri.please_define_hb) > 0:
-            # Initialize iptcri for HB
-            track.iptcri = np.zeros(len(eep_obj.eep_list_hb), dtype=int)
+        #if hb and len(ptcri.please_define_hb) > 0:
+        #    # Initialize iptcri for HB
+        #    track.iptcri = np.zeros(len(eep_obj.eep_list_hb), dtype=int)
+        #    self.define_eep_stages(track, hb=hb, plot_dir=plot_dir,
+        #                           diag_plot=diag_plot, debug=debug)
+        #else:
+            # Sandro's definitions. (I don't use his HB EEPs)
+        try:
+            mptcri = ptcri.data_dict['M%.3f' % track.mass]
+        except KeyError:
+            print('M=%.4f not found in %s' % \
+                  (track.mass, os.path.join(self.ptcri.base,
+                                            self.ptcri.name)))
+            track.flag = 'no ptcri mass'
+            return track
+        track.sptcri = \
+            np.concatenate([np.nonzero(track.data[MODE] == m)[0]
+                            for m in mptcri])
+        if len(track.sptcri) != len(np.nonzero(mptcri)[0]):
+            track.flag = 'ptcri file does not match track, not enough MODEs'
+        if len(ptcri.please_define) > 0:
+            # Initialize iptcri
+            track.iptcri = np.zeros(len(eep_obj.eep_list), dtype=int)
+
+            # Get the values that we won't be replacing.
+            pinds = np.array([i for i, a in enumerate(eep_obj.eep_list)
+                              if a in self.ptcri.sandro_eeps])
+
+            sinds = \
+                np.array([i for i, a in enumerate(self.ptcri.sandro_eeps)
+                          if a in eep_obj.eep_list])
+            track.iptcri[pinds] = mptcri[sinds] - 2
+
+            # but if the track did not actually make it to that EEP, no -2!
+            track.iptcri[track.iptcri < 0] = 0
+
+            # and if sandro cut the track before it reached this point,
+            # no index error!
+            track.iptcri[track.iptcri > len(track.data[MODE])] = 0
+
+            # define the eeps
             self.define_eep_stages(track, hb=hb, plot_dir=plot_dir,
                                    diag_plot=diag_plot, debug=debug)
         else:
-            # Sandro's definitions. (I don't use his HB EEPs)
-            try:
-                mptcri = ptcri.data_dict['M%.3f' % track.mass]
-            except KeyError:
-                print('M=%.4f not found in %s' % \
-                      (track.mass, os.path.join(self.ptcri.base,
-                                                self.ptcri.name)))
-                track.flag = 'no ptcri mass'
-                return track
-            track.sptcri = \
-                np.concatenate([np.nonzero(track.data[MODE] == m)[0]
-                                for m in mptcri])
-            if len(track.sptcri) != len(np.nonzero(mptcri)[0]):
-                track.flag = 'ptcri file does not match track, not enough MODEs'
-            if len(ptcri.please_define) > 0:
-                # Initialize iptcri
-                track.iptcri = np.zeros(len(eep_obj.eep_list), dtype=int)
-
-                # Get the values that we won't be replacing.
-                pinds = np.array([i for i, a in enumerate(eep_obj.eep_list)
-                                  if a in self.ptcri.sandro_eeps])
-
-                sinds = \
-                    np.array([i for i, a in enumerate(self.ptcri.sandro_eeps)
-                              if a in eep_obj.eep_list])
-                track.iptcri[pinds] = mptcri[sinds] - 2
-
-                # but if the track did not actually make it to that EEP, no -2!
-                track.iptcri[track.iptcri < 0] = 0
-
-                # and if sandro cut the track before it reached this point,
-                # no index error!
-                track.iptcri[track.iptcri > len(track.data[MODE])] = 0
-
-                # define the eeps
-                self.define_eep_stages(track, hb=hb, plot_dir=plot_dir,
-                                       diag_plot=diag_plot, debug=debug)
-            else:
-                # copy sandros dict.
-                track.iptcri = ptcri.data_dict['M%.3f' % track.mass]
+            # copy sandros dict.
+            track.iptcri = ptcri.data_dict['M%.3f' % track.mass]
         return track
 
     def add_quiesscent_he_eep(self, track, ycen1, start='RG_TIP'):
