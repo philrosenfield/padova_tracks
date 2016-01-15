@@ -418,7 +418,7 @@ class TrackDiag(object):
         if len(ptcri_names) == 0:
             # assume all
             ptcri_names = eep_list
-        pts = [eep_list.index(i) for i in ptcri_names]
+        pts = [list(eep_list).index(i) for i in ptcri_names]
         if pts > len(iptcri):
             #print('Warning: more ptcri names than values. Assuming they are in order!')
             pts = pts[:len(iptcri)]
