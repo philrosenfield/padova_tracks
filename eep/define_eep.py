@@ -336,12 +336,10 @@ class DefineEeps(Interpolator):
         Add YCEN_%.3f eeps, if YCEN=fraction not found to tol, will add 0 as
         the iptrcri, equivalent to not found.
         '''
+        please_define = self.ptcri.please_define
         if hb:
             # HB starts at the beginning
             istart = 0
-            please_define = self.ptcri.please_define_hb
-        else:
-            please_define = self.ptcri.please_define
 
         if istart is None:
             start = 'RG_TIP'
