@@ -951,8 +951,8 @@ class DefineEeps(Interpolator):
             if len(pinds) > 0 and len(sinds) > 0:
                 lineind = mptcri[sinds] - 2
                 while lineind >= len(track.data.LX):
+                    print('adjusting!! {} {}'.format(track.mass, lineind))
                     lineind -= 1
-                    print('adjusting!!')
                 track.iptcri[pinds] = lineind
 
 
