@@ -906,9 +906,8 @@ class DefineEeps(Interpolator):
             ptcri = critical_point(ptcri, hb=hb)
         self.ptcri = ptcri
         eep_obj = self.ptcri.eep
-
-        please_define = ptcri.please_define
-        eep_list = eep_obj.eep_list
+        please_define = self.ptcri.please_define
+        eep_list = self.ptcri.eep_list
 
         if hasattr(ptcri, 'Z'):
             assert ptcri.Z == track.Z, \
