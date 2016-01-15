@@ -146,7 +146,7 @@ class critical_point(object):
         else:
             begin = 0
 
-        if sandro:
+        if sandro and not 'hb' in filename:
             try:
                 self.fnames = [l.strip().split('../F7/')[1]
                                for l in lines[(begin+2):]]
