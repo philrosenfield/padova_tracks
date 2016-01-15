@@ -48,7 +48,7 @@ def quick_hrd(track, ax=None, inds=None, reverse='x', plt_kw={}):
 
     if 'x' in reverse:
         ax.set_xlim(ax.get_xlim()[::-1])
-    
+
     ax.set_ylabel(r'$\rm{L} (\rm{L}_\odot)$')
     ax.set_xlabel(r'$\log\ T_{eff}$')
     return ax
@@ -472,9 +472,9 @@ class TrackDiag(object):
                      ['YCEN_0.400', 'YCEN_0.200', 'YCEN_0.100'],
                      ['YCEN_0.100', 'YCEN_0.005', 'YCEN_0.000', 'TPAGB']]
         else:
-            plots = [['HB_BEG', 'YCEN_0.500', 'YCEN_0.400', 'YCEN_0.200',
+            plots = [['HE_BEG', 'YCEN_0.500', 'YCEN_0.400', 'YCEN_0.200',
                       'YCEN_0.100', 'YCEN_0.005'],
-                     ['YCEN_0.005', 'TPAGB']]
+                     ['YCEN_0.005', 'YCEN_0.000', 'AGB_LY1', 'AGB_LY2', 'TPAGB']]
 
         for i, plot in enumerate(plots):
             if last in plot:
