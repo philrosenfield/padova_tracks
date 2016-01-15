@@ -82,16 +82,17 @@ def parsec2match(input_obj, loud=False):
                 inps.ptcri_file = None
                 inps.from_p2m = True
                 inps = load_ptcri(inps)
-                pat_kw = {'ptcri': inps.ptcri}
                 if loud:
                     print('making parsec diag plots')
+
                 if inps.hb:
-                    tfm.diag_plots(tfm.hbtracks, hb=inps.hb, pat_kw=pat_kw,
-                                   extra='parsec', plot_dir=inps.plot_dir)
+                    pat_kw = {'ptcri': inps.ptcri_hb}
                 else:
+                    pat_kw = {'ptcri': inps.ptcri}
                     #tfm.diag_plots(xcols=xcols, pat_kw=pat_kw)
-                    tfm.diag_plots(tfm.tracks, pat_kw=pat_kw, extra='parsec',
-                                   plot_dir=inps.plot_dir)
+
+                tfm.diag_plots(tfm.hbtracks, hb=inps.hb, pat_kw=pat_kw,
+                               extra='parsec', plot_dir=inps.plot_dir)
 
         # do the match interpolation (produce match output files)
         if inps.do_interpolation:
