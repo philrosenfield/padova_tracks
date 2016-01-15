@@ -964,7 +964,10 @@ class DefineEeps(Interpolator):
             sinds = \
                 np.array([i for i, a in enumerate(self.ptcri.sandro_eeps)
                           if a in eep_list])
-            track.iptcri[pinds] = mptcri[sinds] - 2
+
+            # they may all be replaced!
+            if len(pinds) > 0 and len(sinds) > 0:
+                track.iptcri[pinds] = mptcri[sinds] - 2
 
             # but if the track did not actually make it to that EEP, no -2!
             track.iptcri[track.iptcri < 0] = 0
