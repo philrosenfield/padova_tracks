@@ -406,7 +406,7 @@ class DefineEeps(Interpolator):
         # there are probably thermal pulses in the track, taking the first 6
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
-        
+
         if len(mins) == 0:
             msg = 'no eagb '
             msg1 = msg + 'linspace between YCEN_0.000 and final track point'
@@ -442,9 +442,18 @@ class DefineEeps(Interpolator):
                     (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
                     msg = ' adjusted to be outside of a TP'
                     i -= 1
-
         msg1 += msg
         msg2 += msg
+
+        if agb_ly2 > track.iptcri[-1]:
+            _, agb_ly2 = np.round(np.linspace(track.iycen_0000,
+                                        track.iptcri[-1], 4))[1:3]
+            msg2 += ' was past TPAGB re-adjusted.'
+        if agb_ly1 > track.iptcri[-1]:
+            agb_ly1, _ = np.round(np.linspace(track.iycen_0000,
+                                        track.iptcri[-1], 4))[1:3]
+            msg1 += ' was past TPAGB re-adjusted.'
+
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
         self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True, message=msg1)
         self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
