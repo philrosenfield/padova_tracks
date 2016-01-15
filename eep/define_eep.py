@@ -941,6 +941,7 @@ class DefineEeps(Interpolator):
         if len(track.sptcri) != len(np.nonzero(mptcri)[0]):
             track.flag = 'ptcri file does not match track, not enough MODEs'
         if len(please_define) > 0:
+            import pdb; pdb.set_trace()
             # Initialize iptcri
             track.iptcri = np.zeros(len(eep_list), dtype=int)
 

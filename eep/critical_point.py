@@ -265,7 +265,6 @@ class critical_point(object):
                 for ind in inds:
                     self.fix_ptcri(np.array(self.fnames)[ind])
 
-
     def fix_ptcri(self, fname):
         """
         print better values of sandro's EEPs (the basis for Phil's EEPs)
