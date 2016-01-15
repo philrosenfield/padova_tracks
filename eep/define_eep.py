@@ -454,15 +454,17 @@ class DefineEeps(Interpolator):
             fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12, 6))
             ax1.plot(norm_age, ly, label='He', color='purple')
             ax1.plot(norm_age, lx, label='H', color='orange')
-            ax1.plot(norm_age[ex_inds], diff_L, label='abs diff', color='black')
-            ax1.plot(norm_age[ex_inds[mins]], diff_L[mins], 'o', color='black')
+            if len(ex_inds) > 0:
+                ax1.plot(norm_age[ex_inds], diff_L, label='abs diff', color='black')
+                ax1.plot(norm_age[ex_inds[mins]], diff_L[mins], 'o', color='black')
             ax1.plot(norm_age[agb_ly1], lx[agb_ly1], 'o', color=agb_ly1c)
             ax1.plot(norm_age[agb_ly2], ly[agb_ly2], 'o', color=agb_ly2c)
 
             ax1.set_title(track.mass)
             ax1.legend(loc=0)
             ax1.set_ylim(-0.05, 1.)
-            ax1.set_xlim(norm_age[ex_inds[0]], 1)
+            if len(ex_inds) > 0:
+                ax1.set_xlim(norm_age[ex_inds[0]], 1)
             ax1.set_ylabel('Luminosity fraction from []')
             ax1.set_xlabel('Age/Total Age')
 
