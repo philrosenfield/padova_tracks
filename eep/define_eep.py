@@ -407,7 +407,7 @@ class DefineEeps(Interpolator):
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
 
-        if len(mins) == 0:
+        if len(mins) <= 2:
             msg = 'no eagb '
             msg1 = msg + 'linspace between YCEN_0.000 and final track point'
             msg2 = msg + 'linspace between YCEN_0.000 and final track point'
