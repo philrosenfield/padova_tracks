@@ -454,11 +454,12 @@ class DefineEeps(Interpolator):
 
         msg1 += msg
         msg2 += msg
-        self.add_eep(track, 'TPAGB', agb_ly2, hb=True, message=msg2)
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
-        self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True)
-        self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True)
-        import pdb; pdb.set_trace()
+        self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True, message=msg1)
+        self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
+        #self.add_eep(track, 'TPAGB', agb_ly2, hb=True, message=msg2)
+        #import pdb; pdb.set_trace()
+
         if diag_plot:
             agb_ly1c = 'red'
             agb_ly2c = 'blue'

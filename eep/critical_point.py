@@ -147,7 +147,7 @@ class critical_point(object):
         else:
             begin = -1
             hb = True
-        
+
         if sandro and not hb:
             try:
                 self.fnames = [l.strip().split('../F7/')[1]
@@ -167,6 +167,10 @@ class critical_point(object):
             usecols = range(0, len(all_keys))
         try:
             col_keys[col_keys.index('C_BUR')] = 'TPAGB'
+        except ValueError:
+            pass
+        try:
+            col_keys[col_keys.index('HeLST')] = 'TPAGB'
         except ValueError:
             pass
         # invalid_raise will skip the last rows that Sandro uses to fake the
