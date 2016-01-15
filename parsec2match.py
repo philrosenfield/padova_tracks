@@ -97,9 +97,9 @@ def parsec2match(input_obj, loud=False):
         # do the match interpolation (produce match output files)
         if inps.do_interpolation:
             # force reading of my eeps
-            inps.ptcri_file = None
-            inps.from_p2m = True
-            inps = load_ptcri(inps)
+            #inps.ptcri_file = None
+            #inps.from_p2m = True
+            #inps = load_ptcri(inps)
 
             if loud:
                 print('doing match interpolation')
