@@ -213,8 +213,8 @@ def define_eeps(tfm, inputs):
             if t.flag is not None:
                 out.write(t.flag)
             else:
-                for ptc in defined:
-                    t.info[ptc] = ''
+                #for ptc in defined:
+                #    t.info[ptc] = ''
                 [out.write('%s: %s\n' % (ptc, t.info[ptc])) for ptc in defined]
     if not inputs.from_p2m:
         inputs.ptcri.save_ptcri(tracks, hb=inputs.hb)
