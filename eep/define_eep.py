@@ -438,6 +438,7 @@ class DefineEeps(Interpolator):
                         (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
                     except:
                         agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
+                        msg = ''
                     i -= 1
                 msg = ' adjusted to be outside of a TP'
 
@@ -450,6 +451,7 @@ class DefineEeps(Interpolator):
                         (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
                     except:
                         agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
+                        msg = ''
                     i -= 1
                 msg = ' adjusted to be outside of a TP'
         msg1 += msg
