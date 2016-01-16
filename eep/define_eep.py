@@ -391,6 +391,13 @@ class DefineEeps(Interpolator):
         For low-mass HB (<0.485) the hydrogen fusion is VERY low (no atm!),
         and never surpasses helium, this is still a to be done!!
         '''
+        def no_agb(track):
+            msg = 'no eagb '
+            msg1 = msg + 'linspace between YCEN_0.000 and final track point'
+            msg2 = msg + 'linspace between YCEN_0.000 and final track point'
+            agb_ly1, agb_ly2 = np.round(np.linspace(track.iycen_0000,
+                                        track.iptcri[-1], 4))[1:3]
+            return agb_ly1, agb_ly2, msg1, msg2
         if track.mass <= 0.480:
             print('HB AGB EEPS might not work for HPHB')
 
@@ -406,13 +413,10 @@ class DefineEeps(Interpolator):
         # there are probably thermal pulses in the track, taking the first 6
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
+
         #import pdb; pdb.set_trace()
         if len(mins) <= 2:
-            msg = 'no eagb '
-            msg1 = msg + 'linspace between YCEN_0.000 and final track point'
-            msg2 = msg + 'linspace between YCEN_0.000 and final track point'
-            agb_ly1, agb_ly2 = np.round(np.linspace(track.iycen_0000,
-                                        track.iptcri[-1], 4))[1:3]
+            agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
         else:
             # the two deepest mins are the ly == lx match
             min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
@@ -430,18 +434,24 @@ class DefineEeps(Interpolator):
                 while norm_age[agb_ly1] > 0.98:
                     mins = mins[:i]
                     min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-                    (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
-                    msg = ' adjusted to be outside of a TP'
+                    try:
+                        (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+                    except:
+                        agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
                     i -= 1
+                msg = ' adjusted to be outside of a TP'
 
             # if the agb_ly2 is in a thermal pulse take away some mins...
             if norm_age[agb_ly2] > 0.999:
                 while norm_age[agb_ly2] > 0.999:
                     mins = mins[:i]
                     min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-                    (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
-                    msg = ' adjusted to be outside of a TP'
+                    try:
+                        (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+                    except:
+                        agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
                     i -= 1
+                msg = ' adjusted to be outside of a TP'
         msg1 += msg
         msg2 += msg
 
