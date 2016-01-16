@@ -398,6 +398,7 @@ class DefineEeps(Interpolator):
             agb_ly1, agb_ly2 = np.round(np.linspace(track.iycen_0000,
                                         track.iptcri[-1], 4))[1:3]
             return agb_ly1, agb_ly2, msg1, msg2
+
         if track.mass <= 0.480:
             print('HB AGB EEPS might not work for HPHB')
 
@@ -439,6 +440,7 @@ class DefineEeps(Interpolator):
                     except:
                         agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
                         msg = ''
+                        break
                     i -= 1
                 msg = ' adjusted to be outside of a TP'
 
@@ -452,10 +454,11 @@ class DefineEeps(Interpolator):
                     except:
                         agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
                         msg = ''
+                        break
                     i -= 1
                 msg = ' adjusted to be outside of a TP'
-        msg1 += msg
-        msg2 += msg
+            msg1 += msg
+            msg2 += msg
 
         if agb_ly2 > track.iptcri[-1]:
             _, agb_ly2 = np.round(np.linspace(track.iycen_0000,
