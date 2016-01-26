@@ -50,7 +50,7 @@ class TrackSet(object):
 
         if self.hb:
             self.find_tracks(track_search_term=inputs.hbtrack_search_term,
-                             masses=inputs.masses, match=inputs.match)
+                             masses=inputs.hbmasses, match=inputs.match)
         else:
 
             self.hbtrack_names = []

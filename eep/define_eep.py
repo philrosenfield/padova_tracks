@@ -30,6 +30,34 @@ MODE = 'MODE'
 #YCEN = 'HE_CEN'
 #MODE = 'MODELL'
 
+def second_derivative(xdata, inds, gt=False, s=0):
+    '''
+    The second derivative of d^2 xdata / d inds^2
+
+    why inds for interpolation, not log l?
+    if not using something like model number instead of log l,
+    the tmin will get hidden by data with t < tmin but different
+    log l. This is only a problem for very low Z.
+    If I find the arg min of teff to be very close to MS_BEG it
+    probably means the MS_BEG is at a lower Teff than Tmin.
+    '''
+    tckp, _ = splprep([inds, xdata], s=s, k=3)
+    arb_arr = np.arange(0, 1, 1e-2)
+    xnew, ynew = splev(arb_arr, tckp)
+    # second derivative, bitches.
+    ddxnew, ddynew = splev(arb_arr, tckp, der=2)
+    ddyddx = ddynew/ddxnew
+    # not just argmin, but must be actual min...
+    try:
+        if gt:
+            aind = [a for a in np.argsort(ddyddx) if ddyddx[a-1] < 0][0]
+        else:
+            aind = [a for a in np.argsort(ddyddx) if ddyddx[a-1] > 0][0]
+    except IndexError:
+        return -1
+    tmin_ind, _ = utils.closest_match2d(aind, inds, xdata, xnew, ynew)
+    return inds[tmin_ind]
+
 class DefineEeps(Interpolator):
     '''
     Define the stages if not simply using Sandro's defaults.
@@ -469,9 +497,35 @@ class DefineEeps(Interpolator):
                                         track.iptcri[-1], 4))[1:3]
             msg1 += ' was past TPAGB re-adjusted.'
 
-        # HACK UNTIL TPAGB IS FULLY INTEGRATED
         self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True, message=msg1)
         self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
+
+        # HACK UNTIL TPAGB IS FULLY INTEGRATED
+        inds = np.arange(agb_ly2 + 3, track.iptcri[-1], dtype=int)
+        if len(inds) == 0 and track.iptcri[-1] > 0:
+            track.flag = 'TP-AGB is at or before AGB_LY2'
+            import pdb; pdb.set_trace()
+        else:
+            pd = utils.find_peaks(track.data.LOG_L[inds])
+            if pd['maxima_number'] >= 1:
+                #stpagb = second_derivative(track.data['LOG_L'][inds], np.log10(track.data['AGE'][inds]))
+                pf_kw = {'get_max': True, 'sandro': False, 'more_than_one': 'max of max',
+                         'parametric_interp': False, 'less_linear_fit': False}
+                stpagb = self.peak_finder(track, 'LOG_L', 'AGB_LY2', 'TPAGB', **pf_kw)
+                msg = 'Peaks found between AGB_LY2 and TPAGB. Redifining TPAGB'
+                imax = pd['maxima_locations']
+                imin = pd['minima_locations']
+                tpagb = inds[imax[0]]
+                #from padova_tracks.tracks.track_diag import plot_track
+                #ax = plot_track(track, 'AGE', 'LOG_L')
+                #ax.plot(track.data.AGE[track.iptcri], track.data.LOG_L[track.iptcri], 'o')
+                #ax.plot(track.data.AGE[inds[imin]], track.data.LOG_L[inds[imin]], 'o')
+                #ax.plot(track.data.AGE[stpagb], track.data.LOG_L[stpagb], 's')
+                #ax.plot(track.data.AGE[tpagb], track.data.LOG_L[tpagb], '*')
+                #print(track.mass)
+                #print(track.Z)
+                #import pdb; pdb.set_trace()
+                self.add_eep(track, 'TPAGB', tpagb, hb=True, message=msg)
 
         if diag_plot:
             agb_ly1c = 'red'
@@ -538,30 +592,6 @@ class DefineEeps(Interpolator):
         if there is an error, either MS_TO or MS_TMIN will -1
 
         '''
-        def second_derivative(xdata, inds):
-            '''
-            The second derivative of d^2 xdata / d inds^2
-
-            why inds for interpolation, not log l?
-            if not using something like model number instead of log l,
-            the tmin will get hidden by data with t < tmin but different
-            log l. This is only a problem for very low Z.
-            If I find the arg min of teff to be very close to MS_BEG it
-            probably means the MS_BEG is at a lower Teff than Tmin.
-            '''
-            tckp, _ = splprep([inds, xdata], s=0, k=3)
-            arb_arr = np.arange(0, 1, 1e-2)
-            xnew, ynew = splev(arb_arr, tckp)
-            # second derivative, bitches.
-            ddxnew, ddynew = splev(arb_arr, tckp, der=2)
-            ddyddx = ddynew/ddxnew
-            # not just argmin, but must be actual min...
-            try:
-                aind = [a for a in np.argsort(ddyddx) if ddyddx[a-1] > 0][0]
-            except IndexError:
-                return -1
-            tmin_ind, _ = utils.closest_match2d(aind, inds, xdata, xnew, ynew)
-            return inds[tmin_ind]
 
         def delta_te_eeps(track, before, after):
             xdata = track.data.LOG_L

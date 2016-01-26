@@ -480,7 +480,8 @@ class TrackDiag(object):
         else:
             plots = [['HE_BEG', 'YCEN_0.500', 'YCEN_0.400', 'YCEN_0.200',
                       'YCEN_0.100', 'YCEN_0.005'],
-                     ['YCEN_0.005', 'YCEN_0.000', 'AGB_LY1', 'AGB_LY2', 'TPAGB']]
+                     ['YCEN_0.005', 'YCEN_0.000', 'AGB_LY1', 'AGB_LY2'],
+                     ['AGB_LY2', 'TPAGB']]
 
         for i, plot in enumerate(plots):
             if last in plot:
