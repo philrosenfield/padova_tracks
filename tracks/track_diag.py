@@ -242,7 +242,7 @@ class TrackDiag(object):
 
     def diag_plots(self, tracks, pat_kw=None, xcols=['LOG_TE', 'AGE'],
                    extra='', hb=False, mass_split='default', mextras=None,
-                   plot_dir='.', match_tracks=False):
+                   plot_dir='.', match_tracks=False, sandro=False):
         '''
         pat_kw go to plot all tracks default:
             'eep_list': self.eep_list,
@@ -253,8 +253,8 @@ class TrackDiag(object):
         extras is the filename extra associated with each mass split
            length == mass_split + 1
         '''
-        poop = [t for t in tracks if t.flag is not None]
-        for t in poop:
+        flags = [t for t in tracks if t.flag is not None]
+        for t in flags:
             print('diag_plots skipping M=%.3f: %s' % (t.mass, t.flag))
         tracks = [t for t in tracks if t.flag is None]
         if hasattr(self, 'prefix'):
@@ -268,12 +268,17 @@ class TrackDiag(object):
         default = {'hb': hb}
         pat_kw = pat_kw or {}
         pat_kw = dict(default.items() + pat_kw.items())
-
+        if 'ptcri' in pat_kw.keys():
+            if type(pat_kw['ptcri']) is str:
+                pat_kw['ptcri'] = critical_point(pat_kw['ptcri'], hb=hb,
+                                                 sandro=sandro)
         if hb:
             extra += 'hb_'
 
         if mass_split == 'default':
             mass_split = [1, 1.4, 3, 12, 50]
+            if hb:
+                mass_split = [0.7, 0.9, 1.4, 2, 6]
             mextras = ['_lowest', '_vlow', '_low', '_inte', '_high', '_vhigh']
             tracks_split = \
                 [[i for i, t in enumerate(tracks) if t.mass <= mass_split[0]],
@@ -297,7 +302,8 @@ class TrackDiag(object):
                 pass
             mpat_kw = {'line_pltkw': {'color': 'black', 'lw': 2,
                                       'alpha': 0.3},
-                       'point_pltkw': {'marker': '*'}}
+                       'point_pltkw': {'marker': '*'},
+                       'hb': hb}
 
         for i, its in enumerate(tracks_split):
             if len(its) == 0:
@@ -369,7 +375,7 @@ class TrackDiag(object):
                 ax.plot(xdata[finds], ydata[finds], **line_pltkw)
             else:
                 ax.plot(xdata, ydata, **line_pltkw)
-            if len(inds) > len(xdata):
+            if len(inds) < len(xdata):
                 for i in range(len(inds)):
                     x = xdata[inds[i]]
                     y = ydata[inds[i]]
