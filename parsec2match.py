@@ -325,4 +325,5 @@ if __name__ == '__main__':
         inp_obj.prefixs = prefixs
         call_prepare_makemod(inp_obj)
 
-    os.system('mv {} {}'.format(fname, os.path.join(inp_obj.outfile_loc, 'logs')
+    os.system('mv {} {}'.format(fname,
+                                os.path.join(inp_obj.outfile_loc, 'logs')))
