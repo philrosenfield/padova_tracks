@@ -7,28 +7,13 @@ from critical_point import critical_point, Eep
 from scipy.interpolate import splev, splprep
 from .. import utils
 from ..interpolate import Interpolator
+
+from ..config import *
+
 import logging
 logger = logging.getLogger()
 
-# from low mass and below XCEN = 0.3 for MS_TMIN
-low_mass = 1.25
 
-# inte_mass is where SG_MAXL becomes truly meaningless
-inte_mass = 12.
-
-# from high mass and above find MS_BEG in this code
-high_mass = 19.
-
-# for low mass stars with no MS_TO listed, where to place it (and ms_tmin)
-max_age = 10e10
-
-XCEN = 'XCEN'
-YCEN = 'YCEN'
-MODE = 'MODE'
-
-#XCEN = 'H_CEN'
-#YCEN = 'HE_CEN'
-#MODE = 'MODELL'
 
 def second_derivative(xdata, inds, gt=False, s=0):
     '''
@@ -133,9 +118,18 @@ class DefineEeps(Interpolator):
         else:
             negatives = np.nonzero(np.diff(track.iptcri[track.iptcri > 0]) <= 0)[0]
             if len(negatives) > 0:
+                from critical_point import Eep
+                eep = Eep()
+                if track.hb:
+                    l = eep.eep_list_hb
+                else:
+                    l = eep.eep_list
+                track.flag = 'eeps not monotonically increasing'
+                print(track.flag)
+                print(l[negatives+1])
                 if self.debug:
                     pdb.set_trace()
-                track.flag = 'p2m eeps not monotonically increasing'
+
 
     def define_eep_stages(self, track, hb=False, plot_dir=None,
                           diag_plot=True, agb=False, debug=False):
@@ -231,7 +225,8 @@ class DefineEeps(Interpolator):
     def add_ms_beg_eep(self, track, xcen=0.6):
         msg = 'overwrote Sandro for closer match to XCEN=%g' % xcen
         imsbeg = np.argmin(np.abs(xcen - track.data[XCEN]))
-        self.add_eep(track, 'MS_BEG', imsbeg, message=msg)
+        if imsbeg > 0:
+            self.add_eep(track, 'MS_BEG', imsbeg, message=msg)
         return imsbeg
 
     def hb_eeps(self, track, diag_plot=True, plot_dir=None):
@@ -458,6 +453,7 @@ class DefineEeps(Interpolator):
 
             # if agb_ly1 is in a thermal pulse (and should be much younger)
             # take away some mins...
+
             i = 4
             if norm_age[ex_inds[mins[0]]] < 0.89 and norm_age[agb_ly1] > 0.98:
                 while norm_age[agb_ly1] > 0.98:
@@ -511,10 +507,10 @@ class DefineEeps(Interpolator):
                 #stpagb = second_derivative(track.data['LOG_L'][inds], np.log10(track.data['AGE'][inds]))
                 pf_kw = {'get_max': True, 'sandro': False, 'more_than_one': 'max of max',
                          'parametric_interp': False, 'less_linear_fit': False}
-                stpagb = self.peak_finder(track, 'LOG_L', 'AGB_LY2', 'TPAGB', **pf_kw)
+                #stpagb = self.peak_finder(track, 'LOG_L', 'AGB_LY2', 'TPAGB', **pf_kw)
                 msg = 'Peaks found between AGB_LY2 and TPAGB. Redifining TPAGB'
                 imax = pd['maxima_locations']
-                imin = pd['minima_locations']
+                #imin = pd['minima_locations']
                 tpagb = inds[imax[0]]
                 #from padova_tracks.tracks.track_diag import plot_track
                 #ax = plot_track(track, 'AGE', 'LOG_L')
@@ -990,7 +986,13 @@ class DefineEeps(Interpolator):
             np.concatenate([np.nonzero(track.data[MODE] == m)[0]
                             for m in mptcri])
         if len(track.sptcri) != len(np.nonzero(mptcri)[0]):
-            track.flag = 'ptcri file does not match track, not enough MODEs'
+            if len(np.nonzero(mptcri)[0]) - len(track.sptcri) == 1:
+                # Sandro truncated the track after making the ptcri file
+                track.sptcri = np.append(track.sptcri, len(track.data.LOG_L) - 1)
+                mptcri[-1] = len(track.data.LOG_L) + 1
+            else:
+                track.flag = 'ptcri file does not match track, not enough MODEs'
+
         if len(please_define) > 0:
 
             # Initialize iptcri

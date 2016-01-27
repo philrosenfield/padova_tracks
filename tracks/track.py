@@ -7,6 +7,8 @@ import sys
 
 import numpy as np
 import logging
+
+from astropy.table import Table
 logger = logging.getLogger()
 
 class Track(object):
@@ -54,8 +56,9 @@ class Track(object):
             print('track has age decreasing!!', self.mass)
             bads, = np.nonzero(np.diff(age) < 0)
             try:
-                print('Parsec track: offensive MODEs:', self.data.MODE[bads])
-                self.flag += 'track has age decreasing near MODEs {}'.format(self.data.MODE[bads])
+                from ..config import MODE
+                print('Parsec track: offensive MODEs:', self.data[MODE][bads])
+                self.flag = 'track has age decreasing near MODEs {}'.format(self.data[MODE][bads])
             except AttributeError:
                 from ..eep.critical_point import Eep
                 eep = Eep()
@@ -71,7 +74,8 @@ class Track(object):
                 import pdb; pdb.set_trace()
 
         if not self.match:
-            ycen_end = self.data.YCEN[-1]
+            from ..config import YCEN
+            ycen_end = self.data[YCEN][-1]
             if ycen_end != 0:
                 self.info['Warning'] = 'YCEN at final MODE {:.4f}'.format(ycen_end)
         return
@@ -134,7 +138,8 @@ class Track(object):
         '''
         Uses X, Y, C, and O.
         '''
-        xi = np.array(['XCEN', 'YCEN', 'XC_cen', 'XO_cen'])
+        from ..config import XCEN, YCEN, XC_cen, XO_cen
+        xi = np.array([XCEN, YCEN, XC_cen, XO_cen])
         ai = np.array([1., 4., 12., 16.])
         # fully ionized
         qi = ai/2.
@@ -244,17 +249,21 @@ class Track(object):
         self.header = header
 
         if begin_track == -1:
-            self.data = np.array([])
-            self.col_keys = None
-            self.flag += 'load_track error: no begin track '
-            self.mass = float(self.name.split('_M')[1].replace('.PMS', '').replace('.HB', ''))
+            try:
+                self.data = np.array(Table.read(filename, format='ascii')).view(np.recarray)
+                self.col_keys = np.array(self.data.dtype.names)
+            except:
+                self.data = np.array([])
+                self.col_keys = None
+                self.flag = 'load_track error: no begin track '
+            self.mass = float(self.name.split('_M')[1].replace('.DAT', '').replace('.PMS', '').split('.HB')[0])
             return
 
         if len(lines) - begin_track <= 2:
             self.data = np.array([])
             self.col_keys = None
             self.flag = 'load_track error: no data after begin track'
-            self.mass = float(self.name.split('_M')[1].replace('.PMS', '').replace('.HB', ''))
+            self.mass = float(self.name.split('_M')[1].replace('.DAT', '').replace('.PMS', '').split('.HB')[0])
             return
 
         # find the footer assuming it's no longer than 5 lines (for speed)
@@ -388,7 +397,7 @@ class Track(object):
         self.data = data.view(np.recarray)
 
         if self.data.NTP.size == 1:
-            self.flag += 'no abg tracks'
+            self.flag = 'no abg tracks'
             return
         self.Z = self.data.Z[0]
         self.Y = self.data.Y[0]
