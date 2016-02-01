@@ -432,10 +432,10 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         zcol = None
         if np.sum(np.abs(np.diff(mass))) > 0.01:
             frac_mloss = len(np.unique(mass))/float(len(mass))
-            if frac_mloss > 0.25:
+            if frac_mloss > 0.3:
                 zcol = 'MASS'
             else:
-                print(frac_mloss, mass[0], mass[-1])
+                print(mess, frac_mloss, mass[0], mass[-1])
                 #import pdb; pdb.set_trace()
 
         # parafunc = np.log10 means np.log10(AGE)

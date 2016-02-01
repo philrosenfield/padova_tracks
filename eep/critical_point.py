@@ -9,9 +9,7 @@ logger = logging.getLogger()
 high_mass = 19.
 inte_mass = 12.
 
-MODE = 'MODE'
-#MODE = 'MODELL'
-
+from ..config import MODE
 
 class Eep(object):
     '''
@@ -51,7 +49,7 @@ class Eep(object):
                     'RG_TIP', 'HE_BEG', 'YCEN_0.550', 'YCEN_0.500',
                     'YCEN_0.400', 'YCEN_0.200', 'YCEN_0.100', 'YCEN_0.005',
                     'YCEN_0.000', 'AGB_LY1', 'AGB_LY2', 'TPAGB']
-        eep_lengths = [60, 60, 80, 199, 100, 100, 70, 370, 30, 400, 40, 150,
+        eep_lengths = [80, 80, 80, 199, 100, 100, 70, 370, 30, 400, 40, 150,
                        100, 60, 100, 80, 80, 80, 80, 80, 80]
 
         ihb = eep_list.index('HE_BEG')
@@ -320,6 +318,7 @@ class critical_point(object):
         """
         import matplotlib.pylab as plt
         plt.ion()
+        from ..fileio import get_dirs, get_files
         from ..tracks import TrackDiag, Track
         td = TrackDiag()
 
@@ -345,21 +344,21 @@ class critical_point(object):
             """
             go_on = 1
 
-            outmsg = '%s MODE: %i' % (ptname, track.data[MODE][pt])
+            outmsg = '%s MODE: %i'
             if pt is not None:
                 # plot guess first
-                print(outmsg)
+                print(outmsg % (ptname, track.data[MODE][pt]))
                 go_on, pt = plot_point(ptname, pt)
 
             while go_on != 0:
                 go_on, pt = plot_point(ptname, pt)
 
-            print(outmsg)
+            print(outmsg % (ptname, track.data[MODE][pt]))
             return track.data[MODE][pt]
 
         def plot_point(ptname, pt):
             inmsg = 'Enter new value for %s or 0 to move on: ' % ptname
-            ax.plot(track.data.LOG_TE[pt], track.data.LOG_L[pt], 'o')
+            ax.plot(track.data.LOG_TE[pt], track.data.LOG_L[pt], '*')
             plt.draw()
             go_on = int(raw_input(inmsg))
             if go_on != 0:
@@ -367,15 +366,43 @@ class critical_point(object):
                 pt = go_on
             return go_on, pt
 
+
         track_dir = self.base.replace('data', 'tracks')
+        tname = os.path.split(fname)[1]
+        z = tname.split('Z')[1].split('Y')[0].replace('_', '')
+        mass = tname.split('M')[1].replace('.DAT', '').replace('.P', '').split('.HB')[0]
+        track_dir, = get_dirs(track_dir, z)
+
         #track_file = os.path.join(track_dir, '/'.join(fname.split('/')[1:]))
-        track_file = os.path.join(track_dir, fname)
+        try:
+            track_file, = get_files(track_dir, '*{}*'.format(mass))
+        except ValueError:
+            # the above search text will not distiguish, e.g, M030.000 and M130.000
+            track_files = get_files(track_dir, '*{}*'.format(mass))
+            # cull mass values
+            tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1].split('.')[:-1])
+                            for t in track_files], dtype=float)
+            # select by mass
+            track_file, = np.array(track_files)[np.nonzero(float(mass) == tms)]
+
         track = self.load_eeps(Track(track_file))
 
         ax = td.plot_sandro_ptcri(track, ptcri=self)
-        print('open ptcri file and get ready to edit. Current values:')
-        print(track.sptcri)
-        ms_beg = guessandcheck('ms_beg', pt=track.sptcri[3])
+        print('Open sandros ptcri file and get ready to edit. {}'.format(tname))
+        print('Current values:', track.sptcri)
+        if len(track.sptcri) <= 3:
+            print('this ptcri looks especially messed up.')
+            import pdb; pdb.set_trace()
+
+        if track.mass > high_mass:
+            track.sptcri[3] = guessandcheck('pms_end', pt=track.sptcri[2])
+            print('  '.join(['%i' % i for i in np.concatenate([track.sptcri[:3], np.array(np.linspace(track.sptcri[3], len(track.data), 14)[1:-1], dtype=int)])]))
+            return
+        pms_beg = guessandcheck('pms_beg', pt=track.sptcri[0])
+        pms_min = guessandcheck('pms_min', pt=track.sptcri[1])
+        pms_end = guessandcheck('pms_end', pt=track.sptcri[2])
+        near_zam = guessandcheck('near_zam', pt=track.sptcri[4])
+        ms_beg = guessandcheck('ms_beg', pt=track.sptcri[4])
 
         # experience has shown that Sandro's code sets MS_BEG as what should
         # be point C
@@ -414,8 +441,12 @@ class critical_point(object):
         # ensure age increase.
         loopa, loopb, loopc = np.linspace(rg_tip, fin, 5, endpoint=False)[1:-1]
 
-        print('suggested line ptcri line (starting with MS_BEG):')
-        print(''.join(['%10i' % i for i in (ms_beg, point_b, point_c, rg_base,
+
+        print(track.sptcri[:3])
+        print('suggested line ptcri line:')
+        print(''.join(['%10i' % i for i in (pms_beg, pms_min, pms_end, near_zam,
+                                            ms_beg, point_b, point_c, rg_base,
                                             int(rgbmp1), int(rgbmp2), rg_tip,
                                             loopa, loopb, loopc, fin)]))
+
         sys.exit()

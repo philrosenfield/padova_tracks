@@ -90,17 +90,13 @@ class DefineEeps(Interpolator):
     16 YCEN_0.100* Central abundance of He equal to 0.100
     17 YCEN_0.005* Central abundance of He equal to 0.005
     18 YCEN_0.000* Central abundance of He equal to 0.000
-    19 TPAGB       Starting of the central C-burning phase
-                     or beginning of TPAGB.
 
-    HB Tracks (start at 11 HE_BEG and are the same up to 19)
-
-    # ... BUG ... I don't think these are incorporated correctly ....
-    18 AGB_LY1*     Helium (shell) fusion first overpowers hydrogen (shell)
+    19 AGB_LY1*     Helium (shell) fusion first overpowers hydrogen (shell)
                     fusion
-    19 AGB_LY2*     Hydrogen wins again (before TPAGB).
-       **For low-mass HB (<0.485) the hydrogen fusion is VERY low (no atm!),
-            and never surpasses helium, this is still a to be done!!
+    20 AGB_LY2*     Hydrogen wins again (before TPAGB).
+
+    21 TPAGB        Starting of the central C-burning phase
+                        or beginning of TPAGB.
 
     Not yet implemented, no TPAGB tracks decided:
     x When the energy produced by the CNO cycle is larger than that
@@ -126,10 +122,7 @@ class DefineEeps(Interpolator):
                     l = eep.eep_list
                 track.flag = 'eeps not monotonically increasing'
                 print(track.flag)
-                print(l[negatives+1])
-                if self.debug:
-                    pdb.set_trace()
-
+                print(np.array(l)[negatives+1])
 
     def define_eep_stages(self, track, hb=False, plot_dir=None,
                           diag_plot=True, agb=False, debug=False):
@@ -176,6 +169,8 @@ class DefineEeps(Interpolator):
             except:
                 track.info['MS_BEG'] = 'Incomplete track?'
                 print('incomplete track?!', track.mass)
+                ind, = np.nonzero(self.ptcri.masses == track.mass)
+                d
             if track.mass <= low_mass:
                 self.add_ms_beg_eep(track)
 
@@ -319,7 +314,6 @@ class DefineEeps(Interpolator):
         # this is a little reset to push that YCEN=0.000 between
         # YCEN_0.005 and fin
         if track.data[YCEN][cens[-2]] == 0.0:
-            #import pdb; pdb.set_trace()
             cens[-1] = (cens[-2] + fin) / 2
             self.add_eep(track, 'YCEN_0.000', cens[-1],
                          message='Reset between YCEN=0.005 and final point')
@@ -398,11 +392,15 @@ class DefineEeps(Interpolator):
         it could be placed in the load_track method. However, because
         it is not a physically meaningful eep, I'm keeping it here.
         '''
-        ainds, = np.nonzero(track.data['AGE'] > 0.2)
-        hb_beg = ainds[0]
         eep_name = 'HE_BEG'
+        hb_beg = track.sptcri[0]
+        msg = 'Sandros He1'
+        if hb_beg == 0:
+            ainds, = np.nonzero(track.data['AGE'] > 0.2)
+            hb_beg = ainds[0]
+            msg = 'first point with AGE > 0.2'
         self.add_eep(track, eep_name, hb_beg, hb=True,
-                     message='first point with AGE > 0.2')
+                     message=msg)
         return hb_beg
 
     def add_agb_eeps(self, track, diag_plot=False, plot_dir=None):
@@ -422,8 +420,8 @@ class DefineEeps(Interpolator):
                                         track.iptcri[-1], 4))[1:3]
             return agb_ly1, agb_ly2, msg1, msg2
 
-        if track.mass <= 0.480:
-            print('HB AGB EEPS might not work for HPHB')
+        #if track.mass <= 0.480:
+        #    print('HB AGB EEPS might not work for HPHB')
 
         ly = track.data.LY
         lx = track.data.LX
@@ -438,7 +436,6 @@ class DefineEeps(Interpolator):
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
 
-        #import pdb; pdb.set_trace()
         if len(mins) <= 2:
             agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
         else:
@@ -499,8 +496,10 @@ class DefineEeps(Interpolator):
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
         inds = np.arange(agb_ly2 + 3, track.iptcri[-1], dtype=int)
         if len(inds) == 0 and track.iptcri[-1] > 0:
-            track.flag = 'TP-AGB is at or before AGB_LY2'
-            import pdb; pdb.set_trace()
+            if track.iptcri[-1] < agb_ly2:
+                track.flag = 'TP-AGB is at or before AGB_LY2'
+                if self.debug:
+                    pdb.set_trace()
         else:
             pd = utils.find_peaks(track.data.LOG_L[inds])
             if pd['maxima_number'] >= 1:
@@ -520,7 +519,6 @@ class DefineEeps(Interpolator):
                 #ax.plot(track.data.AGE[tpagb], track.data.LOG_L[tpagb], '*')
                 #print(track.mass)
                 #print(track.Z)
-                #import pdb; pdb.set_trace()
                 self.add_eep(track, 'TPAGB', tpagb, hb=True, message=msg)
 
         if diag_plot:
@@ -992,6 +990,8 @@ class DefineEeps(Interpolator):
                 mptcri[-1] = len(track.data.LOG_L) + 1
             else:
                 track.flag = 'ptcri file does not match track, not enough MODEs'
+                ind, = np.nonzero(self.ptcri.masses == track.mass)
+                self.ptcri.fix_ptcri(self.ptcri.fnames[ind])
 
         if len(please_define) > 0:
 
@@ -1237,7 +1237,6 @@ class InDevelopment(object):
                   (len(inds), max_frac, min_frac))
             print('MS_TO+ minima_number', peak_dict['minima_number'])
             print('MS_TO+ maxima_number', peak_dict['maxima_number'])
-            #import pdb; pdb.set_trace()
             track = self.strip_instablities(track, inds)
         '''
 
