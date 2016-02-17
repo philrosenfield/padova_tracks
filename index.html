@@ -29,14 +29,15 @@
       </header>
       <section>
         <h3>
-<a id="download-tracks" class="anchor" href="#download-tracks" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Download Interpolated PARSEC Tracks.</h3>
+<a id="download-tracks" class="anchor" href="#download-tracks" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Download Interpolated PARSEC Tracks</h3>
 
-<p>PARSEC V1.2S Tracks were downloaded Jan 2016 from <a href="http://people.sissa.it/~sbressan/parsec.html">Alessandro Bressan's Home Page</a></p>
+<p>Meta: PARSEC V1.2S Tracks were downloaded Jan 2016 from <a href="http://people.sissa.it/~sbressan/parsec.html">Alessandro Bressan's Home Page</a></p>
 <p>For isochrones please see <a href="http://stev.oapd.inaf.it/cgi-bin/cmd">Leo Girari's web interface</a></p>
 <p> Tracks were run using <a href="https://github.com/philrosenfield/padova_tracks/parsec2match.py">parsec2match.py</a> on 2016-02-02 11:05:27 (git hash <code>ab24083</code>).</p>
 
-Download the entire grid or individual metallicity set (all <code>tar.gz</code>):
-<a href="https://github.com/philrosenfield/padova_tracks/release/tracks/alltracks.tar.gz">All Tracks</a><br>
+<p>download the entire grid (all downloads are formatted <code>tar.gz</code>):
+<a href="https://github.com/philrosenfield/padova_tracks/release/tracks/alltracks.tar.gz">All Tracks</a></p>
+<p>or download individual metallicity sets:
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0001_Y0.249.tar.gz">Z=0.0001 Y=0.249</a>, 
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0002_Y0.249.tar.gz">Z=0.0002 Y=0.249</a>, 
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0005_Y0.249.tar.gz">Z=0.0005 Y=0.249</a>, 
@@ -51,10 +52,10 @@ Download the entire grid or individual metallicity set (all <code>tar.gz</code>)
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0200_Y0.284.tar.gz">Z=0.02 Y=0.284</a>, 
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0300_Y0.302.tar.gz">Z=0.03 Y=0.302</a>, 
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0400_Y0.321.tar.gz">Z=0.04 Y=0.321</a>, 
-  <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0600_Y0.356.tar.gz">Z=0.06 Y=0.356</a>
+  <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0600_Y0.356.tar.gz">Z=0.06 Y=0.356</a></p>
 
 <h3>
-<a id="how-tracks-made" class="anchor" href="#how-tracks-made" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Track format</h3>
+<a id="how-tracks-made" class="anchor" href="#how-tracks-made" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Track Interpolations</h3>
 
 <p> PARSEC tracks are interpolated such that each track has the same number of points between each equivallent evolutionary point (EEP).</p>
 <table>
@@ -116,7 +117,7 @@ Download the entire grid or individual metallicity set (all <code>tar.gz</code>)
                     or beginning of TPAGB. <td></tr>
 </tbody>
 </table>
-<p>Helium burning phases take place from 1549 on. Tracks that do not reach a given phase will be tuncated. There are four different track lengths:</p>
+<p>Helium burning phases take place from 1549 on. There are four different track lengths:</p>
 <ol><li>539: Up to the MS turn off (low mass) </li>
 <li>1509: Up to the TRGB (He-flash stars that will continue onto the horizontal branch) </li>
 <li>2439: All phases (intermediate high mass)</li>
@@ -125,16 +126,17 @@ Download the entire grid or individual metallicity set (all <code>tar.gz</code>)
 
 <h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
 
-<p>Within each metallicity set (directory) there are a number of files (tracks), each with a different inital mass. The file names are formated by initial metallicity, helium, mass (Z{}_Y{}_M{}.extension) horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
+<p>Within each metallicity set (directory) there are a number of tracks (files). The file names are formated by initial metallicity, helium, and mass (Z{}_Y{}_M{}.extension). Horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
 <p>Each file has six columns: <code>log Age, Mass, log Te, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity, and unitless.</p>
 <p>Notes on column formats:</p>
-<ul><li>C/O is currently a place holder until I add the TP-AGB phases.</li>
-<li>PARSEC does not calculate <code>log g</code> or <code>Mbol</code> they are calculated here from Log Teff, Log L and Mass: <br>
-<code>Mbol = 4.77 - 2.5 * log L </code><br>
-<code>log g = -10.616 + log mass + 4.0 * log Teff - log L</code><br>
-<i>(all logs are base 10)</i>
-</li>
+<ul>
+  <li>Horizontal branch ages start at the zero age horizontal branch.</li>
+  <li>C/O is currently a place holder until I add the TP-AGB phases.</li>
+  <li>PARSEC does not calculate <code>log g</code> or <code>Mbol</code> they are calculated here from Log Teff, Log L and Mass: <br>
+  <code>Mbol = 4.77 - 2.5 * log L </code><br>
+  <code>log g = -10.616 + log mass + 4.0 * log Teff - log L</code><br></li>
 </ul>
+  <i>(all logs are base 10)</i>
 <h3>
 <a id="references" class="anchor" href="#references" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>References</h3>
 
