@@ -35,7 +35,7 @@
 <p> And then run through parsec2match.py on 2016-02-02 11:05:27 (git hash <code>ab24083</code>).</p>
 
 <table>
-  <thead><th>Download the entire grid or individual metallicity set:</th></thead>
+  <thead><th>Download the entire grid or individual metallicity set (all <code>tar.gz</code>):</th></thead>
   <tbody>
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/alltracks.tar.gz">All Tracks</a></td></tr>
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0001_Y0.249.tar.gz">Z=0.0001 Y=0.249</a></td></tr>
@@ -49,7 +49,7 @@
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0100_Y0.267.tar.gz">Z=0.01 Y=0.267</a></td></tr>
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0140_Y0.273.tar.gz">Z=0.014 Y=0.273</a></td></tr>
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0170_Y0.279.tar.gz">Z=0.017 Y=0.279</a></td></tr>
-  <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0200_Y0.284.tar.gz">Z=0.02 Y=0.284</a><</td></tr>
+  <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0200_Y0.284.tar.gz">Z=0.02 Y=0.284</a></td></tr>
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0300_Y0.302.tar.gz">Z=0.03 Y=0.302</a></td></tr>
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0400_Y0.321.tar.gz">Z=0.04 Y=0.321</a></td></tr>
   <tr><td><a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0600_Y0.356.tar.gz">Z=0.06 Y=0.356</a></td></tr>
@@ -57,7 +57,7 @@
 </table>
 
 <h3>
-<a id="how-tracks-made" class="anchor" href="#how-tracks-made" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>How these tracks were made</h3>
+<a id="how-tracks-made" class="anchor" href="#how-tracks-made" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Track format</h3>
 
 <p> PARSEC tracks are interpolated such that each track has the same number of points between each equivallent evolutionary point (EEP).</p>
 <table>
@@ -119,23 +119,32 @@
                     or beginning of TPAGB. <td></tr>
 </tbody>
 </table>
-<p><i>*not including header line of the file</i></p>
+<p>Helium burning phases take place from 1549 on. Tracks that do not reach a given phase will be tuncated. There are four different track lengths:</p>
+<ol><li>539: Up to the MS turn off (low mass) </li>
+<li>1509: Up to the TRGB (He-flash stars that will continue onto the horizontal branch) </li>
+<li>2439: All phases (intermediate high mass)</li>
+<li>890: Only Helium burning phases (Horizontal Branch tracks)</li></ol>
+<p><i>* numbers quoted do not include header line of the file so they should be 1 off from the line number or e.g., <code>wc *.dat</code></i></p>
 
+<h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
+
+<p>Within each metallicity set (directory) there are a number of files (tracks), each with a different inital mass. The file names are formated Z%.4f_Y%.4f_M%03.3f.extension, horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
+<p>Each file has six columns: <code>log Age, Mass, log Te, Mbol, log g, C/O</code> with units (yrs, Msun, K, bolometric mag, solar surface gravity, unitless</p>
+<p>Notes on column formats:</p>
+<ul><li>C/O is currently a place holder until I add the TP-AGB phases</li>
+<li>PARSEC does not calculate <code>log g</code> or <code>Mbol</code> the are calculated from Log Teff, Log L and Mass: <br>
+<code>Mbol = 4.77 - 2.5 * log L </code><br>
+<code>log g = -10.616 + log mass + 4.0 * log Teff - log L</code><br>
+<i>all logs are base 10</i>
+</li>
+</ul>
 <h3>
-  
-<a id="creating-pages-manually" class="anchor" href="#creating-pages-manually" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Creating pages manually</h3>
+<a id="references" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>References</h3>
 
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
+<p>Use of PARSEC V1.2S tracks should at least reference <a href="http://adsabs.harvard.edu/abs/2012MNRAS.427..127B">Bressan et al. 2012</a>. 
+If you are using high mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Tang et al. 2014</a>. If you are using low mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Chen et al. 2014</a></p>
 
-<h3>
-<a id="authors-and-contributors" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Authors and Contributors</h3>
-
-<p>You can <a href="https://help.github.com/articles/basic-writing-and-formatting-syntax/#mentioning-users-and-teams" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor’s GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
-
-<h3>
-<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
-
-<p>Having trouble with Pages? Check out our <a href="https://help.github.com/pages">documentation</a> or <a href="https://github.com/contact">contact support</a> and we’ll help you sort it out.</p>
+<p>I haven't made a DOI for this yet...</p>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/philrosenfield">Phil Rosenfield</a></p>
