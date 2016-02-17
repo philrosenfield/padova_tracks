@@ -65,14 +65,14 @@
                  For M > 20 Msun: <code>log L</code> minimum after end of PMS.<td></tr>
 <tr><td> 439 </td><td> <code>log Te</code> minimum on the Main Sequence.
                   Calculated one of four possible ways:
-                 <ol><li> First minimum in <code>log Te</code> </li>
-                 <li>For no minimum in <code>log Te</code> (M>50 Msun, usually >100),
+                 <ol><li> First minimum in <code>log Teff</code> </li>
+                 <li>For no minimum in <code>log Teff</code> (M>50 Msun, usually >100),
                      halfway in age between MS beginning and MS Turn off</li>
                  <li><code>XCEN=0.30</code> for low-mass stars (via BaSTi)</li>
                  <li>For very low mass stars that never reach <code>XCEN=0.30</code>
                     half the age of the universe ~= 13.7/2 Gyr </li>
                     </ol><td></tr>
-<tr><td> 539 </td><td> Main Sequence turn off (MSTO): <code>log Te</code> maximum along the MS.
+<tr><td> 539 </td><td> Main Sequence turn off (MSTO): <code>log Teff</code> maximum along the MS.
                  For very low mass stars that never reach the MSTO:
                  the age of the universe ~= 13.7 Gyr<td></tr>
 <tr><td> 639 </td><td> Maximum luminosity of the sub-giant phase: Maximum in <code>log L</code> for high-mass or <code>XCEN=0.0</code> for low-mass stars
@@ -83,10 +83,10 @@
 <tr><td> 1109 </td><td> RG bump 2: The minimum luminosity during the RGB Bump<td></tr>
 <tr><td> 1509 </td><td> RG tip: Tip of the RGB (TRGB) defined in 3 ways:
                  <ol><li> If the last track model (line of file) has <code>YCEN > 0.1</code>
-                    the TRGB is either the minimum <code>log Te</code> or the last model, which
+                    the TRGB is either the minimum <code>log Teff</code> or the last model, which
                     ever comes first. (low masses)</li>
                  <li>If <code>YCEN = 0.0</code> at the last track
-                    model, TRGB is the minimum log Teff where <code>YCEN > 1-Z-0.1.</code></li>
+                    model, TRGB is the minimum <code>log Teff</code> where <code>YCEN > 1-Z-0.1.</code></li>
                 <li> If there is still Hydrogen in the center (very low mass),
                     TRGB is the final track model point.
                     </li></ol><td></tr>
@@ -124,12 +124,12 @@
 <h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
 
 <p>Within each metallicity set (directory) there are a number of tracks (files). The file names are formated by initial metallicity, helium, and mass (Z{}_Y{}_M{}.extension). Horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
-<p>Each file has six columns: <code>log Age, Mass, log Te, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity, and unitless.</p>
+<p>Each file has six columns: <code>log Age, Mass, log Teff, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity, and unitless.</p>
 <p>Notes on column formats:</p>
 <ul>
   <li>Horizontal branch ages start at the zero age horizontal branch.</li>
   <li>C/O is currently a place holder until I add the TP-AGB phases.</li>
-  <li>PARSEC does not calculate <code>log g</code> or <code>Mbol</code> they are calculated here from Log Teff, Log L and Mass: <br>
+  <li>PARSEC does not calculate <code>log g</code> or <code>Mbol</code> they are calculated here from <code>log Teff</code>, <code>log L</code> and <code>Mass</code>: <br>
   <code>Mbol = 4.77 - 2.5 * log L </code><br>
   <code>log g = -10.616 + log mass + 4.0 * log Teff - log L</code><br></li>
 </ul>
