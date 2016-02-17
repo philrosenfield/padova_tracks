@@ -52,7 +52,7 @@
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0200_Y0.284.tar.gz">Z=0.02 Y=0.284</a>, 
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0300_Y0.302.tar.gz">Z=0.03 Y=0.302</a>, 
   <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0400_Y0.321.tar.gz">Z=0.04 Y=0.321</a>, 
-  <a href="https://github.com/philrosenfield/padova_tracks/release/tracks/Z0.0600_Y0.356.tar.gz">Z=0.06 Y=0.356</a></p>
+  <a href="https://github.com/philrosenfield/padova_tracks/blob/master/release/tracks/Z0.0600_Y0.356.tar.gz">Z=0.06 Y=0.356</a></p>
 
 <h3>
 <a id="how-tracks-made" class="anchor" href="#how-tracks-made" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Track Interpolations</h3>
@@ -70,44 +70,44 @@
 <tr><td> 80 </td><td> Minimum of Pre Main Sequence<td></tr>
 <tr><td> 160 </td><td> End of Pre-Main Sequence<td></tr>
 <tr><td> 240 </td><td> Beginning of Main Sequence (MS): Starting of the central H-burning.
-                 For M > 20 Msun: Log L minimum after end of PMS.<td></tr>
-<tr><td> 439 </td><td> Log Teff minimum on the Main Sequence.
+                 For M > 20 Msun: <code>log L</code> minimum after end of PMS.<td></tr>
+<tr><td> 439 </td><td> <code>log Te</code> minimum on the Main Sequence.
                   Calculated one of four possible ways:
-                 <ol><li> First Minimum in Teff </li>
-                 <li>For no minimum Log Teff (M>50, usually >100),
+                 <ol><li> First minimum in <code>log Te</code> </li>
+                 <li>For no minimum in <code>log Te</code> (M>50 Msun, usually >100),
                      halfway in age between MS beginning and MS Turn off</li>
-                 <li>Xc=0.30 (Central H mass fraction) for low-mass stars (via BaSTi)</li>
-                 <li>For very low mass stars that never reach Xc=0.30
+                 <li><code>XCEN=0.30</code> for low-mass stars (via BaSTi)</li>
+                 <li>For very low mass stars that never reach <code>XCEN=0.30</code>
                     half the age of the universe ~= 13.7/2 Gyr </li>
                     </ol><td></tr>
-<tr><td> 539 </td><td> Main Sequence turn off: log Teff maximum along the Main Sequence
+<tr><td> 539 </td><td> Main Sequence turn off (MSTO): <code>log Te</code> maximum along the MS.
                  For very low mass stars that never reach the MSTO:
                  the age of the universe ~= 13.7 Gyr<td></tr>
-<tr><td> 639 </td><td> Max luminosity of the Sub-giant phase: Maximum in log L for high-mass or Xc=0.0 for low-mass stars
+<tr><td> 639 </td><td> Maximum luminosity of the sub-giant phase: Maximum in <code>log L</code> for high-mass or <code>XCEN=0.0</code> for low-mass stars
                  (via BaSTi)<td></tr>
-<tr><td> 709 </td><td> Base of the Red Giant (RG) Branch: Minimum in log L for high-mass or base of the RGB for
+<tr><td> 709 </td><td> Base of the Red Giant (RG) Branch: Minimum in <code>log L</code> for high-mass or base of the RGB for
                  low-mass stars (via BaSTi)<td></tr>
 <tr><td> 1079 </td><td> RG bump 1: The maximum luminosity during the RGB Bump<td></tr>
 <tr><td> 1109 </td><td> RG bump 2: The minimum luminosity during the RGB Bump<td></tr>
 <tr><td> 1509 </td><td> RG tip: Tip of the RGB (TRGB) defined in 3 ways:
-                 <ol><li> If the last track model still has a He center abundance (YCEN) > 0.1
-                    the TRGB is either the minimum log Teff or the last model, which
+                 <ol><li> If the last track model (line of file) has <code>YCEN > 0.1</code>
+                    the TRGB is either the minimum <code>log Te</code> or the last model, which
                     ever comes first. (low masses)</li>
-                 <li>If YCEN==0 at the last track
-                    model, TRGB is the minimum log Teff where YCEN > 1-Z-0.1.</li>
-                <li> If there is still H in the center (very low mass),
+                 <li>If <code>YCEN = 0.0</code> at the last track
+                    model, TRGB is the minimum log Teff where <code>YCEN > 1-Z-0.1.</code></li>
+                <li> If there is still Hydrogen in the center (very low mass),
                     TRGB is the final track model point.
                     </li></ol><td></tr>
 <tr><td> 1549 </td><td>Beginning He Fusion: Start quiescent central He-burning phase
                  Minimum of the luminosity due to He fusion after the TRGB, which dips as the star contracts,
                  and then ramps up.<td></tr>
-<tr><td> 1699 </td><td> YCEN=0.550 Central abundance of He equal to 0.550<td></tr>
-<tr><td> 1799 </td><td> YCEN=0.500 Central abundance of He equal to 0.500<td></tr>
-<tr><td> 1859 </td><td> YCEN=0.400 Central abundance of He equal to 0.400<td></tr>
-<tr><td> 1959 </td><td> YCEN=0.200 Central abundance of He equal to 0.200<td></tr>
-<tr><td> 2039 </td><td> YCEN=0.100 Central abundance of He equal to 0.100<td></tr>
-<tr><td> 2119 </td><td> YCEN=0.005 Central abundance of He equal to 0.005<td></tr>
-<tr><td> 2199 </td><td> YCEN=0.000 Central abundance of He equal to 0.000<td></tr>
+<tr><td> 1699 </td><td> YCEN=0.550<td></tr>
+<tr><td> 1799 </td><td> YCEN=0.500<td></tr>
+<tr><td> 1859 </td><td> YCEN=0.400<td></tr>
+<tr><td> 1959 </td><td> YCEN=0.200<td></tr>
+<tr><td> 2039 </td><td> YCEN=0.100<td></tr>
+<tr><td> 2119 </td><td> YCEN=0.005<td></tr>
+<tr><td> 2199 </td><td> YCEN=0.000<td></tr>
 
 <tr><td> 2279 </td><td> AGB EEP 1: Helium (shell) fusion first overpowers hydrogen (shell)
                 fusion <td></tr>
@@ -117,6 +117,11 @@
                     or beginning of TPAGB. <td></tr>
 </tbody>
 </table>
+<p> Dictionary:
+<code>YCEN</code> = Central abundance of Helium
+<code>XCEN</code> = Central abundance of Hydrogen
+</p>
+
 <p>Helium burning phases take place from 1549 on. There are four different track lengths:</p>
 <ol><li>539: Up to the MS turn off (low mass) </li>
 <li>1509: Up to the TRGB (He-flash stars that will continue onto the horizontal branch) </li>
