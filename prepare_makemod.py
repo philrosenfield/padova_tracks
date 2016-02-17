@@ -26,12 +26,14 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
     ext = '.DAT'
     if sub is not None:
         prefixs = os.listdir(sub)
-        tracks_dir = sub
+        h = os.getcwd()
+        tracks_dir = os.path.join(h, sub)
+        prefixs = [p for p in prefixs if os.path.isdir(os.path.join(tracks_dir, p))]
         ext = '.dat'
 
     zsun = 0.02
     #allzs = [p.split('Z')[1].split('_')[0] for p in prefixs]
-    allzs = [p.split('_Z')[1].split('_Y')[0] for p in prefixs]
+    allzs = [p.split('Z')[1].split('Y')[0].replace('_', '') for p in prefixs]
     zs = np.unique(np.array(allzs, dtype=float))
     prefixs = np.array(prefixs)[np.argsort(allzs)]
 
@@ -57,7 +59,7 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
     for p in prefixs:
         this_dir = os.path.join(tracks_dir, p)
         track_names = fileio.get_files(this_dir, '*{}'.format(ext))
-        masses = np.array([os.path.split(t)[1].split('M')[1].split('.{}'.format(ext[1]))[0]
+        masses = np.array(['.'.join(os.path.split(t)[1].split('M')[1].split('.')[:2])
                            for t in track_names if not 'hb' in t.lower() and not 'add' in t.lower()], dtype=float)
         all_masses = np.append(all_masses, masses)
         for t in track_names:
@@ -166,8 +168,13 @@ def main(argv):
     parser.add_argument('sub', type=str,
                         help='subdirectory with match track dirs (not mods)')
 
+    parser.add_argument('-v', action='store_true',
+                        help='invoke pdb')
+
     args = parser.parse_args(argv)
 
+    if args.v:
+        import pdb; pdb.set_trace()
     prepare_makemod(sub=args.sub)
 
 
