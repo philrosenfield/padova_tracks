@@ -53,7 +53,7 @@
 <table>
 <thead>
 <tr>
-<th>Line number*</th>
+<th>Model number*</th>
 <th>EEP Notes</th>
 </tr>
 </thead>
@@ -119,12 +119,12 @@
 <li>1509: Up to the TRGB (He-flash stars that will continue onto the horizontal branch) </li>
 <li>2439: All phases (intermediate high mass)</li>
 <li>890: Only Helium burning phases (Horizontal Branch tracks)</li></ol>
-<p><i>* numbers quoted do not include header line of the file so they should be 1 off from the line number or e.g., <code>wc *.dat</code></i></p>
+<p><i>* Model number = line number + 1. Model number does not include header line of the file</i></p>
 
 <h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
 
 <p>Within each metallicity set (directory) there are a number of tracks (files). The file names are formated by initial metallicity, helium, and mass (Z{}_Y{}_M{}.extension). Horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
-<p>Each file has six columns: <code>log Age, Mass, log Teff, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity, and unitless.</p>
+<p>Each file has six columns: <code>log Age, Mass, log Teff, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity (cgs), and unitless.</p>
 <p>Notes on column formats:</p>
 <ul>
   <li>Horizontal branch ages start at the zero age horizontal branch.</li>
