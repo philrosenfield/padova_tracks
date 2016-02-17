@@ -128,18 +128,18 @@
 
 <h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
 
-<p>Within each metallicity set (directory) there are a number of files (tracks), each with a different inital mass. The file names are formated Z%.4f_Y%.4f_M%03.3f.extension, horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
-<p>Each file has six columns: <code>log Age, Mass, log Te, Mbol, log g, C/O</code> with units (yrs, Msun, K, bolometric mag, solar surface gravity, unitless</p>
+<p>Within each metallicity set (directory) there are a number of files (tracks), each with a different inital mass. The file names are formated by initial metallicity, helium, mass (Z{}_Y{}_M{}.extension) horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
+<p>Each file has six columns: <code>log Age, Mass, log Te, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity, and unitless.</p>
 <p>Notes on column formats:</p>
-<ul><li>C/O is currently a place holder until I add the TP-AGB phases</li>
-<li>PARSEC does not calculate <code>log g</code> or <code>Mbol</code> the are calculated from Log Teff, Log L and Mass: <br>
+<ul><li>C/O is currently a place holder until I add the TP-AGB phases.</li>
+<li>PARSEC does not calculate <code>log g</code> or <code>Mbol</code> they are calculated here from Log Teff, Log L and Mass: <br>
 <code>Mbol = 4.77 - 2.5 * log L </code><br>
 <code>log g = -10.616 + log mass + 4.0 * log Teff - log L</code><br>
-<i>all logs are base 10</i>
+<i>(all logs are base 10)</i>
 </li>
 </ul>
 <h3>
-<a id="references" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>References</h3>
+<a id="references" class="anchor" href="#references" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>References</h3>
 
 <p>Use of PARSEC V1.2S tracks should at least reference <a href="http://adsabs.harvard.edu/abs/2012MNRAS.427..127B">Bressan et al. 2012</a>. 
 If you are using high mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Tang et al. 2014</a>. If you are using low mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Chen et al. 2014</a></p>
