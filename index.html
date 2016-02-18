@@ -16,7 +16,7 @@
     <div class="wrapper">
       <header>
         <h1>Interpolated PARSEC Stellar Evolution Tracks</h1>
-        <p>Tracks with equally spaced equavalent evolutionary points (EEPs) and an equal number of points between EEPs for simple interpolations between tracks and across metallicity. Primarily designed to be easily implemented in Andrew Dolphin&#39;s MATCH package</p>
+        <p>Tracks with equally spaced equivalent evolutionary points (EEPs) and an equal number of points between EEPs for simple interpolations between tracks and across metallicity. Primarily designed to be easily implemented in Andrew Dolphin&#39;s MATCH package</p>
       
       <p>Download all tracks here: </br>
        <a href="https://www.cfa.harvard.edu/~prosenfi/parsec/alltracks.tar.gz">All Tracks</a></p> 
@@ -49,7 +49,7 @@
 <h3>
 <a id="how-tracks-made" class="anchor" href="#how-tracks-made" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Track Interpolations</h3>
 
-<p> PARSEC tracks are interpolated such that each track has the same number of points between each equivallent evolutionary point (EEP).</p>
+<p> PARSEC tracks are interpolated such that each track has the same number of points between each equivalent evolutionary point (EEP).</p>
 <table>
 <thead>
 <tr>
@@ -63,7 +63,7 @@
 <tr><td> 160 </td><td> End of Pre-Main Sequence<td></tr>
 <tr><td> 240 </td><td> Beginning of Main Sequence (MS): Starting of the central H-burning.
                  For M > 20 Msun: <code>log L</code> minimum after end of PMS.<td></tr>
-<tr><td> 439 </td><td> <code>log Te</code> minimum on the Main Sequence.
+<tr><td> 439 </td><td> <code>log Teff</code> minimum on the Main Sequence.
                   Calculated one of four possible ways:
                  <ol><li> First minimum in <code>log Teff</code> </li>
                  <li>For no minimum in <code>log Teff</code> (M>50 Msun, usually >100),
@@ -103,10 +103,10 @@
 
 <tr><td> 2279 </td><td> AGB EEP 1: Helium (shell) fusion first overpowers hydrogen (shell)
                 fusion <td></tr>
-<tr><td> 2359 </td><td> AGB EEP 2: Hydrogen wins again (before TPAGB). <td></tr>
+<tr><td> 2359 </td><td> AGB EEP 2: Hydrogen wins again (before TP-AGB). <td></tr>
 
-<tr><td> 2439 </td><td> TPAGB Starting of the central C-burning phase
-                    or beginning of TPAGB. <td></tr>
+<tr><td> 2439 </td><td> Starting of the central C-burning phase
+                    or beginning of TP-AGB. <td></tr>
 </tbody>
 </table>
 <p> Dictionary:
@@ -123,8 +123,8 @@
 
 <h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
 
-<p>Within each metallicity set (directory) there are a number of tracks (files). The file names are formated by initial metallicity, helium, and mass (Z{}_Y{}_M{}.extension). Horizontal branch tracks are calculated seperately and have extenstion <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extention</p>
-<p>Each file has six columns: <code>log Age, Mass, log Teff, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity (cgs), and unitless.</p>
+<p>Within each metallicity set (directory) there are a number of tracks (files). The file names are formatted by initial metallicity, helium, and mass (Z{}_Y{}_M{}.extension). Horizontal branch tracks are calculated separately and have extension <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extension</p>
+<p>Each file has six columns: <code>log Age, Mass, log Teff, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity (cgs), and unit less.</p>
 <p>Notes on column formats:</p>
 <p>
 <ul>
