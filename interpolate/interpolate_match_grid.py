@@ -1,8 +1,11 @@
+import argparse
 import matplotlib.pylab as plt
 import numpy as np
 import os
 import trilegal
 from ResolvedStellarPops import fileio
+import sys
+from ..eep.critical_point import Eep
 
 __all__ = ['interp_match_grid', 'interp_mhefs']
 
@@ -37,7 +40,7 @@ def plot_MheF(isotracks=None, labels=None, colors=None):
     ax.set_ylim(1.55, 2.05)
     return ax
 
-def interp_mhefs(isotracks=None, outfile=None):
+def interp_mhefs(isodirs, outfile=None):
     """
     Write the minimum initial mass for He fusion to a file, interpolating
     between isotracks.
@@ -47,11 +50,11 @@ def interp_mhefs(isotracks=None, outfile=None):
     isotracks : list of strings
         path to parsec isotrack files. Must be in order!
         eg:
-        isotracks = ['isotrack/parsec/CAF09_MC_S13v3_OV0.3.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.4.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.5.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.6.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.7.dat']
+        isodirs = ['CAF09_MC_S13v3_OV0.3',
+                   'CAF09_MC_S13v3_OV0.4',
+                   'CAF09_MC_S13v3_OV0.5',
+                   'CAF09_MC_S13v3_OV0.6',
+                   'CAF09_MC_S13v3_OV0.7']
     outfile : string
         filename of output file
     """
@@ -59,40 +62,63 @@ def interp_mhefs(isotracks=None, outfile=None):
         """ make a %.2f string combining a float and an array """
         return ' '.join(['%.2f' % i for i in np.concatenate(([ov], marr))]) + '\n'
 
-    if isotracks is None:
-        isotracks = ['isotrack/parsec/CAF09_MC_S13v3_OV0.3.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.4.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.5.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.6.dat',
-                     'isotrack/parsec/CAF09_MC_S13v3_OV0.7.dat']
-        isotracks = [os.path.join(os.environ['TRILEGAL_ROOT'], i)
-                     for i in isotracks]
+    outfile = outfile or 'MHeF_interp.dat'
 
-    if outfile is None:
-        outfile = os.path.join(os.environ['TRILEGAL_ROOT'],
-                               'CAF09_MC_S13v3_MHeF_interp.dat')
-    line = '\n'.join(['# %s' % i for i in isotracks]) + '\n'
-    isots = [trilegal.IsoTrack(i) for i in isotracks]
-    line += '# OV '
-    for isot in isots:
-        isot.load_int2()
-        isot.ov = float(isot.name.split('OV')[1].replace('.dat', ''))
-    line += ' '.join(['%.3f' % z for z in isot.Z]) + '\n'
-    for i in range(len(isots)-1):
-        intov = (isots[i+1].ov + isots[i].ov) / 2.
-        intpd = (np.array(isots[i+1].mhefs) + np.array(isots[i].mhefs)) / 2.
-        line += pretty(isots[i].ov, isots[i].mhefs)
+    line = ''
+    mhefs = np.array([])
+    ovs = np.array([])
+    zs = np.array([])
+    for isodir in isodirs:
+        # each INT file in each dir
+        int_files = fileio.get_files(isodir, '*INT*')
+        for int_file in int_files:
+            z = float(os.path.split(int_file)[1].split('_Z')[1].split('_')[0])
+            zs = np.append(zs, z)
+            with open(int_file, 'r') as inp:
+                lines = inp.readlines()
+            # MHeF is the first mass of the INT* files issue is where the
+            # mass is in the file
+            if int_file.endswith('2'):
+                # Leo's formatted isotrack files *INT2
+                nsplits = int(lines[0])
+                iline = nsplits + 3
+            else:
+                # Sandro's dbert/*INT files
+                iline = -1
+
+            mhefs = np.append(mhefs, float(lines[iline].split()[0]))
+
+        ov = float(os.path.split(int_file)[1].split('_OV')[1].split('_')[0])
+        ovs  = np.append(ovs, ov)
+
+    zs = np.unique(zs)
+    # one mass for one Z one row for each OV.
+    mhefs = mhefs.reshape(len(mhefs)/len(zs), len(zs))
+
+    line += '# OV ' + ' '.join(['Z%g' % z for z in zs]) + '\n'
+
+    # midpoint interpolation
+    for i in range(len(isodirs)-1):
+        intov = (ovs[i+1] + ovs[i]) / 2.
+        intpd = (mhefs[i+1] + mhefs[i]) / 2.
+        line += pretty(ovs[i], mhefs[i])
         line += pretty(intov, intpd)
-    line += pretty(isots[i+1].ov, isots[i+1].mhefs)
+    line += pretty(ovs[i+1], mhefs[i+1])
 
     with open(outfile, 'w') as outf:
         outf.write(line)
-    print 'wrote %s' % outfile
+    print('wrote %s' % outfile)
+    return outfile
+
 
 def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
-                             overwrite=False):
+                             overwrite=False, plot=False,
+                             truth_track_loc=''):
     def strip_m(s):
         return float(s.split('7_M')[-1].replace('.dat', '').replace('.HB',''))
+
+    def strip_z(s):
+        return float(s.split('Z')[-1].split('Y')[0].replace('_', ''))
 
     def get_names(s):
         return [os.path.split(i)[1] for i in s]
@@ -120,34 +146,63 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
 
     #assert tname1s == tname2s, 'Track mismatches'
     if tname1s != tname2s:
+        print('Track mismatches')
         import pdb; pdb.set_trace()
 
     t1s = [np.loadtxt(t) for t in t1files]
     t2s = [np.loadtxt(t) for t in t2files]
     for i in range(ntracks):
+        addedhb = False  # for plotting
         mass = strip_m(t1files[i])
+        # simple mid point interpolation
         try:
             track = (t1s[i] + t2s[i]) / 2.
         except:
             nt1s = len(t1s[i])
-            if mass < mhef:
+            if len(t1s[i]) < len(t2s[i]):
+                if not mass < mhef:
+                    print('something weird!!')
                 # shorter track
                 track = (t1s[i] + t2s[i][:nt1s]) / 2.
                 print 'shorter', mass, len(t1s[i]), len(t2s[i]), i
-            if mass >= mhef:
+            else:
+                if not mass >= mhef:
+                    print('something weird!!')
                 # longer track
                 t1hb, = [t for t in t1hbs if 'M%.2f' % mass in t]
                 t1hb = np.genfromtxt(t1hb)
                 print 'longer', mass, len(t1s[i]), len(t2s[i])
+                # add the transition points
                 t1withhb = rg_tip_heb_transition(t1hb, t1s[i])
                 track = (t1withhb + t2s[i]) / 2.
-                #ax = diag_plot(track, mass, ax=ax, color='k')
-                #ax = diag_plot(t1withhb, '', ax=ax, color='r')
-                #ax = diag_plot(t1s[i], '', ax=ax, color='r')
-                #ax = diag_plot(t2s[i], '', ax=ax, color='b')
+                addedhb = True
+        if plot:
+            ax = diag_plot(track, mass, ax=None, label='interp')
+            if addedhb:
+                ax = diag_plot(t1withhb, '', ax=ax, label='added hb')
+                ax = diag_plot(t1hb, '', ax=ax, label='hb')
+
+            ax = diag_plot(t1s[i], '', ax=ax, label='t1')
+            ax = diag_plot(t2s[i], '', ax=ax, label='t2')
+            if os.path.isdir(truth_track_loc):
+                z = strip_z(tname1s[i])
+                tds = fileio.get_dirs(truth_track_loc)
+                td, = [t for t in tds if str(z) in t]
+                truth_tracks = \
+                    fileio.get_files(td, '*{0}*0{1:.3f}*'.format(z, mass))
+                if len(truth_tracks) > 0:
+                    [diag_plot(np.loadtxt(t), '', ax=ax, label='truth')
+                    for t in truth_tracks]
+            plt.legend()
+            figname = os.path.join(outdir, tname1s[i].replace('dat', 'png'))
+            ax[1].set_xscale('log')
+            plt.savefig(figname)
+            #print('wrote {}'.format(figname))
+            plt.close()
         outfile = os.path.join(outdir, tname1s[i])
         fileio.savetxt(outfile, track, header=header, fmt='%.8f',
                        overwrite=overwrite)
+        #print('wrote {}'.format(outfile))
 
 def rg_tip_heb_transition(hb_track, track):
     """
@@ -160,10 +215,9 @@ def rg_tip_heb_transition(hb_track, track):
     have been in a transition phase from RG_TIP to HE_BEG as a RGB star.
     At this point in time, a negligable error.
     """
-    # hard coded! whatever, you can get it from eep.critical_points.critical_point
-
-    ntrans = 40
-    rg_tip = 1468
+    eep = Eep()
+    ntrans = eep.trans
+    rg_tip = eep.nms - 1
 
     agei = 100.
     agef = 10 ** hb_track.T[0][0]
@@ -185,80 +239,90 @@ def rg_tip_heb_transition(hb_track, track):
     new_track = np.concatenate((track, trans_track, hb_track))
     return new_track
 
-def diag_plot(track, mass, ax=None, color='k'):
+def diag_plot(track, mass, ax=None, label=''):
     if ax is None:
-        fig, ax = plt.subplots(ncols=2, sharey=True, figsize=(8,8))
+        fig, ax = plt.subplots(ncols=2, figsize=(16,8))
         ax[0].set_xlabel(r'$\log\ Te$')
         ax[1].set_xlabel(r'$\rm{Age}$')
         ax[0].set_ylabel(r'$\rm{Mbol}$')
 
-    ax[0].plot(track.T[2], track.T[3], color=color)
+    ax[0].plot(track.T[2], track.T[3], label=label)
     if mass != '':
-        ax[1].plot(10 ** track.T[0], track.T[3], label='$%.2f$' % mass,
-                   color=color)
+        ax[1].plot(10 ** track.T[0], track.T[3],
+                   label='${}\ {:.2f}$'.format(label, mass))
     else:
-        ax[1].plot(10 ** track.T[0], track.T[3], color=color)
+        ax[1].plot(10 ** track.T[0], track.T[3], label=label)
 
     return ax
 
+def read_mhef(mhef_file):
+    with open(mhef_file, 'r') as inp:
+        lines = inp.readlines()
+    zs = np.array([l.replace('Z', '')
+                   for l in lines[0].split() if 'Z' in l], dtype=float)
+    data = np.genfromtxt(mhef_file)
+    return data, zs
+
+def interp_match_grid(parsecinterp_loc, mhef_file, overwrite=False,
+                      plot=False, truth_track_loc=''):
+    data, zs = read_mhef(mhef_file)
+    subs = [l for l in os.listdir(parsecinterp_loc)
+            if os.path.isdir(l) and 'ov' in l]
+    pts = np.array([s.replace('ov', '') for s in subs], dtype=float)
+    interps = [p for p in data.T[0] if not p in pts]
+    newsubs=['ov{:.2f}'.format(s) for s in interps]
+    sets = [[os.path.join(s, l) for l in os.listdir(s)] for s in subs]
+    for i in range(len(sets)-1):
+        for j in range(len(sets[i])):
+            newset = os.path.split(sets[i][j])[1]
+            newset = newset.replace('OV{:.1f}'.format(pts[i]),
+                                    'OV{:.2f}'.format(interps[i]))
+            newdir = os.path.join(newsubs[i], newset)
+            interpolate_between_sets(sets[i][j], sets[i+1][j], newdir,
+                                     data[2*i+1][j+1], plot=plot,
+                                     truth_track_loc=truth_track_loc)
+    return
 
 
-def interp_match_grid(overwrite=False):
-    match_dirs1 = np.array(['MC_S13_OV0.3_Z0.002_Y0.2521',
-                            'MC_S13_OV0.3_Z0.004_Y0.2557',
-                            'MC_S13_OV0.3_Z0.008_Y0.2629'])#,
-                            #'MC_S13_OV0.4_Z0.002_Y0.2521',
-                            #'MC_S13_OV0.4_Z0.004_Y0.2557',
-                            #'MC_S13_OV0.4_Z0.008_Y0.2629',
-                            #'MC_S13_OV0.5_Z0.002_Y0.2521',
-                            #'MC_S13_OV0.5_Z0.004_Y0.2557',
-                            #'MC_S13_OV0.5_Z0.008_Y0.2629',
-                            #'MC_S13_OV0.6_Z0.002_Y0.2521',
-                            #'MC_S13_OV0.6_Z0.004_Y0.2557',
-                            #'MC_S13_OV0.6_Z0.008_Y0.2629'])
+def main(argv):
+    """
 
-    match_dirs2 = np.array(['MC_S13_OV0.4_Z0.002_Y0.2521',
-                            'MC_S13_OV0.4_Z0.004_Y0.2557',
-                            'MC_S13_OV0.4_Z0.008_Y0.2629'])#,
-                            #'MC_S13_OV0.5_Z0.002_Y0.2521',
-                            #'MC_S13_OV0.5_Z0.004_Y0.2557',
-                            #'MC_S13_OV0.5_Z0.008_Y0.2629',
-                            #'MC_S13_OV0.6_Z0.002_Y0.2521',
-                            #'MC_S13_OV0.6_Z0.004_Y0.2557',
-                            #'MC_S13_OV0.6_Z0.008_Y0.2629',
-                            #'MC_S13_OV0.7_Z0.002_Y0.2521',
-                            #'MC_S13_OV0.7_Z0.004_Y0.2557',
-                            #'MC_S13_OV0.7_Z0.008_Y0.2629'])
+    """
+    parser = argparse.ArgumentParser(description=" ")
 
-    new_dirs = np.array(['MC_S13_OV0.35_Z0.002_Y0.2521',
-                         'MC_S13_OV0.35_Z0.004_Y0.2557',
-                         'MC_S13_OV0.35_Z0.008_Y0.2629'])#,
-                         #'MC_S13_OV0.45_Z0.002_Y0.2521',
-                         #'MC_S13_OV0.45_Z0.004_Y0.2557',
-                         #'MC_S13_OV0.45_Z0.008_Y0.2629',
-                         #'MC_S13_OV0.55_Z0.002_Y0.2521',
-                         #'MC_S13_OV0.55_Z0.004_Y0.2557',
-                         #'MC_S13_OV0.55_Z0.008_Y0.2629',
-                         #'MC_S13_OV0.65_Z0.002_Y0.2521',
-                         #'MC_S13_OV0.65_Z0.004_Y0.2557',
-                         #'MC_S13_OV0.65_Z0.008_Y0.2629'])
-    #v2
-    #mhefs = np.array([1.82, 1.90, 1.95, 1.70, 1.80, 1.85, 1.62, 1.70, 1.75,
-    #                  1.55, 1.60, 1.67])
-    #v3
-    mhefs = np.array([1.81, 1.86, 1.94])#, 1.70, 1.76, 1.84, 1.60, 1.66, 1.75,
-    #                  1.51, 1.56, 1.66])
+    parser.add_argument('-m', '--mhef_file', type=str,
+                        help='file containing the He fusion masses')
 
-    for i in range(len(mhefs)):
-        interpolate_between_sets(match_dirs1[i], match_dirs2[i], new_dirs[i],
-                                 mhefs[i], overwrite=overwrite)
+    parser.add_argument('-i', '--isodir_loc', type=str,
+                        help='where the isotrack files are (if not -m)')
+
+    parser.add_argument('-p', '--parsecinterp_loc', type=str,
+                        default=os.getcwd(),
+                        help='where the parsec for match files are')
+
+    parser.add_argument('-t', '--truth_track_loc', type=str, default='',
+                        help='over plot comparison tracks from this location')
+
+    parser.add_argument('-d', '--diag_plot', action='store_false',
+                        help='make HB plots')
+
+    parser.add_argument('-v', '--pdb', action='store_true',
+                        help='invoke python debugger')
+
+    args = parser.parse_args(argv)
+
+    if args.pdb:
+        import pdb; pdb.set_trace()
+
+    # Where are the INT files
+    if not args.mhef_file:
+        isodir_loc = args.isodir_loc or os.getcwd()
+        isodirs = [l for l in os.listdir(isodir_loc) if os.path.isdir(l)]
+        args.mhef_file = interp_mhefs(isodirs)
+
+    interp_match_grid(args.parsecinterp_loc, args.mhef_file,
+                      plot=args.diag_plot,
+                      truth_track_loc=os.path.abspath(args.truth_track_loc))
 
 if __name__ == '__main__':
-    import pdb; pdb.set_trace()
-    #with new version, first do this:
-    #interp_mhefs()
-    # then do this, but need to update mhefs
-    interp_match_grid()
-
-    # to do:
-    #argparse it, make it read mhefs from file (at least?)
+    main(sys.argv[1:])

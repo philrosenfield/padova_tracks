@@ -50,14 +50,13 @@ class TrackSet(object):
 
         if self.hb:
             self.find_tracks(track_search_term=inputs.hbtrack_search_term,
-                             masses=inputs.masses, match=inputs.match)
+                             masses=inputs.hbmasses, match=inputs.match)
         else:
-
             self.hbtrack_names = []
             self.hbtracks = []
             self.hbmasses = []
 
-        if not inputs.hb or inputs.both:
+        if not self.hb or inputs.both:
             self.find_tracks(track_search_term=inputs.track_search_term,
                              masses=inputs.masses, match=inputs.match)
 
@@ -74,6 +73,7 @@ class TrackSet(object):
         # mass array
         mass = np.array(['.'.join(os.path.split(t)[1].split(mstr)[1].split('.')[:2])
                          for t in track_names], dtype=float)
+
         # inds of the masses to use and the correct order
         cut_mass, = np.nonzero(mass <= max_mass)
         morder = np.argsort(mass[cut_mass])
@@ -83,6 +83,9 @@ class TrackSet(object):
         mass = mass[cut_mass][morder]
 
         assert len(track_names) != 0, \
+            'No tracks found: %s/%s' % (self.tracks_base, track_search_term)
+
+        assert len(mass) != 0, \
             'No tracks found: %s/%s' % (self.tracks_base, track_search_term)
 
         return track_names, mass

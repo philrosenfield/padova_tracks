@@ -33,7 +33,7 @@ def add_version_info(input_file):
     fname = fileio.replace_ext(input_file, '.info')
     with open(fname, 'w') as out:
         out.write('parsec2match run started %s \n' % now)
-        out.write('ResolvedStellarPops git hash: ')
+        out.write('padova_tracks git hash: ')
 
     # the best way to get the git hash?
     here = os.getcwd()
@@ -44,7 +44,7 @@ def add_version_info(input_file):
 
     # add the input file
     os.system('cat %s >> %s' % (input_file, fname))
-    return
+    return fname
 
 def parsec2match(input_obj, loud=False):
     '''do an entire set and make the plots'''
@@ -109,6 +109,7 @@ def parsec2match(input_obj, loud=False):
             if loud:
                 print('checking interpolation')
             CheckMatchTracks(inps)
+            del inps.flag_dict
 
     print('DONE')
     return prefixs
@@ -272,6 +273,7 @@ def initialize_inputs():
                   'hbtrack_search_term':'*F7_*PMS.HB',
                   'from_p2m': False,
                   'masses': None,
+                  'hbmasses': None,
                   'do_interpolation': True,
                   'debug': False,
                   'hb': True,
@@ -301,7 +303,7 @@ def call_prepare_makemod(inputs):
 
 if __name__ == '__main__':
     inp_obj = fileio.InputFile(sys.argv[1], default_dict=initialize_inputs())
-    add_version_info(sys.argv[1])
+    fname = add_version_info(sys.argv[1])
     loud = False
     if len(sys.argv) > 2:
         loud = True
@@ -322,3 +324,5 @@ if __name__ == '__main__':
     if inp_obj.prepare_makemod:
         inp_obj.prefixs = prefixs
         call_prepare_makemod(inp_obj)
+
+    os.system('mv {} {}'.format(fname, os.path.join(inp_obj.tracks_dir, 'logs')))

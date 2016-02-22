@@ -8,6 +8,9 @@ from ResolvedStellarPops import fileio
 from eep.critical_point import Eep
 """
 MIST debug
+import os
+import glob
+import numpy as np
 dirs = [d for d in os.listdir('.') if d.startswith('Z')]
 zsun = 0.0172
 zs = np.array([(d.split('_')[0].split('Z')[1]) for d in dirs], dtype=float)
@@ -23,12 +26,14 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
     ext = '.DAT'
     if sub is not None:
         prefixs = os.listdir(sub)
-        tracks_dir = sub
+        h = os.getcwd()
+        tracks_dir = os.path.join(h, sub)
+        prefixs = [p for p in prefixs if os.path.isdir(os.path.join(tracks_dir, p))]
         ext = '.dat'
 
     zsun = 0.02
     #allzs = [p.split('Z')[1].split('_')[0] for p in prefixs]
-    allzs = [p.split('_Z')[1].split('_Y')[0] for p in prefixs]
+    allzs = [p.split('Z')[1].split('Y')[0].replace('_', '') for p in prefixs]
     zs = np.unique(np.array(allzs, dtype=float))
     prefixs = np.array(prefixs)[np.argsort(allzs)]
 
@@ -54,7 +59,7 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
     for p in prefixs:
         this_dir = os.path.join(tracks_dir, p)
         track_names = fileio.get_files(this_dir, '*{}'.format(ext))
-        masses = np.array([os.path.split(t)[1].split('M')[1].split('.{}'.format(ext[1]))[0]
+        masses = np.array(['.'.join(os.path.split(t)[1].split('M')[1].split('.')[:2])
                            for t in track_names if not 'hb' in t.lower() and not 'add' in t.lower()], dtype=float)
         all_masses = np.append(all_masses, masses)
         for t in track_names:
@@ -63,59 +68,59 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
             mod_t1 = np.max([mod_t1, np.min(data['logte'])])
             mod_l0 = np.min([mod_l0, np.min(data['mbol'])])
             mod_l1 = np.max([mod_l1, np.min(data['mbol'])])
-        # find a common low and high mass at all Z.
-        umasses = np.sort(np.unique(all_masses))
-        min_mass = umasses[0]
-        max_mass = umasses[-1]
-        imin = 0
-        imax = -1
-        while len(np.nonzero(all_masses == min_mass)[0]) != len(zs):
-            imin += 1
-            min_mass = umasses[imin]
+    # find a common low and high mass at all Z.
+    umasses = np.sort(np.unique(all_masses))
+    imin = 0
+    imax = -1
+    min_mass = umasses[imin]
+    max_mass = umasses[imax]
+    while len(np.nonzero(all_masses == min_mass)[0]) != len(zs):
+        imin += 1
+        min_mass = umasses[imin]
 
-        while len(np.nonzero(all_masses == max_mass)[0]) != len(zs):
-            imax -= 1
-            max_mass = umasses[imax]
+    while len(np.nonzero(all_masses == max_mass)[0]) != len(zs):
+        imax -= 1
+        max_mass = umasses[imax]
 
-        if imax == -1 and imin == 0:
-            masses = umasses
-        elif imax == -1:
-            masses = umasses[imin - 1::]
-        elif imin ==0:
-            masses = umasses[imin: imax + 1]
-        else:
-            masses = umasses[imin - 1: imax + 1]
+    if imax == -1 and imin == 0:
+        masses = umasses
+    elif imax == -1:
+        masses = umasses[imin - 1::]
+    elif imin ==0:
+        masses = umasses[imin: imax + 1]
+    else:
+        masses = umasses[imin - 1: imax + 1]
 
-        masses_str = ','.join(map(str, masses))
+    masses_str = ','.join(map(str, masses))
 
-        eep = Eep()
-        mdict = {'npt_low': eep.nlow,
-                 'npt_hb': eep.nhb,
-                 'npt_tr': eep.ntot - eep.nms - eep.nhb,
-                 'npt_ms': eep.nms,
-                 'masses_str': masses_str,
-                 'prefix_str': prefix_str,
-                 'FNZ': FNZ,
-                 'zs_str': zs_str,
-                 'modelIZmax': modelIZmax,
-                 'modelIZmin': modelIZmin,
-                 'zsun': zsun,
-                 'mod_l0': mod_l0,
-                 'mod_l1': mod_l1,
-                 'mod_t0': mod_t0,
-                 'mod_t1': mod_t1}
+    eep = Eep()
+    mdict = {'npt_low': eep.nlow,
+             'npt_hb': eep.nhb,
+             'npt_tr': eep.ntot - eep.nms - eep.nhb,
+             'npt_ms': eep.nms,
+             'masses_str': masses_str,
+             'prefix_str': prefix_str,
+             'FNZ': FNZ,
+             'zs_str': zs_str,
+             'modelIZmax': modelIZmax,
+             'modelIZmin': modelIZmin,
+             'zsun': zsun,
+             'mod_l0': mod_l0,
+             'mod_l1': mod_l1,
+             'mod_t0': mod_t0,
+             'mod_t1': mod_t1}
 
-        if sub is None:
-            fname = 'makemod_%s_%s.txt' % (tracks_dir.split('/')[-2], p.split('_Z')[0])
-        else:
-            fname = 'makemod_%s.txt' % (sub)
-        with open(fname, 'w') as out:
-            out.write(makemod_fmt() % mdict)
-            out.write('\nmay need to adjust for rounding error:\n')
-            out.write(''.join(('mod_l0: %.4f \n' % mod_l0,
-                               'mod_l1: %.4f \n' % mod_l1,
-                               'mod_t0: %.4f \n' % mod_t0,
-                               'mod_t1: %.4f \n' % mod_t1)))
+    if sub is None:
+        fname = 'makemod_%s_%s.txt' % (tracks_dir.split('/')[-2], p.split('_Z')[0])
+    else:
+        fname = 'makemod_%s.txt' % (sub)
+    with open(fname, 'w') as out:
+        out.write(makemod_fmt() % mdict)
+        out.write('\nmay need to adjust for rounding error:\n')
+        out.write(''.join(('mod_l0: %.4f \n' % mod_l0,
+                           'mod_l1: %.4f \n' % mod_l1,
+                           'mod_t0: %.4f \n' % mod_t0,
+                           'mod_t1: %.4f \n' % mod_t1)))
 
 def makemod_fmt():
     return """
@@ -163,8 +168,13 @@ def main(argv):
     parser.add_argument('sub', type=str,
                         help='subdirectory with match track dirs (not mods)')
 
+    parser.add_argument('-v', action='store_true',
+                        help='invoke pdb')
+
     args = parser.parse_args(argv)
 
+    if args.v:
+        import pdb; pdb.set_trace()
     prepare_makemod(sub=args.sub)
 
 

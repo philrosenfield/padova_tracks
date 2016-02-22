@@ -20,10 +20,10 @@ track_diag_plot     False
 #masses          %f <= .5
 
 ## interpolate the HB files (if False, PMS)
-hb                  True
+hb                  False
 
 ## use pdb
-debug               True
+debug               False
 
 ## make the files for match
 do_interpolation    True

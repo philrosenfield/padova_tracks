@@ -7,28 +7,41 @@ from critical_point import critical_point, Eep
 from scipy.interpolate import splev, splprep
 from .. import utils
 from ..interpolate import Interpolator
+
+from ..config import *
+
 import logging
 logger = logging.getLogger()
 
-# from low mass and below XCEN = 0.3 for MS_TMIN
-low_mass = 1.25
 
-# inte_mass is where SG_MAXL becomes truly meaningless
-inte_mass = 12.
 
-# from high mass and above find MS_BEG in this code
-high_mass = 19.
+def second_derivative(xdata, inds, gt=False, s=0):
+    '''
+    The second derivative of d^2 xdata / d inds^2
 
-# for low mass stars with no MS_TO listed, where to place it (and ms_tmin)
-max_age = 10e10
-
-XCEN = 'XCEN'
-YCEN = 'YCEN'
-MODE = 'MODE'
-
-#XCEN = 'H_CEN'
-#YCEN = 'HE_CEN'
-#MODE = 'MODELL'
+    why inds for interpolation, not log l?
+    if not using something like model number instead of log l,
+    the tmin will get hidden by data with t < tmin but different
+    log l. This is only a problem for very low Z.
+    If I find the arg min of teff to be very close to MS_BEG it
+    probably means the MS_BEG is at a lower Teff than Tmin.
+    '''
+    tckp, _ = splprep([inds, xdata], s=s, k=3)
+    arb_arr = np.arange(0, 1, 1e-2)
+    xnew, ynew = splev(arb_arr, tckp)
+    # second derivative, bitches.
+    ddxnew, ddynew = splev(arb_arr, tckp, der=2)
+    ddyddx = ddynew/ddxnew
+    # not just argmin, but must be actual min...
+    try:
+        if gt:
+            aind = [a for a in np.argsort(ddyddx) if ddyddx[a-1] < 0][0]
+        else:
+            aind = [a for a in np.argsort(ddyddx) if ddyddx[a-1] > 0][0]
+    except IndexError:
+        return -1
+    tmin_ind, _ = utils.closest_match2d(aind, inds, xdata, xnew, ynew)
+    return inds[tmin_ind]
 
 class DefineEeps(Interpolator):
     '''
@@ -77,17 +90,13 @@ class DefineEeps(Interpolator):
     16 YCEN_0.100* Central abundance of He equal to 0.100
     17 YCEN_0.005* Central abundance of He equal to 0.005
     18 YCEN_0.000* Central abundance of He equal to 0.000
-    19 TPAGB       Starting of the central C-burning phase
-                     or beginning of TPAGB.
 
-    HB Tracks (start at 11 HE_BEG and are the same up to 19)
-
-    # ... BUG ... I don't think these are incorporated correctly ....
-    18 AGB_LY1*     Helium (shell) fusion first overpowers hydrogen (shell)
+    19 AGB_LY1*     Helium (shell) fusion first overpowers hydrogen (shell)
                     fusion
-    19 AGB_LY2*     Hydrogen wins again (before TPAGB).
-       **For low-mass HB (<0.485) the hydrogen fusion is VERY low (no atm!),
-            and never surpasses helium, this is still a to be done!!
+    20 AGB_LY2*     Hydrogen wins again (before TPAGB).
+
+    21 TPAGB        Starting of the central C-burning phase
+                        or beginning of TPAGB.
 
     Not yet implemented, no TPAGB tracks decided:
     x When the energy produced by the CNO cycle is larger than that
@@ -105,9 +114,15 @@ class DefineEeps(Interpolator):
         else:
             negatives = np.nonzero(np.diff(track.iptcri[track.iptcri > 0]) <= 0)[0]
             if len(negatives) > 0:
-                if self.debug:
-                    pdb.set_trace()
-                track.flag = 'p2m eeps not monotonically increasing'
+                from critical_point import Eep
+                eep = Eep()
+                if track.hb:
+                    l = eep.eep_list_hb
+                else:
+                    l = eep.eep_list
+                track.flag = 'eeps not monotonically increasing'
+                print(track.flag)
+                print(np.array(l)[negatives+1])
 
     def define_eep_stages(self, track, hb=False, plot_dir=None,
                           diag_plot=True, agb=False, debug=False):
@@ -154,6 +169,8 @@ class DefineEeps(Interpolator):
             except:
                 track.info['MS_BEG'] = 'Incomplete track?'
                 print('incomplete track?!', track.mass)
+                ind, = np.nonzero(self.ptcri.masses == track.mass)
+                d
             if track.mass <= low_mass:
                 self.add_ms_beg_eep(track)
 
@@ -203,7 +220,8 @@ class DefineEeps(Interpolator):
     def add_ms_beg_eep(self, track, xcen=0.6):
         msg = 'overwrote Sandro for closer match to XCEN=%g' % xcen
         imsbeg = np.argmin(np.abs(xcen - track.data[XCEN]))
-        self.add_eep(track, 'MS_BEG', imsbeg, message=msg)
+        if imsbeg > 0:
+            self.add_eep(track, 'MS_BEG', imsbeg, message=msg)
         return imsbeg
 
     def hb_eeps(self, track, diag_plot=True, plot_dir=None):
@@ -296,7 +314,6 @@ class DefineEeps(Interpolator):
         # this is a little reset to push that YCEN=0.000 between
         # YCEN_0.005 and fin
         if track.data[YCEN][cens[-2]] == 0.0:
-            #import pdb; pdb.set_trace()
             cens[-1] = (cens[-2] + fin) / 2
             self.add_eep(track, 'YCEN_0.000', cens[-1],
                          message='Reset between YCEN=0.005 and final point')
@@ -375,11 +392,15 @@ class DefineEeps(Interpolator):
         it could be placed in the load_track method. However, because
         it is not a physically meaningful eep, I'm keeping it here.
         '''
-        ainds, = np.nonzero(track.data['AGE'] > 0.2)
-        hb_beg = ainds[0]
         eep_name = 'HE_BEG'
+        hb_beg = track.sptcri[0]
+        msg = 'Sandros He1'
+        if hb_beg == 0:
+            ainds, = np.nonzero(track.data['AGE'] > 0.2)
+            hb_beg = ainds[0]
+            msg = 'first point with AGE > 0.2'
         self.add_eep(track, eep_name, hb_beg, hb=True,
-                     message='first point with AGE > 0.2')
+                     message=msg)
         return hb_beg
 
     def add_agb_eeps(self, track, diag_plot=False, plot_dir=None):
@@ -399,8 +420,8 @@ class DefineEeps(Interpolator):
                                         track.iptcri[-1], 4))[1:3]
             return agb_ly1, agb_ly2, msg1, msg2
 
-        if track.mass <= 0.480:
-            print('HB AGB EEPS might not work for HPHB')
+        #if track.mass <= 0.480:
+        #    print('HB AGB EEPS might not work for HPHB')
 
         ly = track.data.LY
         lx = track.data.LX
@@ -415,7 +436,6 @@ class DefineEeps(Interpolator):
         # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
         mins = peak_dict['minima_locations'][:6]
 
-        #import pdb; pdb.set_trace()
         if len(mins) <= 2:
             agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
         else:
@@ -430,6 +450,7 @@ class DefineEeps(Interpolator):
 
             # if agb_ly1 is in a thermal pulse (and should be much younger)
             # take away some mins...
+
             i = 4
             if norm_age[ex_inds[mins[0]]] < 0.89 and norm_age[agb_ly1] > 0.98:
                 while norm_age[agb_ly1] > 0.98:
@@ -469,10 +490,36 @@ class DefineEeps(Interpolator):
                                         track.iptcri[-1], 4))[1:3]
             msg1 += ' was past TPAGB re-adjusted.'
 
-        # HACK UNTIL TPAGB IS FULLY INTEGRATED
-        import pdb; pdb.set_trace()
         self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True, message=msg1)
         self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
+
+        # HACK UNTIL TPAGB IS FULLY INTEGRATED
+        inds = np.arange(agb_ly2 + 3, track.iptcri[-1], dtype=int)
+        if len(inds) == 0 and track.iptcri[-1] > 0:
+            if track.iptcri[-1] < agb_ly2:
+                track.flag = 'TP-AGB is at or before AGB_LY2'
+                if self.debug:
+                    pdb.set_trace()
+        else:
+            pd = utils.find_peaks(track.data.LOG_L[inds])
+            if pd['maxima_number'] >= 1:
+                #stpagb = second_derivative(track.data['LOG_L'][inds], np.log10(track.data['AGE'][inds]))
+                pf_kw = {'get_max': True, 'sandro': False, 'more_than_one': 'max of max',
+                         'parametric_interp': False, 'less_linear_fit': False}
+                #stpagb = self.peak_finder(track, 'LOG_L', 'AGB_LY2', 'TPAGB', **pf_kw)
+                msg = 'Peaks found between AGB_LY2 and TPAGB. Redifining TPAGB'
+                imax = pd['maxima_locations']
+                #imin = pd['minima_locations']
+                tpagb = inds[imax[0]]
+                #from padova_tracks.tracks.track_diag import plot_track
+                #ax = plot_track(track, 'AGE', 'LOG_L')
+                #ax.plot(track.data.AGE[track.iptcri], track.data.LOG_L[track.iptcri], 'o')
+                #ax.plot(track.data.AGE[inds[imin]], track.data.LOG_L[inds[imin]], 'o')
+                #ax.plot(track.data.AGE[stpagb], track.data.LOG_L[stpagb], 's')
+                #ax.plot(track.data.AGE[tpagb], track.data.LOG_L[tpagb], '*')
+                #print(track.mass)
+                #print(track.Z)
+                self.add_eep(track, 'TPAGB', tpagb, hb=True, message=msg)
 
         if diag_plot:
             agb_ly1c = 'red'
@@ -539,30 +586,6 @@ class DefineEeps(Interpolator):
         if there is an error, either MS_TO or MS_TMIN will -1
 
         '''
-        def second_derivative(xdata, inds):
-            '''
-            The second derivative of d^2 xdata / d inds^2
-
-            why inds for interpolation, not log l?
-            if not using something like model number instead of log l,
-            the tmin will get hidden by data with t < tmin but different
-            log l. This is only a problem for very low Z.
-            If I find the arg min of teff to be very close to MS_BEG it
-            probably means the MS_BEG is at a lower Teff than Tmin.
-            '''
-            tckp, _ = splprep([inds, xdata], s=0, k=3)
-            arb_arr = np.arange(0, 1, 1e-2)
-            xnew, ynew = splev(arb_arr, tckp)
-            # second derivative, bitches.
-            ddxnew, ddynew = splev(arb_arr, tckp, der=2)
-            ddyddx = ddynew/ddxnew
-            # not just argmin, but must be actual min...
-            try:
-                aind = [a for a in np.argsort(ddyddx) if ddyddx[a-1] > 0][0]
-            except IndexError:
-                return -1
-            tmin_ind, _ = utils.closest_match2d(aind, inds, xdata, xnew, ynew)
-            return inds[tmin_ind]
 
         def delta_te_eeps(track, before, after):
             xdata = track.data.LOG_L
@@ -961,7 +984,15 @@ class DefineEeps(Interpolator):
             np.concatenate([np.nonzero(track.data[MODE] == m)[0]
                             for m in mptcri])
         if len(track.sptcri) != len(np.nonzero(mptcri)[0]):
-            track.flag = 'ptcri file does not match track, not enough MODEs'
+            if len(np.nonzero(mptcri)[0]) - len(track.sptcri) == 1:
+                # Sandro truncated the track after making the ptcri file
+                track.sptcri = np.append(track.sptcri, len(track.data.LOG_L) - 1)
+                mptcri[-1] = len(track.data.LOG_L) + 1
+            else:
+                track.flag = 'ptcri file does not match track, not enough MODEs'
+                ind, = np.nonzero(self.ptcri.masses == track.mass)
+                self.ptcri.fix_ptcri(self.ptcri.fnames[ind])
+
         if len(please_define) > 0:
 
             # Initialize iptcri
@@ -1206,7 +1237,6 @@ class InDevelopment(object):
                   (len(inds), max_frac, min_frac))
             print('MS_TO+ minima_number', peak_dict['minima_number'])
             print('MS_TO+ maxima_number', peak_dict['maxima_number'])
-            #import pdb; pdb.set_trace()
             track = self.strip_instablities(track, inds)
         '''
 

@@ -432,10 +432,11 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         zcol = None
         if np.sum(np.abs(np.diff(mass))) > 0.01:
             frac_mloss = len(np.unique(mass))/float(len(mass))
-            if frac_mloss > 0.75:
+            if frac_mloss > 0.3:
                 zcol = 'MASS'
             else:
-                import pdb; pdb.set_trace()
+                print(mess, frac_mloss, mass[0], mass[-1])
+                #import pdb; pdb.set_trace()
 
         # parafunc = np.log10 means np.log10(AGE)
         tckp, _, non_dupes = self._interpolate(track, inds, s=0,
@@ -462,6 +463,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             all_positive = np.diff(lagenew) > 0
             if False in all_positive:
                 # probably too many nticks
+                track.info[mess] += ' non-monotonic increase in age. Forced linear interpolation'
                 lagenew, lnew, tenew, massnew = call_interp1d(track, inds, nticks,
                                                      mess=mess)
         if zcol is None:
