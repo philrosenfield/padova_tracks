@@ -470,6 +470,7 @@ class DefineEeps(Interpolator):
             msg1 += ' was past TPAGB re-adjusted.'
 
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
+        import pdb; pdb.set_trace()
         self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True, message=msg1)
         self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
 
