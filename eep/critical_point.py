@@ -68,7 +68,7 @@ class Eep(object):
         self.nhb = np.sum(eep_lengths_hb)
         self.nms = np.sum(eep_lengths[:trans])
         self.ntot = self.nms + self.nhb + eep_lengths[trans]
-        self.trans = trans
+        self.trans = eep_lengths[trans]
 
 class critical_point(object):
     '''
@@ -160,7 +160,7 @@ class critical_point(object):
         Read the ptcri*dat file.
         Initialize Eep
         Flag the missing eeps in the ptcri file.
-        '''
+        '''            
         with open(filename, 'r') as f:
             lines = f.readlines()
 

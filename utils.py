@@ -6,7 +6,19 @@ __all__ = ['add_data', 'count_uncert_ratio', 'between', 'brighter',
            'closest_match', 'closest_match2d', 'double_gaussian', 'extrap1d',
            'find_peaks', 'gaussian', 'get_verts', 'is_numeric', 'min_dist2d',
            'mp_double_gauss', 'points_inside_poly', 'smooth', 'sort_dict',
-           'mp_gauss']
+           'mp_gauss', 'minmax', 'extrema', 'replace_']
+
+def replace_(s, rdict):
+    for k, v in rdict.items():
+        s = s.replace(k, v)
+    return s
+
+def extrema(func, arr1, arr2):
+    return func([func(arr1), func(arr2)])
+
+
+def minmax(arr1, arr2):
+    return extrema(np.min, arr1, arr2), extrema(np.max, arr1, arr2)
 
 def add_data(old_data, names, new_data):
     '''

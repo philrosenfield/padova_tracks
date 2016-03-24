@@ -9,6 +9,20 @@ from ..eep.critical_point import Eep
 
 __all__ = ['interp_match_grid', 'interp_mhefs']
 
+
+def reformat_filename(fname, fmt='Z{:.4f}_Y{:.3f}_M{:.3f}{}'):
+    """
+    Common filename formats
+    e.g.,
+    os.system('mv {} {}'.format(fname, reformat_filename(fname))
+    """
+    z = float(fname.split('Z')[1].split('Y')[0].replace('_', ''))
+    y = float(fname.split('Y')[1].split('O')[0].replace('_', ''))
+    mstr = fname.split('M')[1].split('.dat')[0].replace('.HB', '')
+    ext = fname.split('M'+mstr)[1]
+    m = float(mstr)
+    return fmt.format(z, y, m, ext)
+
 def plot_MheF(isotracks=None, labels=None, colors=None):
     """ plot the minimum initial mass for He Fusion """
     if isotracks is None:
@@ -39,6 +53,7 @@ def plot_MheF(isotracks=None, labels=None, colors=None):
     ax.set_xlim(0.001, 0.0085)
     ax.set_ylim(1.55, 2.05)
     return ax
+
 
 def interp_mhefs(isodirs, outfile=None):
     """
@@ -113,9 +128,9 @@ def interp_mhefs(isodirs, outfile=None):
 
 def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
                              overwrite=False, plot=False,
-                             truth_track_loc=''):
+                             truth_track_loc='', frac=2.):
     def strip_m(s):
-        return float(s.split('7_M')[-1].replace('.dat', '').replace('.HB',''))
+        return float(s.split('_M')[-1].replace('.dat', '').replace('.HB',''))
 
     def strip_z(s):
         return float(s.split('Z')[-1].split('Y')[0].replace('_', ''))
@@ -134,7 +149,7 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
     tname2s = get_names(t2files)
 
     t1hbs = [t for t in t1files if 'HB' in t]
-
+    t2hbs = [t for t in t2files if 'HB' in t]
     i2s = [i for i, t in enumerate(tname2s) if t in tname1s]
     t2files = np.array(t2files)[i2s]
     i1s = [i for i, t in enumerate(tname1s) if t in tname2s]
@@ -152,50 +167,82 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
     t1s = [np.loadtxt(t) for t in t1files]
     t2s = [np.loadtxt(t) for t in t2files]
     for i in range(ntracks):
+        if plot:
+            if os.path.isdir(truth_track_loc):
+                gs1, gs2, [lax, lbax, lrax], [rax, rbax, rrax] = setup_diagplot()
+            else:
+                lax, rax = plt.subplots(nrows=2)
+
         addedhb = False  # for plotting
         mass = strip_m(t1files[i])
         # simple mid point interpolation
-        try:
-            track = (t1s[i] + t2s[i]) / 2.
-        except:
-            nt1s = len(t1s[i])
-            if len(t1s[i]) < len(t2s[i]):
-                if not mass < mhef:
-                    print('something weird!!')
-                # shorter track
-                track = (t1s[i] + t2s[i][:nt1s]) / 2.
-                print 'shorter', mass, len(t1s[i]), len(t2s[i]), i
-            else:
-                if not mass >= mhef:
-                    print('something weird!!')
-                # longer track
-                t1hb, = [t for t in t1hbs if 'M%.2f' % mass in t]
-                t1hb = np.genfromtxt(t1hb)
-                print 'longer', mass, len(t1s[i]), len(t2s[i])
-                # add the transition points
-                t1withhb = rg_tip_heb_transition(t1hb, t1s[i])
-                track = (t1withhb + t2s[i]) / 2.
-                addedhb = True
-        if plot:
-            ax = diag_plot(track, mass, ax=None, label='interp')
-            if addedhb:
-                ax = diag_plot(t1withhb, '', ax=ax, label='added hb')
-                ax = diag_plot(t1hb, '', ax=ax, label='hb')
+        nt1s = len(t1s[i])
+        nt2s = len(t2s[i])
 
-            ax = diag_plot(t1s[i], '', ax=ax, label='t1')
-            ax = diag_plot(t2s[i], '', ax=ax, label='t2')
+        # most of the time both tracks are the same length
+        if nt1s == nt2s:
+            track = (t1s[i] + t2s[i]) / frac
+        else:
+            nt1, nt2 = np.sort([nt1s, nt2s])
+            t1, t2 = np.sort([t1s[i], t2s[i]])
+            thbs = t2hb
+            if t1 == t1s[i]:
+                thbs = t1hb
+            if mass <= mhef:
+                # keep the track short.
+                track = (t1 + t2[:nt1]) / frac
+                print 'tuncating HB', mass, nt1, nt2, i
+            else:
+                # add HB to track 1
+                print 'adding HB', mass, len(t1s[i]), len(t2s[i])
+                thb, = [t for t in thbs if 'M%.2f' % mass in t]
+                thb = np.genfromtxt(thb)
+                twithhb = rg_tip_heb_transition(thb, t1)
+                track = (twithhb + t2) / frac
+                addedhb = True
+
+        if plot:
+            _plot(track, mass, lax, rax, label='interp')
+            if addedhb:
+                _plot(twithhb, '', lax, rax, label='added hb')
+                _plot(thb, '', lax, rax, label='hb')
+
+            _plot(t1s[i], '', lax, rax, label='t1')
+            _plot(t2s[i], '', lax, rax, label='t2')
+
             if os.path.isdir(truth_track_loc):
                 z = strip_z(tname1s[i])
                 tds = fileio.get_dirs(truth_track_loc)
                 td, = [t for t in tds if str(z) in t]
                 truth_tracks = \
-                    fileio.get_files(td, '*{0}*0{1:.3f}*'.format(z, mass))
+                    fileio.get_files(td, '*Z{0:.4f}*M{1:.3f}*'.format(z, mass))
                 if len(truth_tracks) > 0:
-                    [diag_plot(np.loadtxt(t), '', ax=ax, label='truth')
-                    for t in truth_tracks]
-            plt.legend()
+                    if len(truth_tracks) > 1:
+                        truet0 = np.loadtxt(truth_tracks[0])
+                        truet1 = np.loadtxt(truth_tracks[1])
+                        if len(truet0) == len(track):
+                            truet = truet0
+                        elif len(truet1) == len(track):
+                            truet = truet1
+                        elif len(truet0[:nt1s]) == len(track):
+                            truet = truet0[:nt1s]
+                        else:
+                            import pdb; pdb.set_trace()
+                    else:
+                        truet = np.loadtxt(truth_tracks[0])
+                        if len(truet) != len(track):
+                            if len(truet[:nt1s]) == len(track):
+                                truet = truet[:nt1s]
+                    try:
+                        _plot(truet, '', lax, rax,  label='truth')
+                        diff_plot(truet, track, lbax, rbax, lrax, rrax)
+                    except:
+                        pass
+
+            rax.legend()
             figname = os.path.join(outdir, tname1s[i].replace('dat', 'png'))
-            ax[1].set_xscale('log')
+            [ax.set_xscale('log') for ax in [rax, rbax]]
+
             plt.savefig(figname)
             #print('wrote {}'.format(figname))
             plt.close()
@@ -203,6 +250,8 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
         fileio.savetxt(outfile, track, header=header, fmt='%.8f',
                        overwrite=overwrite)
         #print('wrote {}'.format(outfile))
+
+
 
 def rg_tip_heb_transition(hb_track, track):
     """
@@ -239,21 +288,51 @@ def rg_tip_heb_transition(hb_track, track):
     new_track = np.concatenate((track, trans_track, hb_track))
     return new_track
 
-def diag_plot(track, mass, ax=None, label=''):
-    if ax is None:
-        fig, ax = plt.subplots(ncols=2, figsize=(16,8))
-        ax[0].set_xlabel(r'$\log\ Te$')
-        ax[1].set_xlabel(r'$\rm{Age}$')
-        ax[0].set_ylabel(r'$\rm{Mbol}$')
+def setup_diagplot():
+    import matplotlib.gridspec as gridspec
+    fig = plt.figure(figsize=(12, 8))
+    gs1 = gridspec.GridSpec(3,3)
+    gs1.update(left=0.1, right=0.48, wspace=0.05)
+    lax = plt.subplot(gs1[:-1, :2])
+    lbax = plt.subplot(gs1[-1, :2])
+    lrax = plt.subplot(gs1[:-1, -1])
+    lbax.set_xlabel(r'$\log\ Te$')
+    lax.set_ylabel(r'$\rm{Mbol}$')
+    gs2 = gridspec.GridSpec(3, 3)
+    gs2.update(left=0.6, right=0.98, hspace=0.05)
+    rax = plt.subplot(gs2[:-1, :2])
+    rbax = plt.subplot(gs2[-1, :2])
+    rrax = plt.subplot(gs2[:-1, -1])
+    rbax.set_xlabel(r'$\rm{Age}$')
+    return gs1, gs2, [lax, lbax, lrax], [rax, rbax, rrax]
 
-    ax[0].plot(track.T[2], track.T[3], label=label)
+def diff_plot(track1, track2, lbax, rbax, lrax, rrax):
+    from matplotlib.ticker import MaxNLocator
+    lxdiff = track1.T[2] - track2.T[2]
+    rxdiff = 10 ** track1.T[0] - 10 ** track2.T[0]
+    ydiff = track1.T[3] - track2.T[3]
+    lbax.plot(track1.T[2], lxdiff, '.')
+    rbax.plot(10 ** track1.T[0], lxdiff, '.')
+    [ax.axhline(0.) for ax in [lbax, rbax]]
+    for ax in lrax, rrax:
+        ax.axvline(0.)
+        ax.plot(ydiff, track1.T[3], '.')
+        ax.xaxis.set_major_locator(MaxNLocator(5))
+
+
+def _plot(track, mass, lax, rax, label=''):
+    alpha=0.3
+    if len(label) > 0:
+        alpha = 1.
+    lax.plot(track.T[2], track.T[3], alpha=alpha)
     if mass != '':
-        ax[1].plot(10 ** track.T[0], track.T[3],
+        rax.plot(10 ** track.T[0], track.T[3], alpha=alpha,
                    label='${}\ {:.2f}$'.format(label, mass))
     else:
-        ax[1].plot(10 ** track.T[0], track.T[3], label=label)
+        rax.plot(10 ** track.T[0], track.T[3], label=label,
+                alpha=alpha)
 
-    return ax
+    return
 
 def read_mhef(mhef_file):
     with open(mhef_file, 'r') as inp:
@@ -263,15 +342,16 @@ def read_mhef(mhef_file):
     data = np.genfromtxt(mhef_file)
     return data, zs
 
-def interp_match_grid(parsecinterp_loc, mhef_file, overwrite=False,
+def interp_match_grid(dir1, dir2, mhef_file, overwrite=False,
                       plot=False, truth_track_loc=''):
     data, zs = read_mhef(mhef_file)
-    subs = [l for l in os.listdir(parsecinterp_loc)
-            if os.path.isdir(l) and 'ov' in l]
-    pts = np.array([s.replace('ov', '') for s in subs], dtype=float)
+    subs = [dir1, dir2]
+    pts = np.array([s.translate(None, 'ov/') for s in subs], dtype=float)
     interps = [p for p in data.T[0] if not p in pts]
     newsubs=['ov{:.2f}'.format(s) for s in interps]
-    sets = [[os.path.join(s, l) for l in os.listdir(s)] for s in subs]
+    sets = [[os.path.join(s, l) for l in os.listdir(s) if not l.startswith('.')] for s in subs]
+    # frac=2 default: mean would assume we're finding the point inbetween.
+    frac = 2
     for i in range(len(sets)-1):
         for j in range(len(sets[i])):
             newset = os.path.split(sets[i][j])[1]
@@ -279,14 +359,23 @@ def interp_match_grid(parsecinterp_loc, mhef_file, overwrite=False,
                                     'OV{:.2f}'.format(interps[i]))
             newdir = os.path.join(newsubs[i], newset)
             interpolate_between_sets(sets[i][j], sets[i+1][j], newdir,
-                                     data[2*i+1][j+1], plot=plot,
+                                     data[2*i+1][j+1], plot=plot, frac=frac,
                                      truth_track_loc=truth_track_loc)
     return
 
 
 def main(argv):
     """
+    Report ... quick test between OV0.4  OV0.6 to compare to parsec:
+        Even the low mass where nothing should change was off. NEED TO CALC OV0.5
 
+    quick test between ov0.30 and 0.60:
+        Some offsets likely due to the end of the track differences.
+        Other offsets because comparing to ov0.40 isn't correct, this will
+        create ov0.45.
+        Lots of structure on HB phase looks pretty strange. It might be better
+        NOT to interpolate and run with MATCH but use a KDE later.
+    
     """
     parser = argparse.ArgumentParser(description=" ")
 
@@ -296,10 +385,6 @@ def main(argv):
     parser.add_argument('-i', '--isodir_loc', type=str,
                         help='where the isotrack files are (if not -m)')
 
-    parser.add_argument('-p', '--parsecinterp_loc', type=str,
-                        default=os.getcwd(),
-                        help='where the parsec for match files are')
-
     parser.add_argument('-t', '--truth_track_loc', type=str, default='',
                         help='over plot comparison tracks from this location')
 
@@ -308,6 +393,9 @@ def main(argv):
 
     parser.add_argument('-v', '--pdb', action='store_true',
                         help='invoke python debugger')
+
+    parser.add_argument('dir1', type=str, help='directory 1')
+    parser.add_argument('dir2', type=str, help='directory 2')
 
     args = parser.parse_args(argv)
 
@@ -320,9 +408,15 @@ def main(argv):
         isodirs = [l for l in os.listdir(isodir_loc) if os.path.isdir(l)]
         args.mhef_file = interp_mhefs(isodirs)
 
-    interp_match_grid(args.parsecinterp_loc, args.mhef_file,
+    if len(args.truth_track_loc) > 0:
+        truth = os.path.abspath(args.truth_track_loc)
+    else:
+        truth = args.truth_track_loc
+
+    interp_match_grid(args.dir1, args.dir2,
+                      args.mhef_file,
                       plot=args.diag_plot,
-                      truth_track_loc=os.path.abspath(args.truth_track_loc))
+                      truth_track_loc=truth)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

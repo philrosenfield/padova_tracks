@@ -228,6 +228,8 @@ class Track(object):
 
         if no footers are found will add message to self.info
         '''
+        if 'ALFO0' in filename:
+            print('Warning: loading an ALFO0 track. {}'.format(filename))
 
         with open(filename, 'r') as infile:
             lines = infile.readlines()
@@ -332,19 +334,18 @@ class Track(object):
             a line with format: track_type Z mass ALFOV QHEL tau_He tau_H
             or a comment: self.Z self.name self.flag
         """
-
-        if len(self.flag) == 0:
+        if self.flag is None:
+            fmt = '%i %.3f %5.3f %.2f %.3f %.4g %.4g'
             self.calc_lifetimes()
-        fmt = '%i %.3f %5.3f %.2f %.3f %.4g %.4g\n'
-        efmt = '# %.3f %s: %s \n'
-        if len(self.flag) > 0:
-            line += efmt % (self.Z, self.name, self.flag)
-        elif self.hb:
-            line += fmt % (0, self.Z, self.mass, self.ALFOV,
-                           self.zahb_mcore, self.tau_he, 0.)
+            if self.hb:
+                line += fmt % (0, self.Z, self.mass, self.ALFOV,
+                               self.zahb_mcore, self.tau_he, 0.)
+            else:
+                line += fmt % (1, self.Z, self.mass, self.ALFOV,
+                               self.final_mcore, self.tau_he, self.tau_h)
         else:
-            line += fmt % (1, self.Z, self.mass, self.ALFOV,
-                           self.final_mcore, self.tau_he, self.tau_h)
+            efmt = '# %.3f %s: %s \n'
+            line += efmt % (self.Z, self.name, self.flag)
         return line
 
     def load_agb_track(self, filename, cut=True):
@@ -471,3 +472,10 @@ class Track(object):
                 print(msg)
             self.info['%s %s' % (level, arg)] = \
                 '%s: %g' % (errstr, self.header_dict[arg])
+
+
+if __name__ == "__main__":
+    print('# HB Z M OV QHEL tau_He tau_H')
+    for tn in sys.argv[1:]:
+        t = Track(tn)
+        print(t.summary())

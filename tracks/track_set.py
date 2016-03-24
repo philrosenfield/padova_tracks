@@ -150,7 +150,8 @@ class TrackSet(object):
             if sandro:
                 if len(track.sptcri) <= eep_ind:
                     data_ind = -1
-                data_ind = track.sptcri[eep_ind]
+                else:
+                    data_ind = track.sptcri[eep_ind]
             else:
                 data_ind = track.iptcri[eep_ind]
             inds.append(data_ind)
@@ -169,36 +170,34 @@ class TrackSet(object):
     def _load_ptcri(self, ptcri_loc, sandro=True, hb=False, search_extra=''):
         '''load ptcri file for each track in trackset'''
 
+        def keyfmt(p):
+            return os.path.split(p)[1].replace('0.', '').replace('.dat', '').lower()
         if sandro:
             search_term = 'pt'
         else:
             search_term = 'p2m'
+        if hb:
+            search_term += '_hb'
 
         new_keys = []
+        mets = np.unique([t.Z for t in self.tracks])
+        pt_search =  '%s*%s*' % (search_term, search_extra)
+        ptcri_files = get_files(ptcri_loc, pt_search)
+        if not hb:
+            ptcri_files = [p for p in ptcri_files if not 'hb' in p]
+
+        for p in ptcri_files:
+            ptcri = critical_point(p, sandro=sandro, hb=False)
+            new_key = keyfmt(p)
+            self.__setattr__(new_key, ptcri)
+            new_keys.append(new_key)
+
+        self.__setattr__('ptcris', np.unique(new_keys).tolist())
         for i, track in enumerate(self.tracks):
-            pt_search =  '%s*%s*Z%g_*' % (search_term, search_extra , track.Z)
-            ptcri_files = get_files(ptcri_loc, pt_search)
-
-            if hb:
-                ptcri_files = [p for p in ptcri_files if 'hb' in p]
-            else:
-                ptcri_files = [p for p in ptcri_files if not 'hb' in p]
-
-            for ptcri_file in ptcri_files:
-                new_key = os.path.split(ptcri_file)[1].replace('0.', '').replace('.dat', '').lower()
-                if os.path.split(track.base)[1] in os.path.split(ptcri_file)[1]:
-                    if not hasattr(self, new_key):
-                        ptcri = critical_point(ptcri_file, sandro=sandro, hb=hb)
-                    else:
-                        ptcri = self.__getattribute__(new_key)
-                    self.tracks[i] = ptcri.load_eeps(track, sandro=sandro)
-
-                    new_keys.append(new_key)
-                    self.__setattr__(new_key, ptcri)
-        if len(list(np.unique(new_keys))) == 0:
-            print('found not ptcri files %s', pt_search)
-        self.__setattr__('ptcris', list(np.unique(new_keys)))
-        return
+            ptcri_name, = [p for p in ptcri_files if os.path.split(track.base)[1] in p]
+            ptcri = self.__getattribute__(keyfmt(ptcri_name))
+            self.tracks[i] = ptcri.load_eeps(track, sandro=sandro)
+        return self.tracks
 
     def relationships(self, eep_name, xattr, yattr, sandro=True, xfunc=None,
                       yfunc=None, ptcri_loc=None, ptcri_search_extra='',

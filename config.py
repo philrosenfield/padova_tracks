@@ -23,3 +23,6 @@ MODE = 'MODELL'
 # only used in tracks.track.calc_core_mu
 XC_cen = 'XC_cen'
 XO_cen = 'XO_cen'
+
+# plot extension
+EXT = '.png'
