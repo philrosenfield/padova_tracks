@@ -11,11 +11,16 @@ import logging
 from astropy.table import Table
 logger = logging.getLogger()
 
+from ..utils import get_zy, replace_
+from ..eep.critical_point import critical_point
+from ..config import *
+
 class Track(object):
     '''
     Padova stellar track.
     '''
-    def __init__(self, filename, match=False, agb=False, track_data=None):
+    def __init__(self, filename, match=False, track_data=None,
+                 ptcri_file=None, ptcri_kw={}, agb=False):
         '''
         filename [str] the path to the PMS or PMS.HB file
         '''
@@ -26,35 +31,37 @@ class Track(object):
         # will house error string(s)
         self.flag = None
         self.info = {}
-        self.match = False
+        self.match = match
+        
+        if agb:
+            return
+        
+        self.filename_info()
         if match:
             self.load_match_track(filename, track_data=track_data)
-            self.track_mass()
-            self.filename_info()
-            self.match = True
-        elif agb:
-            self.load_agb_track(filename)
         else:
             self.load_track(filename)
-            self.filename_info()
-            if self.flag is None:
-                self.track_mass()
-
+                
+        
         if self.flag is None:
+            self.track_mass()
             self.check_track()
             if not match:
                 self.check_header_arg(loud=True)
+                if ptcri_file is not None:
+                    ptcri = critical_point(ptcri_file, **ptcri_kw)
+                    self.iptcri = ptcri.data_dict['M%.3f' % self.mass]
 
     def check_track(self):
         '''check if age decreases'''
         try:
-            age = np.round(self.data.AGE, 6)
+            age_ = np.round(self.data[age], 6)
         except AttributeError:
-            age = np.round(self.data.logAge, 6)
-        test = np.diff(age) >= 0
+            age_ = np.round(self.data.logAge, 6)
+        test = np.diff(age_) >= 0
         if False in test:
             print('track has age decreasing!!', self.mass)
-            bads, = np.nonzero(np.diff(age) < 0)
+            bads, = np.nonzero(np.diff(age_) < 0)
             try:
                 from ..config import MODE
                 print('Parsec track: offensive MODEs:', self.data[MODE][bads])
@@ -74,8 +81,7 @@ class Track(object):
                 import pdb; pdb.set_trace()
 
         if not self.match:
-            from ..config import YCEN
-            ycen_end = self.data[YCEN][-1]
+            ycen_end = self.data[ycen][-1]
             if ycen_end != 0:
                 self.info['Warning'] = 'YCEN at final MODE {:.4f}'.format(ycen_end)
         return
@@ -83,20 +89,20 @@ class Track(object):
     def track_mass(self):
         ''' choose the mass based on the physical track starting points '''
         try:
-            good_age, = np.nonzero(self.data.AGE > 0.2)
+            good_age, = np.nonzero(self.data[age] > 0.2)
         except AttributeError:
             # match tracks have log age
             good_age = [[0]]
         if len(good_age) == 0:
             self.flag = 'unfinished track'
-            self.mass = self.data.MASS[-1]
+            self.mass = self.data[mass][-1]
             return self.mass
         try:
-            self.mass = self.data.MASS[good_age[0]]
+            self.mass = self.data[mass][good_age[0]]
         except:
             e = sys.exc_info()
             print('Problem with Mass in {0}, {1}'.format(self.name, e))
-            self.mass = self.data.MASS[good_age[0]]
+            self.mass = self.data[mass][good_age[0]]
             import pdb; pdb.set_trace()
 
         try:
@@ -123,23 +129,22 @@ class Track(object):
         '''
         Uses Z_sun = 4.77 adds self.Mbol and returns Mbol
         '''
-        self.Mbol = z_sun - 2.5 * self.data.LOG_L
+        self.Mbol = z_sun - 2.5 * self.data[logL]
         return self.Mbol
 
     def calc_logg(self):
         '''
         cgs constant is -10.616 adds self.logg and returns logg
         '''
-        self.logg = -10.616 + np.log10(self.mass) + 4.0 * self.data.LOG_TE - \
-            self.data.LOG_L
+        self.logg = -10.616 + np.log10(self.mass) + 4.0 * self.data[logT] - \
+            self.data[logL]
         return self.logg
 
     def calc_core_mu(self):
         '''
         Uses X, Y, C, and O.
         '''
-        from ..config import XCEN, YCEN, XC_cen, XO_cen
-        xi = np.array([XCEN, YCEN, XC_cen, XO_cen])
+        xi = np.array([xcen, ycen, xc_cen, xo_cen])
         ai = np.array([1., 4., 12., 16.])
         # fully ionized
         qi = ai/2.
@@ -147,17 +152,14 @@ class Track(object):
             self.muc = 1. / (np.sum((self.data[xi[i]] / ai[i]) * (1 + qi[i])
                                      for i in range(len(xi))))
         except:
-            xi = np.array(['H_CEN', 'HE_CEN', 'C_cen', 'O_cen'])
+            xi = np.array([xcen, ycen, xc_cen, xo_cen])
             self.muc = 1. / (np.sum((self.data[xi[i]] / ai[i]) * (1 + qi[i])
                                      for i in range(len(xi))))
         return self.muc
 
     def calc_lifetimes(self):
         self.tau_he = np.sum(self.data.Dtime[self.data.LY>0])
-        try:
-            coreh, = np.nonzero((self.data.LX > 0) & (self.data['XCEN'] > 0))
-        except:
-            coreh, = np.nonzero((self.data.LX > 0) & (self.data['H_CEN'] > 0))
+        coreh, = np.nonzero((self.data.LX > 0) & (self.data[xcen] > 0))
 
         self.tau_h = np.sum(self.data.Dtime[coreh])
         return
@@ -166,15 +168,7 @@ class Track(object):
         '''
         # get Z, Y into attrs: 'Z0.0002Y0.4OUTA1.74M2.30'
         '''
-        Z, Ymore = self.name.split('Z')[1].split('Y')
-        Y = ''
-        for y in Ymore:
-            if y == '.' or y.isdigit():
-                Y += y
-            else:
-                break
-        self.Z = float(Z)
-        self.Y = float(Y)
+        self.Z, self.Y = get_zy(self.name)
         if hasattr(self, 'header'):
             try:
                 self.ALFOV, = np.unique([float(l.replace('ALFOV', '').strip())
@@ -194,7 +188,7 @@ class Track(object):
         load the match interpolated tracks into a record array.
         the file contains Mbol, but it is converted to LOG_L on read.
         LOG_L = (4.77 - Mbol) / 2.5
-        names = 'logAge', 'MASS', 'LOG_TE', 'LOG_L', 'logg', 'CO'
+        names = 'logAge', 'mass', 'LOG_TE', 'LOG_L', 'logg', 'CO'
         '''
         def mbol2logl(m):
             try:
@@ -203,7 +197,7 @@ class Track(object):
                 logl = (4.77 - m) / 2.5
             return logl
 
-        self.col_keys = ['logAge', 'MASS', 'LOG_TE', 'LOG_L', 'logg', 'CO']
+        self.col_keys = [age, mass, logT, logL, 'logg', 'CO']
 
         if track_data is None:
             data = np.genfromtxt(filename, names=self.col_keys,
@@ -234,6 +228,7 @@ class Track(object):
         with open(filename, 'r') as infile:
             lines = infile.readlines()
 
+        rdict = {'LOG_L': logL, 'LOG_TE': logT, 'AGE': age, 'MASS': mass}
         # find the header
         begin_track = -1
         for i, l in enumerate(lines):
@@ -252,13 +247,17 @@ class Track(object):
 
         if begin_track == -1:
             try:
-                self.data = np.array(Table.read(filename, format='ascii')).view(np.recarray)
+                with open(filename) as inp:
+                    names = replace_(inp.readline().strip(), rdict).split()
+
+                self.data = np.array(Table.read(filename, format='ascii',
+                                                names=names)).view(np.recarray)
                 self.col_keys = np.array(self.data.dtype.names)
             except:
                 self.data = np.array([])
                 self.col_keys = None
                 self.flag = 'load_track error: no begin track '
-            self.mass = float(self.name.split('_M')[1].replace('.DAT', '').replace('.PMS', '').split('.HB')[0])
+            self.mass = float(self.name.split('_M')[1].upper().replace('.DAT', '').replace('.PMS', '').split('.HB')[0])
             return
 
         if len(lines) - begin_track <= 2:
@@ -286,7 +285,7 @@ class Track(object):
 
         # find ndarray titles (column keys)
 
-        col_keys = lines[begin_track].replace('#', '').strip().split()
+        col_keys = replace_(lines[begin_track].replace('#', '').strip(), rdict).split()
         begin_track += 1
 
         # extra line for tracks that have been "colored"
@@ -348,70 +347,6 @@ class Track(object):
             line += efmt % (self.Z, self.name, self.flag)
         return line
 
-    def load_agb_track(self, filename, cut=True):
-        '''
-        Read Paola's tracks.
-        Cutting out a lot of information that is not needed for MATCH
-        col_keys = ['MODE', 'status', 'NTP', 'AGE', 'MASS', 'LOG_Mdot',
-                    'LOG_L', 'LOG_TE', 'Mcore', 'Y', 'Z', 'PHI_TP', 'CO']
-        usecols = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13]
-        '''
-        def find_thermal_pulses(ntp):
-            '''find the thermal pulsations'''
-            uniq_tps, uniq_inds = np.unique(ntp, return_index=True)
-            tps = np.array([np.nonzero(ntp == u)[0] for u in uniq_tps])
-            return tps
-
-        def find_quiessent_points(tps, phi):
-            '''
-            find the quiessent points
-            The quiescent phase is the the max phase in each TP,
-            i.e., closest to 1
-            '''
-            if tps.size == 1:
-                qpts = np.argmax(phi)
-            else:
-                qpts = np.unique([tp[np.argmax(phi[tp])] for tp in tps])
-            return qpts
-
-        col_keys = ['MODE', 'status', 'NTP', 'AGE', 'MASS', 'LOG_Mdot',
-                    'LOG_L', 'LOG_TE', 'Mcore', 'Y', 'Z', 'PHI_TP', 'CO']
-        usecols = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13]
-
-        f = open(filename)
-        line1 = f.readline()
-        line2 = f.readline()
-
-        if 'information' in line2:
-            line1 = line1.replace('L_*', 'LOG_L')
-            line1 = line1.replace('step', 'MODE')
-            line1 = line1.replace('T_*', 'LOG_TE')
-            line1 = line1.replace('M_*', 'MASS')
-            line1 = line1.replace('age/yr', 'AGE')
-            line1 = line1.replace('dM/dt', 'LOG_Mdot')
-            line1 = line1.replace('M_c', 'Mcore')
-            col_keys = line1.strip().replace('#', '').replace('lg', '').split()
-            col_keys = self.add_to_col_keys(col_keys, line2)
-            usecols = list(np.arange(len(col_keys)))
-
-        data = np.genfromtxt(filename, names=col_keys, usecols=usecols)
-        self.data = data.view(np.recarray)
-
-        if self.data.NTP.size == 1:
-            self.flag = 'no abg tracks'
-            return
-        self.Z = self.data.Z[0]
-        self.Y = self.data.Y[0]
-        self.mass = self.data.MASS[0]
-        self.col_keys = col_keys
-
-        # The first line in the agb track is 1. This isn't a quiescent stage.
-        self.data.PHI_TP[0] = -99.
-
-        self.tps = find_thermal_pulses(self.data.NTP)
-        self.qpts = find_quiessent_points(self.tps, self.data.PHI_TP)
-        return
-
     def add_to_col_keys(self, col_keys, additional_col_line):
         '''
         If fromHR2mags was run, A new line "Additional information Added:..."
@@ -420,17 +355,6 @@ class Track(object):
         new_cols = additional_col_line.split(':')[1].strip().split()
         col_keys = list(np.concatenate((col_keys, new_cols)))
         return col_keys
-
-    def maxmin(self, col, inds=None):
-        '''
-        return the max and min of a column in self.data, inds to slice.
-        '''
-        arr = self.data[col]
-        if inds is not None:
-            arr = arr[inds]
-        ma = np.max(arr)
-        mi = np.min(arr)
-        return (ma, mi)
 
     def add_header_args_dict(self):
         def rep(s):
@@ -472,6 +396,223 @@ class Track(object):
                 print(msg)
             self.info['%s %s' % (level, arg)] = \
                 '%s: %g' % (errstr, self.header_dict[arg])
+
+
+class AGBTrack(Track):
+    """
+    AGBTrack adapted from colibri2trilegal
+    """
+    def __init__(self, filename):
+        """
+        Read in track, set mass and period.
+        """    
+        Track.__init__(self, filename, agb=True)
+        self.base, self.name = os.path.split(filename)
+        self.load_agbtrack(filename)
+        # period is either P0 or P1 based on value of Pmod
+        period = np.zeros(len(self.data)) * np.nan
+        for i, p in enumerate(self.data['Pmod']):
+            if np.isfinite(p):
+                period[i] = self.data['P{:.0f}'.format(p)][i]
+        try:
+            self.mass = float(filename.split('agb_')[1].split('_')[0])
+        except:
+            self.mass = float(filename.upper().split('M')[1].replace('.DAT', ''))
+        try:
+            self.filename_info()
+        except:
+            try:
+                self.Z, self.Y = get_zy(self.base)
+            except:
+                self.Z = float(filename.split('agb_')[1].split('_')[1].replace('Z',''))
+                self.Y = np.nan
+
+    def ml_regimes(self):
+        indi=None
+        indf=None
+        try:
+            arr, = np.nonzero(self.data['Mdust'] == self.data['dMdt'])
+            indi = arr[0]
+            indf = arr[-1]
+        except:
+            pass
+        return indi, indf
+
+    def load_agbtrack(self, filename):
+        '''
+        Load COLIRBI track and make substitutions to column headings.
+        '''
+        rdict = {'#': '', 'M_*': mass, 'lg ': 'log', '_*': '', 'age/yr': age}
+        with open(filename, 'r') as f:
+            line = f.readline()
+            self.data = np.genfromtxt(f, names=replace_(line, rdict).strip().split())
+        self.fix_phi()
+        return self.data
+
+    def fix_phi(self):
+        '''The first line in the agb track is 1. This isn't a quiescent stage.'''
+        istart = np.where(np.isfinite(self.data['NTP']))[0][0]
+        self.data['PHI_TP'][istart] = np.nan
+
+    def m_cstars(self, mdot_cond=-5, logl_cond=3.3):
+        '''
+        adds mstar and cstar attribute of indices that are true for:
+        mstar: co <=1 logl >= 3.3 mdot <= -5
+        cstar: co >=1 mdot <= -5
+        (by default) adjust mdot with mdot_cond and logl with logl_cond.
+        '''
+        data = self.data_array
+
+        self.mstar, = np.nonzero((data['CO'] <= 1) &
+                                 (data['logL'] >= logl_cond) &
+                                 (data['logdMdt'] <= mdot_cond))
+        self.cstar, = np.nonzero((data['CO'] >= 1) &
+                                 (data['logdMdt'] <= mdot_cond))
+
+    def tauc_m(self):
+        '''lifetimes of c and m stars'''
+
+        if not 'cstar' in self.__dict__.keys():
+            self.m_cstars()
+        try:
+            tauc = np.sum(self.data['dt'][self.cstar]) / 1e6
+        except IndexError:
+            tauc = np.nan
+        try:
+            taum = np.sum(self.data['dt'][self.mstar]) / 1e6
+        except IndexError:
+            taum = np.nan
+        self.taum = taum
+        self.tauc = tauc
+
+    def get_tps(self):
+        '''find the thermal pulsations of each file'''
+        self.tps = []
+        itpagb, = np.where(np.isfinite(self.data['NTP']))
+        ntp = self.data['NTP'][itpagb]
+        untp, itps = np.unique(ntp, return_index=True)
+        itps += itpagb[0]
+        if untp.size == 1:
+            print('only one themal pulse.')
+            self.tps = untp
+        else:
+            # The indices each TP is just filling values between the iTPs
+            # and the final grid point
+            itps = np.append(itps, len(ntp) + itpagb[0])
+            tps = [np.arange(itps[i], itps[i+1]) for i in range(len(itps)-1)]
+            self.tps = tps
+
+
+    def get_quiescents(self):
+        '''
+        The quiescent phase, Qs,  is the the max phase in each TP,
+        i.e., closest to 1.
+        '''
+        if not 'tps' in self.__dict__.keys():
+            self.get_tps()
+        phi = self.data['PHI_TP']
+        logl = self.data['logL']
+        self.iqs = np.unique([tp[np.argmax(phi[tp])] for tp in self.tps])
+        self.imins = np.unique([tp[np.argmin(logl[tp])] for tp in self.tps])
+
+    def vw93_plot(self, agescale=1e5, outfile=None, xlim=None, ylims=None,
+                  fig=None, axs=None, annotate=True, annotation=None):
+        """
+        Make a plot similar to Vassiliadis and Wood 1993. Instead of Vesc,
+        I plot C/O.
+        """
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        from matplotlib.ticker import MaxNLocator
+        from palettable.wesanderson import Darjeeling2_5
+        sns.set()
+        sns.set_context('paper')
+        plt.style.use('paper')
+
+        age = 'age'
+        ycols = [logT, 'Tbot', logL, 'CO', mass, 'logdMdt']
+        ylims = ylims or [None] * len(ycols)
+
+        if axs is None:
+            fig, axs = plt.subplots(nrows=len(ycols), sharex=True, figsize=(5.4, 10))
+            fig.subplots_adjust(hspace=0.05, right=0.97, top=0.97, bottom=0.07,
+                                left=0.2)
+
+        for i in range(len(axs)):
+            ycol = ycols[i]
+            ylim = ylims[i]
+            ax = axs[i]
+            #ax.grid(ls='-', color='k', alpha=0.1, lw=0.5)
+            ax.grid()
+            try:
+                ax.plot(self.data[age] / agescale, self.data[ycol], color='k')
+            except:
+                # period is not in the data but calculated in the init.
+                ax.plot(self.data[age] / agescale, self.__getattribute__(ycol), color='k')
+            if ycol == 'CO':
+                ax.axhline(1, linestyle='dashed', color='k', alpha=0.5, lw=1)
+            ax.set_ylabel(translate_colkey(ycol), fontsize=20)
+            ax.yaxis.set_major_locator(MaxNLocator(5, prune='upper'))
+            if ylim is not None:
+                #print ylim
+                ax.set_ylim(ylim)
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        axs[0].yaxis.set_major_locator(MaxNLocator(5, prune=None))
+        ax.set_xlabel(translate_colkey(age, agescale=agescale), fontsize=20)
+        [ax.get_yaxis().set_label_coords(-.16,0.5) for ax in axs]
+        # doesn't work with latex so well...
+        axs[3].get_yaxis().set_label_coords(-.165,0.5)
+        [ax.get_yaxis().set_label_coords(-.17,0.5) for ax in [axs[-1], axs[2]]]
+
+        indi, indf = self.ml_regimes()
+        if not None in [indi, indf]:
+            [[ax.axvline(self.data[age][i]/agescale, ls=':', color='k',
+                         alpha=0.5, lw=0.8)
+            for ax in axs] for i in [indi, indf]]
+        if annotate:
+            if annotation is None:
+                annotation = r'$\rm{M}_i=%.2f\ \rm{M}_\odot$' % self.mass
+            axs[4].text(0.02, 0.05, annotation, ha='left', fontsize=16,
+                        transform=axs[4].transAxes)
+
+        if outfile is not None:
+            plt.tight_layout()
+            plt.savefig(outfile)
+        return fig, axs
+
+
+def translate_colkey(col, agescale=1.):
+    """
+    Turn COLIBRI column name into a axes label
+    """
+    def str_agescale(scale=1.):
+        """
+        Set the age unit string.
+        """
+        u = ''
+        if scale == 1e9:
+            u = 'G'
+        elif scale == 1e6:
+            u = 'M'
+        elif np.log10(scale) >= 1.:
+            u = '10^%i\ ' % int(np.log10(scale))
+        return u
+
+    tdict = {'Tbot': r'$log\ \rm{T}_{\rm{bce}}\ \rm{(K)}$',
+             logT: r'$log\ \rm{T}_{\rm{eff}}\ \rm{(K)}$',
+             logL: r'$log\ L\ (L_\odot)$',
+             'period': r'$\rm{P\ (days)}$',
+             'CO': r'$\rm{C/O}$',
+             mass: r'$\rm{M}\ (\rm{M}_\odot)$',
+             'logdMdt': r'$\dot{\rm{M}}\ (\rm{M}_\odot/\rm{yr})$',
+             age: r'$\rm{TP-AGB\ Age\ (%syr)}$' % str_agescale(agescale)}
+
+    new_col = col
+    if col in tdict.keys():
+        new_col = tdict[col]
+
+    return new_col
 
 
 if __name__ == "__main__":

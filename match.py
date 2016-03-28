@@ -387,15 +387,15 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             arrays of interpolated values for Log Age, Log L, Log Te
             """
             msg = ' Match interpolation by interp1d'
-            logl = track.data.LOG_L[inds]
-            logte = track.data.LOG_TE[inds]
-            lage = np.log10(track.data.AGE[inds])
-            mass = track.data.MASS[inds]
+            logl = track.data[logL][inds]
+            logte = track.data[logT][inds]
+            lage = np.log10(track.data[age][inds])
+            mass = track.data[mass][inds]
             lagenew = np.linspace(lage[0], lage[-1], nticks)
             if np.sum(np.abs(np.diff(mass))) > 0.01:
                 msg += ' with mass'
             else:
-                massnew = np.repeat(track.data.MASS[inds][0], len(lagenew))
+                massnew = np.repeat(track.data[mass][inds][0], len(lagenew))
             if len(np.nonzero(np.diff(logl))[0]) == 0:
                 # all LOG_Ls are the same
                 lnew = np.zeros(len(lagenew)) + logl[0]
@@ -409,13 +409,13 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
                 lnew = fage_l(lagenew)
                 msg += ', with a single value for LOG_TE'
             else:
-                fage_l = interp1d(lage, track.data.LOG_L[inds],
+                fage_l = interp1d(lage, track.data[logL][inds],
                                   bounds_error=0)
                 lnew = fage_l(lagenew)
-                fage_te = interp1d(lage, track.data.LOG_TE[inds],
+                fage_te = interp1d(lage, track.data[logT][inds],
                                    bounds_error=0)
                 tenew = fage_te(lagenew)
-                fage_m = interp1d(lage, track.data.MASS[inds],
+                fage_m = interp1d(lage, track.data[mass][inds],
                                   bounds_error=0)
                 massnew = fage_m(lagenew)
             track.info[mess] += msg
@@ -428,7 +428,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
         # need to check if mass loss is important enough to include
         # in interopolation
-        mass = track.data.MASS[inds]
+        mass = track.data[mass][inds]
         zcol = None
         if np.sum(np.abs(np.diff(mass))) > 0.01:
             frac_mloss = len(np.unique(mass))/float(len(mass))
@@ -467,5 +467,5 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
                 lagenew, lnew, tenew, massnew = call_interp1d(track, inds, nticks,
                                                      mess=mess)
         if zcol is None:
-            massnew = np.repeat(track.data.MASS[inds][0], len(lagenew))
+            massnew = np.repeat(track.data[mass][inds][0], len(lagenew))
         return lagenew, lnew, tenew, massnew

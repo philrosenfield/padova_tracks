@@ -190,7 +190,7 @@ class Interpolator(object):
             intp_col = ynew
             nintp_col = xnew
             dydx = dxnew / dynew
-            if col == 'LOG_TE':
+            if col == logT:
                 intp_col = xnew
                 nintp_col = ynew
                 dydx = dynew / dxnew
@@ -199,7 +199,7 @@ class Interpolator(object):
             xnew, ynew = splev(arb_arr, tckp)
             intp_col = ynew
             nintp_col = xnew
-            if col == 'LOG_TE':
+            if col == logT:
                 intp_col = xnew
                 nintp_col = ynew
 
@@ -247,14 +247,14 @@ class Interpolator(object):
             ind, dif = \
                 utils.closest_match2d(almost_ind,
                                       track.data[col][inds][non_dupes],
-                                      np.log10(track.data.AGE[inds][non_dupes]),
+                                      np.log10(track.data[age][inds][non_dupes]),
                                       intp_col, agenew)
         else:
             # closest point in interpolation to data
             ind, dif = \
                 utils.closest_match2d(almost_ind,
-                                      track.data.LOG_TE[inds][non_dupes],
-                                      track.data.LOG_L[inds][non_dupes],
+                                      track.data[logT][inds][non_dupes],
+                                      track.data[logL][inds][non_dupes],
                                       xnew, ynew)
 
         if ind == -1:

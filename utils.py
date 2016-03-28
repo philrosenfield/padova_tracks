@@ -8,6 +8,17 @@ __all__ = ['add_data', 'count_uncert_ratio', 'between', 'brighter',
            'mp_double_gauss', 'points_inside_poly', 'smooth', 'sort_dict',
            'mp_gauss', 'minmax', 'extrema', 'replace_']
 
+def get_zy(string):
+    Z, Ymore = string.replace('_','').split('Z')[1].split('Y')
+    Y = ''
+    for y in Ymore:
+        if y == '.' or y.isdigit():
+            Y += y
+        else:
+            break
+    return float(Z), float(Y)
+
+
 def replace_(s, rdict):
     for k, v in rdict.items():
         s = s.replace(k, v)

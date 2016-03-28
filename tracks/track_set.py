@@ -256,7 +256,7 @@ class TrackSet(object):
                 fmt = ' & '.join(eep_name) + ' \\\\ \n'
                 for t in self.tracks:
                     fmt += ' & '.join('{:.3g}'.format(i)
-                                      for i in t.data.AGE[t.iptcri[t.iptcri>0]])
+                                      for i in t.data[age][t.iptcri[t.iptcri>0]])
                     fmt += ' \\\\ \n'
             return fmt
         else:

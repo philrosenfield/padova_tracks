@@ -10,7 +10,7 @@ import os
 from ..graphics.GraphicsUtils import arrow_on_line, setup_multiplot, discrete_colors
 from ..eep.critical_point import Eep
 from ..utils import closest_match
-
+from ..config import *
 
 def offset_axlims(track, xcol, ycol, ax, inds=None):
     xmax, xmin = track.maxmin(xcol, inds=inds)
@@ -41,10 +41,10 @@ def quick_hrd(track, ax=None, inds=None, reverse='x', plt_kw={}):
         ax = plt.axes()
         reverse = 'x'
 
-    ax.plot(track.data.LOG_TE, track.data.LOG_L, **plt_kw)
+    ax.plot(track.data[logT], track.data[logL], **plt_kw)
 
     if inds is not None:
-        ax.plot(track.data.LOG_TE[inds], track.data.LOG_L[inds], 'o')
+        ax.plot(track.data[logT][inds], track.data[logL][inds], 'o')
 
     if 'x' in reverse:
         ax.set_xlim(ax.get_xlim()[::-1])
@@ -80,12 +80,12 @@ def check_eep_hrd(tracks, ptcri_loc, between_ptcris=[0, -2], sandro=True):
 
     for t in tracks:
         ax = axs[list(zs).index(t.Z)]
-        plot_track(t, 'LOG_TE', 'LOG_L', sandro=sandro, ax=ax,
+        plot_track(t, logT, logL, sandro=sandro, ax=ax,
                    between_ptcris=between_ptcris, add_ptcris=True,
                    add_mass=True)
 
         ptcri_names = Eep().eep_list[between_ptcris[0]: between_ptcris[1] + 1]
-        td.annotate_plot(t, ax, 'LOG_TE', 'LOG_L', ptcri_names=ptcri_names)
+        td.annotate_plot(t, ax, logT, logL, ptcri_names=ptcri_names)
 
     [ax.set_xlim(ax.get_xlim()[::-1]) for ax in axs]
     return ts, axs
@@ -172,7 +172,7 @@ def plot_track(track, xcol, ycol, reverse='', ax=None, inds=None, plt_kw=None,
 
     if clean and inds is None:
         # non-physical inds go away.
-        inds, = np.nonzero(track.data.AGE > 0.2)
+        inds, = np.nonzero(track.data[age] > 0.2)
 
     xdata, ydata = column_to_data(track, xcol, ycol, cmd=cmd, norm=norm,
                                   convert_mag_kw=convert_mag_kw)
@@ -210,10 +210,10 @@ def plot_track(track, xcol, ycol, reverse='', ax=None, inds=None, plt_kw=None,
 
     if arrows:
         # hard coded to be 10 equally spaced points...
-        inds, = np.nonzero(track.data.AGE > 0.2)
-        ages = np.linspace(np.min(track.data.AGE[inds]),
-                           np.max(track.data.AGE[inds]), 10)
-        indz, _ = zip(*[closest_match(i, track.data.AGE[inds])
+        inds, = np.nonzero(track.data[age] > 0.2)
+        ages = np.linspace(np.min(track.data[age][inds]),
+                           np.max(track.data[age][inds]), 10)
+        indz, _ = zip(*[closest_match(i, track.data[age][inds])
                         for i in ages])
         # I LOVE IT arrow on line... AOL BUHSHAHAHAHAHA
         aol_kw = deepcopy(plt_kw)
@@ -221,7 +221,7 @@ def plot_track(track, xcol, ycol, reverse='', ax=None, inds=None, plt_kw=None,
             aol_kw['fc'] = aol_kw['color']
             del aol_kw['color']
         indz = indz[indz > 0]
-        print(track.data.LOG_L[inds][np.array([indz])])
+        print(track.data[logL][inds][np.array([indz])])
         arrow_on_line(ax, xdata, ydata, indz, plt_kw=plt_kw)
 
     ax.set_xscale(xscale)
@@ -240,7 +240,7 @@ class TrackDiag(object):
     def plot_track(self, *args, **kwargs):
         return plot_track(*args, **kwargs)
 
-    def diag_plots(self, tracks, pat_kw=None, xcols=['LOG_TE', 'AGE'],
+    def diag_plots(self, tracks, pat_kw=None, xcols=[logT, age],
                    extra='', hb=False, mass_split='default', mextras=None,
                    plot_dir='.', match_tracks=False, sandro=False):
         '''
@@ -325,7 +325,7 @@ class TrackDiag(object):
                 plt.savefig(figname, dpi=300)
                 plt.close('all')
 
-    def plot_all_tracks(self, tracks, xcol='LOG_TE', ycol='LOG_L', ax=None,
+    def plot_all_tracks(self, tracks, xcol=logT, ycol=logL, ax=None,
                         ptcri=None, hb=False, line_pltkw={}, point_pltkw={},
                         clean=True):
         '''plot all tracks and annotate eeps'''
@@ -456,7 +456,7 @@ class TrackDiag(object):
         return ax
 
     def check_ptcris(self, track, ptcri, hb=False, plot_dir=None,
-                     sandro_plot=False, xcol='LOG_TE', ycol='LOG_L',
+                     sandro_plot=False, xcol=logT, ycol=logL,
                      match_track=None):
         '''
         plot of the track, the interpolation, with each eep labeled
@@ -464,7 +464,7 @@ class TrackDiag(object):
         if track.flag is not None:
             return
 
-        all_inds, = np.nonzero(track.data.AGE > 0.2)
+        all_inds, = np.nonzero(track.data[age] > 0.2)
         iptcri = track.iptcri
         defined, = np.nonzero(iptcri > 0)
         ptcri_kw = {'sandro': False, 'hb': hb}
@@ -547,10 +547,10 @@ class TrackDiag(object):
         return axs
 
     def plot_sandro_ptcri(self, track, plot_dir=None, ptcri=None, hb=False):
-        x = 'LOG_TE'
-        y = 'LOG_L'
+        x = logT
+        y = logL
         ax = self.plot_track(track, x, y, reverse='x',
-                             inds=np.nonzero(track.data.AGE > 0.2)[0])
+                             inds=np.nonzero(track.data[age] > 0.2)[0])
 
         ax = self.annotate_plot(track, ax, x, y, hb=hb,
                                 sandro=True, ptcri=ptcri)
@@ -578,7 +578,7 @@ class TrackDiag(object):
             inds = np.arange(pinds[pinds>0][0], pinds[pinds>0][-1])
 
         pinds = add_ptcris(track, between_ptcris, sandro=False)
-        xdata = track.data.AGE[inds]
+        xdata = track.data[age][inds]
 
         if xscale == 'linear':
             # AGE IN Myr
@@ -598,7 +598,7 @@ class TrackDiag(object):
             gs = gridspec.GridSpec(8, 2)
             sm_axs = [plt.subplot(gs[i, 0:]) for i in range(4)]
             ax = plt.subplot(gs[4:, 0:])
-            ycols = ['LOG_TE', '', 'LOG_RHc', 'LOG_Pc']
+            ycols = [logT, '', 'LOG_RHc', 'LOG_Pc']
             ycolls = ['$\log T_{eff}$', '$\mu_c$', '$\\rho_c$', '$\log P_c$']
 
             for smax, ycol, ycoll in zip(sm_axs, ycols, ycolls):
@@ -646,9 +646,9 @@ class TrackDiag(object):
 
         zorder = 100
         if khd_dict is None:
-            khd_dict = {'XC_cen': 'green',
-                        'XO_cen': 'purple',
-                        'YCEN': 'darkred',
+            khd_dict = {xc_cen: 'green',
+                        xo_cen: 'purple',
+                        ycen: 'darkred',
                         'LX': 'navy',
                         'LY': 'darkred',
                         'CONV':  'black'}
@@ -663,7 +663,7 @@ class TrackDiag(object):
                     color=color, label=plot_labels(col), zorder=zorder)
             zorder += 10
 
-        ixmax = p1 + np.argmax(track.data.LOG_TE[inds[p1:]])
+        ixmax = p1 + np.argmax(track.data[logT][inds[p1:]])
 
         if legend:
             ax.legend(frameon=False, loc=0)
@@ -688,14 +688,14 @@ class TrackDiag(object):
         return axs
 
 def plot_labels(column):
-    if column == 'XC_cen':
+    if column == xc_cen:
         lab = '$^{12}C$'
-    elif column == 'XO_cen':
+    elif column == xo_cen:
         lab = '$^{16}O$'
     elif column == 'CONV':
         lab = r'$\rm{core}$'
-    elif 'CEN' in column:
-        lab = '$%s$' % column.replace('CEN', '_c')
+    elif 'CEN' in column.upper():
+        lab = '$%s$' % column.upper().replace('CEN', '_c')
     elif 'L' in column and len(column) == 2:
         lab = '$%s$' % '_'.join(column)
     else:
@@ -704,13 +704,13 @@ def plot_labels(column):
     return lab
 
 def plot_linestyles(column):
-    if column == 'XC_cen':
+    if column == xc_cen:
         ls = '-'
-    elif column == 'XO_cen':
+    elif column == xo_cen:
         ls = '-'
     elif column == 'CONV':
         ls = '-'
-    elif 'CEN' in column:
+    elif 'CEN' in column.upper():
         ls = '-'
     elif 'L' in column and len(column) == 2:
         ls = '--'

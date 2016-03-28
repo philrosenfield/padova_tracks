@@ -7,9 +7,10 @@ import sys
 from matplotlib.ticker import MaxNLocator
 from palettable.wesanderson import Darjeeling2_5
 
-from ..config import EXT
+
 from ..utils import minmax, replace_
-from ..tracks.tpagb_track import AGBTrack
+from ..tracks.tracks import AGBTrack
+
 sns.set()
 sns.set_context('paper')
 plt.style.use('paper')
@@ -22,13 +23,13 @@ def duration_masslost(agbs, justprint=False, norm=False):
             for agb in agbs:
                 if agb.Z not in [0.001, 0.008]:
                     continue
-                #plt.plot(agbs[i].data['ageyr'], agbs[i].data['L_star'])
+                #plt.plot(agbs[i].data[age], agbs[i].data['L_star'])
                 ind1, ind2 = agb.ml_regimes()
                 if not None in [ind1, ind2] or ind1 != ind2:
                     if agb.mass != a:
                         continue
-                    age = agb.data['ageyr'] / 1e5
-                    mass = agb.data['M_star']
+                    age = agb.data[age] / 1e5
+                    mass = agb.data[mass]
                     #print sum(agb.data['dt'][np.nonzero(agb.data['L_star'] < 3.4)[0]])
                     print(ind1, ind2)
                     print '{:g} {:g} {:.2f} {:.2f} {:.2f} {:.2f}'.format(agb.Z, agb.mass,

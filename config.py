@@ -11,18 +11,24 @@ high_mass = 19.
 max_age = 10e10
 
 # file column names. Classic PARSEC
-#XCEN = 'XCEN'
-#YCEN = 'YCEN'
+#xcen = 'XCEN'
+#ycen = 'YCEN'
 #MODE = 'MODE'
 
 # PARSEC online (Sandro's website)
-XCEN = 'H_CEN'
-YCEN = 'HE_CEN'
+xcen = 'H_CEN'
+ycen = 'HE_CEN'
 MODE = 'MODELL'
 
 # only used in tracks.track.calc_core_mu
-XC_cen = 'XC_cen'
-XO_cen = 'XO_cen'
+xc_cen = 'XC_cen'
+xo_cen = 'XO_cen'
 
 # plot extension
 EXT = '.png'
+
+# what you would like them to be:
+logL = 'logL'
+logT = 'logT'
+age = 'age'
+mass = 'mass'

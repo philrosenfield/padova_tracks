@@ -6,11 +6,6 @@ import sys
 import logging
 logger = logging.getLogger()
 
-high_mass = 19.
-inte_mass = 12.
-
-from ..config import MODE
-
 class Eep(object):
     '''
     a simple class to hold eep data. Gets added as an attribute to
@@ -358,7 +353,7 @@ class critical_point(object):
 
         def plot_point(ptname, pt):
             inmsg = 'Enter new value for %s or 0 to move on: ' % ptname
-            ax.plot(track.data.LOG_TE[pt], track.data.LOG_L[pt], '*')
+            ax.plot(track.data[logT][pt], track.data[logL][pt], '*')
             plt.draw()
             go_on = int(raw_input(inmsg))
             if go_on != 0:
@@ -411,18 +406,18 @@ class critical_point(object):
 
         # MS_TMIN is the min LOG_TE between MS_BEG and POINT_C
         inds = np.arange(ms_beg, point_c, dtype=int)
-        point_b = ms_beg + np.argmin(track.data.LOG_TE[inds])
+        point_b = ms_beg + np.argmin(track.data[logT][inds])
         point_b = guessandcheck('point_b', pt=point_b)
 
         # RG_BASE is probably the lowest LOG_L after POINT_C
         inds = np.arange(point_c, len(track.data), dtype=int)
-        rg_base = point_c + np.argmin(track.data.LOG_L[inds])
+        rg_base = point_c + np.argmin(track.data[logL][inds])
         rg_base = guessandcheck('rg_base', pt=rg_base)
 
         # RG_TIP is the peak LOG_L after RG_BASE, probably happens soon
         # in high mass tracks.
         inds = np.arange(rg_base, rg_base + 200, dtype=int)
-        rg_tip = rg_base + np.argmax(track.data.LOG_L[inds])
+        rg_tip = rg_base + np.argmax(track.data[logL][inds])
         rg_tip = guessandcheck('rg_tip', pt=rg_tip)
 
         # There is no RG_BMP when there is core fusion. Pick equally spaced

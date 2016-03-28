@@ -47,10 +47,10 @@ class IsoTrack2(object):
 # get the EEPS too?? I donno what you need the data for besides plotting...
 
 """
-self.data.LOG_TE
-self.data.AGE
+self.data[logT]
+self.data[age]
 self.data.MODE
-self.data.LOG_L
+self.data[logL]
 self.sptrci
 XCEN
 YCEN

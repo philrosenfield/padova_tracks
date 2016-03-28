@@ -63,7 +63,7 @@ class CompareTrackSets(object):
             ts1.load_characteristics()
             ts2 = TrackSet(inputs=inp2)
             ts2.load_characteristics()
-            np.max([np.max(ts1.tracks[i].data.LOG_L - ts2.tracks[i].data.LOG_L) for i in range(len(ts1.tracks))])
+            np.max([np.max(ts1.tracks[i].data[logL] - ts2.tracks[i].data[logL]) for i in range(len(ts1.tracks))])
                 #track_set = np.append(track_set, ts)
         self.track_sets = np.append(self.track_sets, ts1)
         self.track_sets = np.append(self.track_sets, ts2)
