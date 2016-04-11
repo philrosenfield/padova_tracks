@@ -176,7 +176,8 @@ class Track(object):
             except:
                 pass
 
-        if hasattr(self.data, 'QHEL'):
+        
+        if hasattr(self, 'data') and hasattr(self.data, 'QHEL'):
             if self.hb:
                 self.zahb_mcore = self.data.QHEL[0]
             else:

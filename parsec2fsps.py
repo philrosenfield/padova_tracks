@@ -57,7 +57,7 @@ def isoch_for_fsps():
     
     keys = ['logageyr', 'M_ini', 'M_act', 'logL', 'logT', 'logg', 'CO', 'stage']
     agemin = 5.5
-    agemax = 10.10  # cmd2.8 will not take lage >= 10.13
+    agemax = 10.13  # cmd2.8 will not take lage >= 10.13
     for z in zs:
         outfile = 'isoc_z{:.4f}.dat'.format(z)
         tab = cmd.get_t_isochrones(agemin, agemax, 0.05, z, model='parsec12s_r14')
@@ -72,3 +72,7 @@ def isoch_for_fsps():
                 np.savetxt(outp, tab[keys][idx], fmt=fmt)
         print('wrote {}'.format(outfile))
     return
+
+
+if __name__ == "__main__":
+    isoch_for_fsps()
