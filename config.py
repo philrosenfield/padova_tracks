@@ -11,14 +11,14 @@ high_mass = 19.
 max_age = 10e10
 
 # file column names. Classic PARSEC
-#xcen = 'XCEN'
-#ycen = 'YCEN'
-#MODE = 'MODE'
+xcen = 'XCEN'
+ycen = 'YCEN'
+MODE = 'MODE'
 
 # PARSEC online (Sandro's website)
-xcen = 'H_CEN'
-ycen = 'HE_CEN'
-MODE = 'MODELL'
+#xcen = 'H_CEN'
+#ycen = 'HE_CEN'
+#MODE = 'MODELL'
 
 # only used in tracks.track.calc_core_mu
 xc_cen = 'XC_cen'

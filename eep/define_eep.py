@@ -14,7 +14,6 @@ import logging
 logger = logging.getLogger()
 
 
-
 def second_derivative(xdata, inds, gt=False, s=0):
     '''
     The second derivative of d^2 xdata / d inds^2
@@ -123,6 +122,7 @@ class DefineEeps(Interpolator):
                 track.flag = 'eeps not monotonically increasing'
                 print(track.flag)
                 print(np.array(l)[negatives+1])
+                import pdb; pdb.set_trace()
 
     def define_eep_stages(self, track, hb=False, plot_dir=None,
                           diag_plot=True, agb=False, debug=False):
@@ -144,22 +144,20 @@ class DefineEeps(Interpolator):
         """
         self.debug = debug
         track.info = {}
+        # initalize to zero
+        [self.add_eep(track, cp, 0) for cp in self.ptcri.please_define]
+        nsandro_pts = len(np.nonzero(track.sptcri != 0)[0])
 
         # TP-AGB tracks
-        if agb:
+        if track.agb:
             self.add_tpagb_eeps(track)
-            return self.check_for_monotonic_increase(track)
 
         # ZAHB tracks
-        elif hb:
+        if hb:
             self.hb_eeps(track, diag_plot=diag_plot, plot_dir=plot_dir)
             return self.check_for_monotonic_increase(track)
 
         self.check_pms_beg(track)
-
-        # initalize to zero
-        [self.add_eep(track, cp, 0) for cp in self.ptcri.please_define]
-        nsandro_pts = len(np.nonzero(track.sptcri != 0)[0])
 
         if len(track.sptcri) <= 4 or track.data[xcen][track.sptcri[4]] < .6:
             try:
@@ -239,14 +237,22 @@ class DefineEeps(Interpolator):
                          message='overwritten with age > 0.2')
         return
 
-    def add_tpagb_eeps(self, track):
+    def add_tpagb_eeps(self, track, neeps=3):
         '''
         three points for each thermal pulse
         phi_tp = 0.2
         max L
         quessent point (phi_tp max)
         '''
-        print('need to code buddy')
+        tp_start, = np.where(track.data['step'] == 1)[0]
+        tpage = track.data[age][tp_start:] - track.data[age][tp_start]
+        ages = np.linspace(0, tpage[-1], neeps)
+        itps = [np.argmin(np.abs(tpage - a)) for a in ages] + tp_start
+        self.add_eep(track, 'TPAGB', itps[0], message='TPAGB start')
+
+        for i, itp in enumerate(itps[1:]):
+            self.add_eep(track, 'TPAGB{}'.format(i + 1), itp,
+                         message='TPAGB age {}'.format(i + 1))
         return
 
     def add_high_mass_eeps(self, track):
@@ -423,8 +429,9 @@ class DefineEeps(Interpolator):
         #if track.mass <= 0.480:
         #    print('HB AGB EEPS might not work for HPHB')
 
-        ly = track.data.LY
-        lx = track.data.LX
+        ly = track.data['LY']
+        lx = track.data['LX']
+
         norm_age = track.data[age]/track.data[age][-1]
 
         ex_inds, = np.nonzero(track.data[ycen] == 0.00)
@@ -494,23 +501,23 @@ class DefineEeps(Interpolator):
         self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
 
         # HACK UNTIL TPAGB IS FULLY INTEGRATED
-        inds = np.arange(agb_ly2 + 3, track.iptcri[-1], dtype=int)
-        if len(inds) == 0 and track.iptcri[-1] > 0:
-            if track.iptcri[-1] < agb_ly2:
-                track.flag = 'TP-AGB is at or before AGB_LY2'
-                if self.debug:
-                    pdb.set_trace()
-        else:
-            pd = utils.find_peaks(track.data[logL][inds])
-            if pd['maxima_number'] >= 1:
-                #stpagb = second_derivative(track.data[logL][inds], np.log10(track.data['age'][inds]))
-                pf_kw = {'get_max': True, 'sandro': False, 'more_than_one': 'max of max',
-                         'parametric_interp': False, 'less_linear_fit': False}
-                #stpagb = self.peak_finder(track, logL, 'AGB_LY2', 'TPAGB', **pf_kw)
-                msg = 'Peaks found between AGB_LY2 and TPAGB. Redifining TPAGB'
-                imax = pd['maxima_locations']
-                #imin = pd['minima_locations']
-                tpagb = inds[imax[0]]
+        #inds = np.arange(agb_ly2 + 3, track.iptcri[-1], dtype=int)
+        #if len(inds) == 0 and track.iptcri[-1] > 0:
+        #    if track.iptcri[-1] < agb_ly2:
+        #        track.flag = 'TP-AGB is at or before AGB_LY2'
+        #        if self.debug:
+        #            pdb.set_trace()
+        #else:
+        #    pd = utils.find_peaks(track.data[logL][inds])
+        #    if pd['maxima_number'] >= 1:
+        #        #stpagb = second_derivative(track.data[logL][inds], np.log10(track.data['age'][inds]))
+        #        pf_kw = {'get_max': True, 'sandro': False, 'more_than_one': 'max of max',
+        #                 'parametric_interp': False, 'less_linear_fit': False}
+        #        #stpagb = self.peak_finder(track, logL, 'AGB_LY2', 'TPAGB', **pf_kw)
+        #        msg = 'Peaks found between AGB_LY2 and TPAGB. Redifining TPAGB'
+        #        imax = pd['maxima_locations']
+        #        #imin = pd['minima_locations']
+        #        tpagb = inds[imax[0]]
                 #from padova_tracks.tracks.track_diag import plot_track
                 #ax = plot_track(track, 'age', logL)
                 #ax.plot(track.data[age][track.iptcri], track.data[logL][track.iptcri], 'o')
@@ -519,7 +526,7 @@ class DefineEeps(Interpolator):
                 #ax.plot(track.data[age][tpagb], track.data[logL][tpagb], '*')
                 #print(track.mass)
                 #print(track.Z)
-                self.add_eep(track, 'TPAGB', tpagb, hb=True, message=msg)
+         #       self.add_eep(track, 'TPAGB', tpagb, hb=True, message=msg)
 
         if diag_plot:
             agb_ly1c = 'red'
@@ -1068,20 +1075,20 @@ class DefineEeps(Interpolator):
                                                               track.Z))
             return 0
 
-        he_min = np.argmin(track.data.LY[inds])
+        he_min = np.argmin(track.data['LY'][inds])
 
         # Sometimes there is a huge peak in LY before the min, find it...
         npts = inds[-1] - inds[0] + 1
         subset = npts / 3
-        he_max = np.argmax(track.data.LY[inds[:subset]])
+        he_max = np.argmax(track.data['LY'][inds[:subset]])
 
         # Peak isn't as important as the ratio between the start and end
-        rat = track.data.LY[inds[he_max]] / track.data.LY[inds[0]]
+        rat = track.data['LY'][inds[he_max]] / track.data['LY'][inds[0]]
 
         # If the min is at the point next to the RG_TIP, or the ratio is huge,
         # get the min after the peak.
         if he_min == 0 or rat > 10:
-            amin = np.argmin(track.data.LY[inds[he_max + 1:]])
+            amin = np.argmin(track.data['LY'][inds[he_max + 1:]])
             he_min = he_max + 1 + amin
 
         he_beg = inds[he_min]

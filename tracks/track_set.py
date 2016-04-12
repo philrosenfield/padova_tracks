@@ -9,7 +9,7 @@ import scipy
 from ..fileio import get_files
 from ..utils import sort_dict
 
-from .track import Track
+from .track import Track, AGBTrack
 from .track_diag import TrackDiag
 from ..eep.critical_point import critical_point
 
@@ -40,14 +40,6 @@ class TrackSet(object):
                                 inputs.track_search_term.replace('PMS', '')
             inputs.track_search_term += '.dat'
 
-        if inputs.agb:
-            self.find_tracks(track_search_term=inputs.track_search_term,
-                             agb=True)
-        else:
-            self.agbtrack_names = []
-            self.agbtracks = []
-            self.agbmasses = []
-
         if self.hb:
             self.find_tracks(track_search_term=inputs.hbtrack_search_term,
                              masses=inputs.hbmasses, match=inputs.match)
@@ -61,14 +53,11 @@ class TrackSet(object):
                              masses=inputs.masses, match=inputs.match)
 
 
-    def find_masses(self, track_search_term, agb=False, ignore='ALFO0'):
+    def find_masses(self, track_search_term, ignore='ALFO0'):
         track_names = get_files(self.tracks_base, track_search_term)
         if ignore is not None:
             track_names = [t for t in track_names if not ignore in t]
         mstr = '_M'
-        if agb:
-            # Paola's tracks agb_0.66_Z0.00010000_ ... .dat
-            mstr = 'agb_'
 
         # mass array
         mass = np.array(['.'.join(os.path.split(t)[1].split(mstr)[1].split('.')[:2])
@@ -99,7 +88,7 @@ class TrackSet(object):
         '%f < 40' and it will use masses that are less 40.
         '''
 
-        track_names, mass = self.find_masses(track_search_term, agb=agb)
+        track_names, mass = self.find_masses(track_search_term)
 
         # only do a subset of masses
         if masses is not None:
@@ -124,14 +113,17 @@ class TrackSet(object):
         if self.hb:
             track_str = 'hb%s' % track_str
             mass_str = 'hb%s' % mass_str
-        if agb:
-            track_str = 'agb%s' % track_str
-            mass_str = 'agb%s' % mass_str
 
         tattr = '%ss' % track_str
         self.__setattr__('%s_names' % track_str, track_names[inds])
-        self.__setattr__(tattr, \
-            [Track(t, match=match, agb=agb) for t in track_names[inds]])
+        trks = []
+        for t in track_names[inds]:
+            if 'AGB' in t.upper():
+                trk = AGBTrack(t)
+            else:
+                trk = Track(t, match=match)
+            trks.append(trk)
+        self.__setattr__(tattr, trks)
         self.__setattr__('%s' % mass_str, \
             np.array([t.mass for t in self.__getattribute__(tattr)
                       if t.flag is None], dtype=np.float))

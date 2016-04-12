@@ -573,7 +573,7 @@ class TrackDiag(object):
         pinds = add_ptcris(track, between_ptcris, sandro=False)
         if heb_only:
             # Core HeB:
-            inds, = np.nonzero((track.data.LY > 0) & (track.data.QHE1 == 0))
+            inds, = np.nonzero((track.data['LY'] > 0) & (track.data.QHE1 == 0))
         else:
             inds = np.arange(pinds[pinds>0][0], pinds[pinds>0][-1])
 

@@ -25,24 +25,26 @@ class Track(object):
         filename [str] the path to the PMS or PMS.HB file
         '''
         (self.base, self.name) = os.path.split(filename)
-        self.hb = False
-        if 'hb' in self.name.lower():
-            self.hb = True
         # will house error string(s)
         self.flag = None
         self.info = {}
         self.match = match
-        
-        if agb:
+        self.hb = False
+        self.agb = False
+        if 'hb' in self.name.lower():
+            self.hb = True
+
+        if 'agb' in self.name.lower() or agb:
+            self.agb = True
             return
-        
+
         self.filename_info()
         if match:
             self.load_match_track(filename, track_data=track_data)
         else:
             self.load_track(filename)
-                
-        
+
+
         if self.flag is None:
             self.track_mass()
             self.check_track()
@@ -158,8 +160,8 @@ class Track(object):
         return self.muc
 
     def calc_lifetimes(self):
-        self.tau_he = np.sum(self.data.Dtime[self.data.LY>0])
-        coreh, = np.nonzero((self.data.LX > 0) & (self.data[xcen] > 0))
+        self.tau_he = np.sum(self.data.Dtime[self.data['LY']>0])
+        coreh, = np.nonzero((self.data['LX'] > 0) & (self.data[xcen] > 0))
 
         self.tau_h = np.sum(self.data.Dtime[coreh])
         return
@@ -176,7 +178,7 @@ class Track(object):
             except:
                 pass
 
-        if hasattr(self.data, 'QHEL'):
+        if hasattr(self, 'data') and hasattr(self.data, 'QHEL'):
             if self.hb:
                 self.zahb_mcore = self.data.QHEL[0]
             else:
@@ -405,7 +407,7 @@ class AGBTrack(Track):
     def __init__(self, filename):
         """
         Read in track, set mass and period.
-        """    
+        """
         Track.__init__(self, filename, agb=True)
         self.base, self.name = os.path.split(filename)
         self.load_agbtrack(filename)
@@ -415,16 +417,17 @@ class AGBTrack(Track):
             if np.isfinite(p):
                 period[i] = self.data['P{:.0f}'.format(p)][i]
         try:
-            self.mass = float(filename.split('agb_')[1].split('_')[0])
+            self.mass = float(self.name.split('agb_')[1].split('_')[0])
         except:
-            self.mass = float(filename.upper().split('M')[1].replace('.DAT', ''))
+            #self.mass = float(self.name.upper().split('M')[1].replace('.DAT', ''))
+            self.mass = float('.'.join(self.name.upper().split('M')[1].split('.')[:2]))
         try:
             self.filename_info()
         except:
             try:
                 self.Z, self.Y = get_zy(self.base)
             except:
-                self.Z = float(filename.split('agb_')[1].split('_')[1].replace('Z',''))
+                self.Z = float(self.name.split('agb_')[1].split('_')[1].replace('Z',''))
                 self.Y = np.nan
 
     def ml_regimes(self):
