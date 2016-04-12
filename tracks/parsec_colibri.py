@@ -60,8 +60,8 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
     prc_track_loc = '/Users/rosenfield/Dropbox/CAF09_V1.2S_M36_LT/tracks'
     first_tp_loc = '/Users/rosenfield/Dropbox/CAF09_V1.2S_M36_LT/tpagb'
     ptcri_loc = '/Users/rosenfield/Dropbox/CAF09_V1.2S_M36_LT/data'
-
     outputloc = first_tp_loc
+    #outputloc = prc_track_loc
     firsttps = get_files(first_tp_loc, '*.INP')
     for firsttp in firsttps:
         onetp = FirstTP(firsttp)
@@ -105,7 +105,7 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
 
         new_track_dir = os.path.join(outputloc, os.path.split(prc_track_dir)[1])
         ensure_dir(new_track_dir)
-        fmt = 'Z{:.4f}_Y{:.3f}_M{:.3f}.dat'
+        #fmt = 'Z{:.4f}_Y{:.3f}_M{:.3f}.dat'
         print(new_track_dir)
         for mass_ in common_masses:
             iprc, = np.where(prc_masses == mass_)[0]
@@ -127,8 +127,8 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
             iotp, = np.where(onetp.data[mass] == mass_)[0]
             onetpm = onetp.data[iotp]
 
-            fname = fmt.format(parsec.Z, parsec.Y, mass_)
-            output = os.path.join(new_track_dir, fname)
+            #fname = fmt.format(parsec.Z, parsec.Y, mass_)
+            output = os.path.join(new_track_dir, parsec_track + '.TPAGB')
             attach(parsec, colibri, onetpm, output, diag=diag)
 
 

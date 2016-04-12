@@ -6,6 +6,7 @@ import sys
 from ..config import *
 
 import logging
+from ..config import *
 logger = logging.getLogger()
 
 class Eep(object):
@@ -76,7 +77,10 @@ class critical_point(object):
     '''
     def __init__(self, filename=None, sandro=True, debug=False, hb=False):
         self.debug = debug
+        
         if filename is not None:
+            if 'hb' in filename:
+                hb = True
             self.base, self.name = os.path.split(filename)
             self.load_ptcri(filename, sandro=sandro, hb=hb)
             self.get_args_from_name(filename)
@@ -165,7 +169,7 @@ class critical_point(object):
         # the lines have the path name, and the path has F7.
         if not hb:
             begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
-                    and 'F7' in lines[i]]
+                      and 'F7' in lines[i]]
         else:
             if 'p2m' in filename:
                 begin = 0
