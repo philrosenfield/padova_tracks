@@ -186,8 +186,7 @@ def define_eeps(tfm, inputs):
     de = DefineEeps()
     crit_kw = {'plot_dir': inputs.plot_dir,
                'diag_plot': inputs.track_diag_plot,
-               'debug': inputs.debug,
-               'hb': inputs.hb}
+               'debug': inputs.debug}
 
     if inputs.hb:
         track_str = 'hbtracks'

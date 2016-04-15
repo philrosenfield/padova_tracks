@@ -11,6 +11,7 @@ from scipy.interpolate import splev
 from scipy.interpolate import interp1d
 import pdb
 import logging
+from config import mass, logT, age, logL
 
 logger = logging.getLogger()
 
@@ -58,10 +59,10 @@ class CheckMatchTracks(critical_point.Eep, TrackSet, TrackDiag):
                 print('check_tracks: skipping %s: %s' % (t.mass, t.flag))
                 continue
 
-            test = np.diff(t.data.logAge) > 0
+            test = np.diff(t.data[age]) > 0
             if False in test:
                 # age where does age decrease
-                bads, = np.nonzero(np.diff(t.data.logAge) < 0)
+                bads, = np.nonzero(np.diff(t.data[age]) < 0)
                 edges = np.cumsum(self.nticks)
                 if len(bads) != 0:
                     if not key in self.match_info:
@@ -72,10 +73,10 @@ class CheckMatchTracks(critical_point.Eep, TrackSet, TrackDiag):
                                             for j in bads])
                     bad_inds = np.unique(nears)
                     match_info.append([np.array(self.eep_list)[bad_inds],
-                                       t.data.logAge[bads]])
+                                       t.data[age][bads]])
                     self.flag_dict['M%.3f' % t.mass] = 'age decreases on track'
                 # identical values of age
-                bads1, = np.nonzero(np.diff(t.data.logAge) == 0)
+                bads1, = np.nonzero(np.diff(t.data[age]) == 0)
                 if len(bads1) != 0:
                     if not key in self.match_info:
                         self.match_info[key] = []
@@ -86,7 +87,7 @@ class CheckMatchTracks(critical_point.Eep, TrackSet, TrackDiag):
                     bad_inds = np.unique(nears)
                     match_info.append(['near',
                                        np.array(self.eep_list)[bad_inds]])
-                    match_info.append(['log ages:', t.data.logAge[bads1]])
+                    match_info.append(['log ages:', t.data[age][bads1]])
                     match_info.append(['inds:', bads1])
 
 
@@ -162,7 +163,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
             if inputs.track_diag_plot:
                 # make diagnostic plots
-                for xcol in ['LOG_TE', 'AGE']:
+                for xcol in [logT, age]:
                     plot_dir = os.path.join(inputs.plot_dir, xcol.lower())
                     if not os.path.isdir(plot_dir):
                         os.makedirs(plot_dir)
@@ -209,8 +210,8 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         eep = critical_point.Eep()
         with open(logfile, 'w') as out:
             # sort by mass
-            mass, info = sortbyval(info_dict)
-            for m, d in zip(mass, info):
+            mass_, info = sortbyval(info_dict)
+            for m, d in zip(mass_, info):
                 out.write('# %s\n' % m)
                 try:
                     # sort by EEP
@@ -310,8 +311,8 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         CO = np.zeros(len(logL))
         mass_arr = np.repeat(track.mass, len(logL))
 
-        inds, = np.nonzero(track.data['AGE'] > 0.2)
-        umass = np.unique(track.data['MASS'][inds])
+        inds, = np.nonzero(track.data[age] > 0.2)
+        umass = np.unique(track.data[mass][inds])
         #if len(umass) > 1 or umass[0] != mass_arr[0]:
         #    logger.warning('mass array is a copy of the track.mass is that kosher?')
         #    pdb.set_trace()
@@ -390,9 +391,9 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             logl = track.data[logL][inds]
             logte = track.data[logT][inds]
             lage = np.log10(track.data[age][inds])
-            mass = track.data[mass][inds]
+            mass_ = track.data[mass][inds]
             lagenew = np.linspace(lage[0], lage[-1], nticks)
-            if np.sum(np.abs(np.diff(mass))) > 0.01:
+            if np.sum(np.abs(np.diff(mass_))) > 0.01:
                 msg += ' with mass'
             else:
                 massnew = np.repeat(track.data[mass][inds][0], len(lagenew))
@@ -428,14 +429,14 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
         # need to check if mass loss is important enough to include
         # in interopolation
-        mass = track.data[mass][inds]
+        mass_ = track.data[mass][inds]
         zcol = None
-        if np.sum(np.abs(np.diff(mass))) > 0.01:
+        if np.sum(np.abs(np.diff(mass_))) > 0.01:
             frac_mloss = len(np.unique(mass))/float(len(mass))
-            if frac_mloss > 0.3:
-                zcol = 'MASS'
+            if frac_mloss >= 0.25:
+                zcol = mass
             else:
-                print(mess, frac_mloss, mass[0], mass[-1])
+                print('interpolate_along_track: {} frac mloss, mi, mf: {} {} {}'.format(mess, frac_mloss, mass_[0], mass_[-1]))
                 #import pdb; pdb.set_trace()
 
         # parafunc = np.log10 means np.log10(AGE)

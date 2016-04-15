@@ -59,7 +59,7 @@ def main(argv):
     parser.add_argument('filename', type=str, nargs='*', help='ptcri*.dat.HB files to work on')
 
     args = parser.parse_args(argv)
-
+    import pdb; pdb.set_trace()
     [format_ptcriHB(f) for f in args.filename]
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.interpolate import splev, splprep
 from .. import utils
-
+from ..config import *
 
 class Interpolator(object):
     def __init__(self):
@@ -9,13 +9,13 @@ class Interpolator(object):
 
     def _interpolate(self, track, inds, k=3, s=0., min_step=1e-4,
                      parametric=True, xfunc=None, yfunc=None,
-                     parafunc=None, xcol='LOG_TE', ycol='LOG_L',
-                     paracol='AGE', zcol=None):
+                     parafunc=None, xcol=logT, ycol=logL,
+                     paracol=age, zcol=None):
         """
         Call scipy.optimize.splprep. Will also rid the array
         of duplicate values.
 
-        if parametric_interp is True use AGE with LOG_TE and LOG_L
+        if parametric_interp is True use age with logT and logL
            if linear is also False use log10 Age
 
         Parameters
@@ -45,7 +45,7 @@ class Interpolator(object):
 
         xcol, ycol, paracol, zcol : str, str, str, str
             xaxis column name, xaxis column name, column for parametric
-            (probably LOG_TE, LOG_L, AGE, MASS)
+            (probably logT, logL, age, MASS)
 
         Returns
         -------

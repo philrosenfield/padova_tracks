@@ -398,7 +398,7 @@ class TrackDiag(object):
         return ax
 
     def annotate_plot(self, track, ax, xcol, ycol, ptcri_names=[],
-                      sandro=False, hb=False, box=True, khd=False,
+                      sandro=False, box=True, khd=False,
                       xdata=None, ydata=None, inds=None, **kwargs):
         '''
         if a subset of ptcri inds are used, set them in inds. If you want
@@ -408,7 +408,7 @@ class TrackDiag(object):
         eep = Eep()
         eep_list = eep.eep_list
 
-        if hb:
+        if track.hb:
             eep_list = eep.eep_list_hb
 
         if not sandro:
@@ -441,7 +441,8 @@ class TrackDiag(object):
         if box:
             # label stylings
             bbox = dict(boxstyle='round, pad=0.2', fc=fc, alpha=0.2)
-            arrowprops = dict(arrowstyle='->', connectionstyle='arc3, rad=0')
+            arrowprops = dict(arrowstyle='->', connectionstyle='arc3, rad=0',
+                              color=fc)
 
         for i, (lab, x, y) in enumerate(zip(labs, xdata[pinds], ydata[pinds])):
             # varies the labels placement... default is 20, 20

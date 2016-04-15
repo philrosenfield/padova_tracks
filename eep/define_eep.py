@@ -122,28 +122,35 @@ class DefineEeps(Interpolator):
                 track.flag = 'eeps not monotonically increasing'
                 print(track.flag)
                 print(np.array(l)[negatives+1])
-                import pdb; pdb.set_trace()
+                if self.debug:
+                    self.ptcri.fix_ptcri(os.path.join(track.base, track.name))
+                    from ..tracks import TrackDiag
+                    plt.ion()
+                    td = TrackDiag()
+                    fig, ax = plt.subplots()
+                    ax.plot(track.data[logT], track.data[logL])
+                    ax.plot(track.data[logT][track.iptcri], track.data[logL][track.iptcri], 'o')
+                    td.annotate_plot(track, ax, logT, logL)
+                    plt.show()
+                    import pdb; pdb.set_trace()
 
-    def define_eep_stages(self, track, hb=False, plot_dir=None,
-                          diag_plot=True, agb=False, debug=False):
+    def define_eep_stages(self, track, plot_dir=None, diag_plot=True,
+                          debug=False):
         """
         Define all eeps (add as track.iptcri)
 
         Parameters
         ----------
         track : object
-            rsp.padova_track.Track object
-        hb : bool [False]
-            track is an HB track
+            padova_track.tracks.Track object
         plot_dir : str
             loction to put plots (if diag_plot)
         diag_plot : bool
             make diagnostic plots
-        agb : bool
-            track is an AGB track
         """
         self.debug = debug
         track.info = {}
+
         # initalize to zero
         [self.add_eep(track, cp, 0) for cp in self.ptcri.please_define]
         nsandro_pts = len(np.nonzero(track.sptcri != 0)[0])
@@ -153,7 +160,7 @@ class DefineEeps(Interpolator):
             self.add_tpagb_eeps(track)
 
         # ZAHB tracks
-        if hb:
+        if track.hb:
             self.hb_eeps(track, diag_plot=diag_plot, plot_dir=plot_dir)
             return self.check_for_monotonic_increase(track)
 
@@ -167,8 +174,8 @@ class DefineEeps(Interpolator):
             except:
                 track.info['MS_BEG'] = 'Incomplete track?'
                 print('incomplete track?!', track.mass)
-                ind, = np.nonzero(self.ptcri.masses == track.mass)
-                d
+                #ind, = np.nonzero(self.ptcri.masses == track.mass)
+                #d
             if track.mass <= low_mass:
                 self.add_ms_beg_eep(track)
 
@@ -184,13 +191,13 @@ class DefineEeps(Interpolator):
              for cp in self.ptcri.please_define]
             ims_beg = track.iptcri[self.ptcri.get_ptcri_name('MS_BEG',
                                                              sandro=False)]
-            ims_to, age = self.add_eep_with_age(track, 'MS_TO', max_age)
-            ims_tmin, _ = self.add_eep_with_age(track, 'MS_TMIN', (age / 2.))
+            ims_to, age_ = self.add_eep_with_age(track, 'MS_TO', max_age)
+            ims_tmin, _ = self.add_eep_with_age(track, 'MS_TMIN', (age_ / 2.))
             # it's possible that MS_BEG occurs after max_age / 2
             # if that's the case, take the average age between ms_beg and ms_to
             if ims_tmin <= ims_beg:
-                age = (track.data[age][ims_to] + track.data[age][ims_beg]) / 2.
-                ims_tmin, _ = self.add_eep_with_age(track, 'MS_TMIN', age)
+                age_ = (track.data[age][ims_to] + track.data[age][ims_beg]) / 2.
+                ims_tmin, _ = self.add_eep_with_age(track, 'MS_TMIN', age_)
 
             return self.check_for_monotonic_increase(track)
 
@@ -210,14 +217,15 @@ class DefineEeps(Interpolator):
             # should now make sure all other eeps are 0.
             [self.add_eep(track, cp, 0, message='no He EEPs')
              for cp in self.ptcri.please_define[5:]]
+        else:
+            self.add_agb_eeps(track)
 
         self.add_sg_rg_eeps(track)
-        self.add_agb_eeps(track)
         self.check_for_monotonic_increase(track)
 
-    def add_ms_beg_eep(self, track, xcen=0.6):
-        msg = 'overwrote Sandro for closer match to XCEN=%g' % xcen
-        imsbeg = np.argmin(np.abs(xcen - track.data[xcen]))
+    def add_ms_beg_eep(self, track, xcen_=0.6):
+        msg = 'overwrote Sandro for closer match to XCEN=%g' % xcen_
+        imsbeg = np.argmin(np.abs(xcen_ - track.data[xcen]))
         if imsbeg > 0:
             self.add_eep(track, 'MS_BEG', imsbeg, message=msg)
         return imsbeg
@@ -225,7 +233,7 @@ class DefineEeps(Interpolator):
     def hb_eeps(self, track, diag_plot=True, plot_dir=None):
         '''Call the HB EEP functions.'''
         self.add_hb_beg(track)
-        self.add_cen_eeps(track, hb=True)
+        self.add_cen_eeps(track)
         self.add_agb_eeps(track, diag_plot=diag_plot, plot_dir=plot_dir)
         return
 
@@ -319,10 +327,10 @@ class DefineEeps(Interpolator):
         # cens[-1] will occur at fin even though the track is complete.
         # this is a little reset to push that YCEN=0.000 between
         # YCEN_0.005 and fin
-        if track.data[ycen][cens[-2]] == 0.0:
-            cens[-1] = (cens[-2] + fin) / 2
-            self.add_eep(track, 'YCEN_0.000', cens[-1],
-                         message='Reset between YCEN=0.005 and final point')
+        #if track.data[ycen][cens[-2]] == 0.0:
+        #    cens[-1] = (cens[-2] + fin) / 2
+        #    self.add_eep(track, 'YCEN_0.000', cens[-1],
+        #                 message='Reset between YCEN=0.005 and final point')
         heb_beg  = self.add_quiesscent_he_eep(track, cens[0], start=ms_to)
         self.add_eep(track, 'TPAGB', fin, message='Last track value')
 
@@ -355,13 +363,13 @@ class DefineEeps(Interpolator):
 
         return np.concatenate(([ms_beg, ms_tmin, ms_to, heb_beg], cens, [fin]))
 
-    def add_cen_eeps(self, track, hb=False, tol=0.01, istart=None):
+    def add_cen_eeps(self, track, tol=0.01, istart=None):
         '''
         Add YCEN_%.3f eeps, if YCEN=fraction not found to tol, will add 0 as
         the iptrcri, equivalent to not found.
         '''
         please_define = self.ptcri.please_define
-        if hb:
+        if track.hb:
             # HB starts at the beginning
             istart = 0
 
@@ -383,12 +391,13 @@ class DefineEeps(Interpolator):
             # some tolerance for a good match.
             if dif > tol:
                 icen = 0
-            self.add_eep(track, 'YCEN_%.3f' % cen, icen, hb=hb,
+            self.add_eep(track, 'YCEN_%.3f' % cen, icen,
                          message='YCEN == %.6f' % track.data[ycen][icen])
             # for monotonic increase, even if there is another flare up in
             # He burning, this limits the matching indices to begin at this
             # new eep index.
-            inds = np.arange(icen + 1, len(track.data[ycen]))
+            if icen > 0:
+                inds = np.arange(icen + 1, len(track.data[ycen]))
             icens.append(icen)
         return icens
 
@@ -405,11 +414,12 @@ class DefineEeps(Interpolator):
             ainds, = np.nonzero(track.data[age] > 0.2)
             hb_beg = ainds[0]
             msg = 'first point with age > 0.2'
-        self.add_eep(track, eep_name, hb_beg, hb=True,
+        self.add_eep(track, eep_name, hb_beg,
                      message=msg)
         return hb_beg
 
-    def add_agb_eeps(self, track, diag_plot=False, plot_dir=None):
+    def add_agb_eeps(self, track, diag_plot=False, plot_dir=None,
+                     basti=False):
         '''
         This is for HB tracks... not sure if it will work for tpagb.
 
@@ -426,149 +436,167 @@ class DefineEeps(Interpolator):
                                         track.iptcri[-1], 4))[1:3]
             return agb_ly1, agb_ly2, msg1, msg2
 
-        #if track.mass <= 0.480:
-        #    print('HB AGB EEPS might not work for HPHB')
+        def ala_mist(track):
+            end_cheb = np.argmin(np.abs(track.data['YCEN'] - 1e-4))
+            try:
+                ind = np.argmin(np.abs(track.data['YCEN'] - 1e-6))
+                tpagb = np.nonzero(track.data['QH1'][ind:] - track.data['QHE2'][ind:] < 0.1)[0][0] + ind
+            except:
+                import pdb; pbd.set_trace()
+                #agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
+            self.add_eep(track, 'TPAGB', tpagb, message='Mdiff between H and He shell < 0.1')
+            self.add_eep(track, 'END_CHEB', end_cheb)
 
-        ly = track.data['LY']
-        lx = track.data['LX']
+        def ala_basti(track):
+            #if track.mass <= 0.480:
+            #    print('HB AGB EEPS might not work for HPHB')
 
-        norm_age = track.data[age]/track.data[age][-1]
+            ly = track.data['LY']
+            lx = track.data['LX']
 
-        ex_inds, = np.nonzero(track.data[ycen] == 0.00)
+            norm_age = track.data[age]/track.data[age][-1]
 
-        diff_L = np.abs(ly[ex_inds] - lx[ex_inds])
-        peak_dict = utils.find_peaks(diff_L)
+            ex_inds, = np.nonzero(track.data[ycen] == 0.00)
 
-        # there are probably thermal pulses in the track, taking the first 6
-        # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
-        mins = peak_dict['minima_locations'][:6]
+            diff_L = np.abs(ly[ex_inds] - lx[ex_inds])
+            peak_dict = utils.find_peaks(diff_L)
 
-        if len(mins) <= 2:
-            agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
+            # there are probably thermal pulses in the track, taking the first 6
+            # mins to try and avoid them. Yeah, I checked by hand, 6 usually works.
+            mins = peak_dict['minima_locations'][:6]
+
+            if len(mins) <= 2:
+                agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
+            else:
+                # the two deepest mins are the ly == lx match
+                min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
+                (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+                msg1 = 'first deepest min when ly == lx after YCEN_0.000'
+                msg2 = 'second deepest mins when ly == lx after YCEN_0.000'
+                msg = ''
+                # most of the time, the above works, a couple times the points
+                # are instead in the thermal pulses.
+
+                # if agb_ly1 is in a thermal pulse (and should be much younger)
+                # take away some mins...
+
+                i = 4
+                if norm_age[ex_inds[mins[0]]] < 0.89 and norm_age[agb_ly1] > 0.98:
+                    while norm_age[agb_ly1] > 0.98:
+                        mins = mins[:i]
+                        min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
+                        try:
+                            (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+                        except:
+                            agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
+                            msg = ''
+                            break
+                        i -= 1
+                    msg = ' adjusted to be outside of a TP'
+
+                # if the agb_ly2 is in a thermal pulse take away some mins...
+                if norm_age[agb_ly2] > 0.999:
+                    while norm_age[agb_ly2] > 0.999:
+                        mins = mins[:i]
+                        min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
+                        try:
+                            (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
+                        except:
+                            agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
+                            msg = ''
+                            break
+                        i -= 1
+                    msg = ' adjusted to be outside of a TP'
+                msg1 += msg
+                msg2 += msg
+
+            if agb_ly2 > track.iptcri[-1]:
+                _, agb_ly2 = np.round(np.linspace(track.iycen_0000,
+                                            track.iptcri[-1], 4))[1:3]
+                msg2 += ' was past TPAGB re-adjusted.'
+            if agb_ly1 > track.iptcri[-1]:
+                agb_ly1, _ = np.round(np.linspace(track.iycen_0000,
+                                            track.iptcri[-1], 4))[1:3]
+                msg1 += ' was past TPAGB re-adjusted.'
+
+            self.add_eep(track, 'AGB_LY1', agb_ly1, message=msg1)
+            self.add_eep(track, 'AGB_LY2', agb_ly2, message=msg2)
+
+            # HACK UNTIL TPAGB IS FULLY INTEGRATED
+            #inds = np.arange(agb_ly2 + 3, track.iptcri[-1], dtype=int)
+            #if len(inds) == 0 and track.iptcri[-1] > 0:
+            #    if track.iptcri[-1] < agb_ly2:
+            #        track.flag = 'TP-AGB is at or before AGB_LY2'
+            #        if self.debug:
+            #            pdb.set_trace()
+            #else:
+            #    pd = utils.find_peaks(track.data[logL][inds])
+            #    if pd['maxima_number'] >= 1:
+            #        #stpagb = second_derivative(track.data[logL][inds], np.log10(track.data['age'][inds]))
+            #        pf_kw = {'get_max': True, 'sandro': False, 'more_than_one': 'max of max',
+            #                 'parametric_interp': False, 'less_linear_fit': False}
+            #        #stpagb = self.peak_finder(track, logL, 'AGB_LY2', 'TPAGB', **pf_kw)
+            #        msg = 'Peaks found between AGB_LY2 and TPAGB. Redifining TPAGB'
+            #        imax = pd['maxima_locations']
+            #        #imin = pd['minima_locations']
+            #        tpagb = inds[imax[0]]
+                    #from padova_tracks.tracks.track_diag import plot_track
+                    #ax = plot_track(track, 'age', logL)
+                    #ax.plot(track.data[age][track.iptcri], track.data[logL][track.iptcri], 'o')
+                    #ax.plot(track.data[age][inds[imin]], track.data[logL][inds[imin]], 'o')
+                    #ax.plot(track.data[age][stpagb], track.data[logL][stpagb], 's')
+                    #ax.plot(track.data[age][tpagb], track.data[logL][tpagb], '*')
+                    #print(track.mass)
+                    #print(track.Z)
+             #       self.add_eep(track, 'TPAGB', tpagb, hb=True, message=msg)
+
+            if diag_plot:
+                agb_ly1c = 'red'
+                agb_ly2c = 'blue'
+                fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12, 6))
+                ax1.plot(norm_age, ly, label='He', color='purple')
+                ax1.plot(norm_age, lx, label='H', color='orange')
+                if len(ex_inds) > 0:
+                    ax1.plot(norm_age[ex_inds], diff_L, label='abs diff', color='black')
+                    ax1.plot(norm_age[ex_inds[mins]], diff_L[mins], 'o', color='black')
+                ax1.plot(norm_age[agb_ly1], lx[agb_ly1], 'o', color=agb_ly1c)
+                ax1.plot(norm_age[agb_ly2], ly[agb_ly2], 'o', color=agb_ly2c)
+
+                ax1.set_title(track.mass)
+                ax1.legend(loc=0)
+                ax1.set_ylim(-0.05, 1.)
+                if len(ex_inds) > 0:
+                    ax1.set_xlim(norm_age[ex_inds[0]], 1)
+                ax1.set_ylabel('Luminosity fraction from []')
+                ax1.set_xlabel('Age/Total Age')
+
+                ax2.plot(track.data[logT], track.data[logL], color='green')
+                inds = track.iptcri[track.iptcri > 0]
+                ax2.plot(track.data[logT][inds], track.data[logL][inds], 'o', color='green')
+                ax2.plot(track.data[logT][agb_ly1], track.data[logL][agb_ly1],
+                         'o', color=agb_ly1c)
+                ax2.plot(track.data[logT][agb_ly2], track.data[logL][agb_ly2],
+                         'o', color=agb_ly2c)
+                ax2.set_xlim(ax2.get_xlim()[::-1])
+                ax2.set_xlabel('$\log\ T_{eff}$')
+                ax2.set_ylabel('$\log\ L$')
+
+                figname = 'diag_agb_HB_eep_M%s.png' % track.mass
+                if plot_dir is not None:
+                    figname = os.path.join(plot_dir, figname)
+                plt.savefig(figname)
+                # helpful in ipython:
+                #if i == 4:
+                #    plt.close()
+                plt.close()
+                #print('wrote %s' % figname)
+
+        if basti:
+            ala_basti(track)
         else:
-            # the two deepest mins are the ly == lx match
-            min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-            (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
-            msg1 = 'first deepest min when ly == lx after YCEN_0.000'
-            msg2 = 'second deepest mins when ly == lx after YCEN_0.000'
-            msg = ''
-            # most of the time, the above works, a couple times the points
-            # are instead in the thermal pulses.
+            ala_mist(track)
 
-            # if agb_ly1 is in a thermal pulse (and should be much younger)
-            # take away some mins...
-
-            i = 4
-            if norm_age[ex_inds[mins[0]]] < 0.89 and norm_age[agb_ly1] > 0.98:
-                while norm_age[agb_ly1] > 0.98:
-                    mins = mins[:i]
-                    min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-                    try:
-                        (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
-                    except:
-                        agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
-                        msg = ''
-                        break
-                    i -= 1
-                msg = ' adjusted to be outside of a TP'
-
-            # if the agb_ly2 is in a thermal pulse take away some mins...
-            if norm_age[agb_ly2] > 0.999:
-                while norm_age[agb_ly2] > 0.999:
-                    mins = mins[:i]
-                    min_inds = np.asarray(mins)[np.argsort(diff_L[mins])[0:2]]
-                    try:
-                        (agb_ly1, agb_ly2) = np.sort(ex_inds[min_inds])
-                    except:
-                        agb_ly1, agb_ly2, msg1, msg2 = no_agb(track)
-                        msg = ''
-                        break
-                    i -= 1
-                msg = ' adjusted to be outside of a TP'
-            msg1 += msg
-            msg2 += msg
-
-        if agb_ly2 > track.iptcri[-1]:
-            _, agb_ly2 = np.round(np.linspace(track.iycen_0000,
-                                        track.iptcri[-1], 4))[1:3]
-            msg2 += ' was past TPAGB re-adjusted.'
-        if agb_ly1 > track.iptcri[-1]:
-            agb_ly1, _ = np.round(np.linspace(track.iycen_0000,
-                                        track.iptcri[-1], 4))[1:3]
-            msg1 += ' was past TPAGB re-adjusted.'
-
-        self.add_eep(track, 'AGB_LY1', agb_ly1, hb=True, message=msg1)
-        self.add_eep(track, 'AGB_LY2', agb_ly2, hb=True, message=msg2)
-
-        # HACK UNTIL TPAGB IS FULLY INTEGRATED
-        #inds = np.arange(agb_ly2 + 3, track.iptcri[-1], dtype=int)
-        #if len(inds) == 0 and track.iptcri[-1] > 0:
-        #    if track.iptcri[-1] < agb_ly2:
-        #        track.flag = 'TP-AGB is at or before AGB_LY2'
-        #        if self.debug:
-        #            pdb.set_trace()
-        #else:
-        #    pd = utils.find_peaks(track.data[logL][inds])
-        #    if pd['maxima_number'] >= 1:
-        #        #stpagb = second_derivative(track.data[logL][inds], np.log10(track.data['age'][inds]))
-        #        pf_kw = {'get_max': True, 'sandro': False, 'more_than_one': 'max of max',
-        #                 'parametric_interp': False, 'less_linear_fit': False}
-        #        #stpagb = self.peak_finder(track, logL, 'AGB_LY2', 'TPAGB', **pf_kw)
-        #        msg = 'Peaks found between AGB_LY2 and TPAGB. Redifining TPAGB'
-        #        imax = pd['maxima_locations']
-        #        #imin = pd['minima_locations']
-        #        tpagb = inds[imax[0]]
-                #from padova_tracks.tracks.track_diag import plot_track
-                #ax = plot_track(track, 'age', logL)
-                #ax.plot(track.data[age][track.iptcri], track.data[logL][track.iptcri], 'o')
-                #ax.plot(track.data[age][inds[imin]], track.data[logL][inds[imin]], 'o')
-                #ax.plot(track.data[age][stpagb], track.data[logL][stpagb], 's')
-                #ax.plot(track.data[age][tpagb], track.data[logL][tpagb], '*')
-                #print(track.mass)
-                #print(track.Z)
-         #       self.add_eep(track, 'TPAGB', tpagb, hb=True, message=msg)
-
-        if diag_plot:
-            agb_ly1c = 'red'
-            agb_ly2c = 'blue'
-            fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(12, 6))
-            ax1.plot(norm_age, ly, label='He', color='purple')
-            ax1.plot(norm_age, lx, label='H', color='orange')
-            if len(ex_inds) > 0:
-                ax1.plot(norm_age[ex_inds], diff_L, label='abs diff', color='black')
-                ax1.plot(norm_age[ex_inds[mins]], diff_L[mins], 'o', color='black')
-            ax1.plot(norm_age[agb_ly1], lx[agb_ly1], 'o', color=agb_ly1c)
-            ax1.plot(norm_age[agb_ly2], ly[agb_ly2], 'o', color=agb_ly2c)
-
-            ax1.set_title(track.mass)
-            ax1.legend(loc=0)
-            ax1.set_ylim(-0.05, 1.)
-            if len(ex_inds) > 0:
-                ax1.set_xlim(norm_age[ex_inds[0]], 1)
-            ax1.set_ylabel('Luminosity fraction from []')
-            ax1.set_xlabel('Age/Total Age')
-
-            ax2.plot(track.data[logT], track.data[logL], color='green')
-            inds = track.iptcri[track.iptcri > 0]
-            ax2.plot(track.data[logT][inds], track.data[logL][inds], 'o', color='green')
-            ax2.plot(track.data[logT][agb_ly1], track.data[logL][agb_ly1],
-                     'o', color=agb_ly1c)
-            ax2.plot(track.data[logT][agb_ly2], track.data[logL][agb_ly2],
-                     'o', color=agb_ly2c)
-            ax2.set_xlim(ax2.get_xlim()[::-1])
-            ax2.set_xlabel('$\log\ T_{eff}$')
-            ax2.set_ylabel('$\log\ L$')
-
-            figname = 'diag_agb_HB_eep_M%s.png' % track.mass
-            if plot_dir is not None:
-                figname = os.path.join(plot_dir, figname)
-            plt.savefig(figname)
-            # helpful in ipython:
-            #if i == 4:
-            #    plt.close()
-            plt.close()
-            #print('wrote %s' % figname)
-        return agb_ly1, agb_ly2
+        return
 
     def add_ms_eeps(self, track):
         '''
@@ -616,10 +644,10 @@ class DefineEeps(Interpolator):
             msg = 'Min logT'
             if track.mass <= low_mass:
                 # BaSTi uses XCEN == 0.3, could put this as a keyword
-                xcen = 0.3
-                dte = np.abs(track.data[xcen][inds] - xcen)
+                xcen_ = 0.3
+                dte = np.abs(track.data[xcen][inds] - xcen_)
                 ms_tmin = inds[np.argmin(dte)]
-                msg = 'XCEN==%.1f' % xcen
+                msg = 'XCEN==%.1f' % xcen_
             elif delta_te < .1:  # value to use interp instead
                 # find the te min by interpolation.
                 ms_tmin = second_derivative(xdata, inds)
@@ -862,25 +890,19 @@ class DefineEeps(Interpolator):
                                                          sandro=False)]
 
         if max_l == -1 or np.abs(rg_minl - max_l) < 10:
-            pf_kw['less_linear_fit'] = bool(np.abs(pf_kw['less_linear_fit']-1))
             msg = '%s logL MS_TO to %s less_linear_fit' % (extreme, eep2)
-            max_l = self.peak_finder(track, logL, 'MS_TO', eep2, **pf_kw)
+            inds = self.ptcri.inds_between_ptcris(track, 'MS_TO', eep2, sandro=False)
 
-        if np.abs(rg_minl - max_l) < 10:
-            inds = self.ptcri.inds_between_ptcris(track, 'MS_TO', eep2,
-                                                  sandro=False)
-            non_dupes = self.remove_dupes(track.data[logT][inds],
-                                          track.data[logL][inds], '',
-                                          just_two=True)
-
-            xdata = track.data[logT][inds][non_dupes]
-            ydata = track.data[logL][inds][non_dupes]
+            xdata = track.data[logT][inds]
+            ydata = track.data[logL][inds]
             # calculate slope using polyfit
-            m, bb = np.polyfit(xdata, ydata, 1)
+            m, bb = np.polyfit([xdata[0], xdata[-1]], [ydata[0], ydata[-1]], 1)
             peak_dict = utils.find_peaks(ydata - (m * xdata + bb))
             maxs = peak_dict['maxima_locations']
-            max_l = inds[non_dupes[maxs[np.argmax(xdata[maxs])]]]
-            msg = 'Hacked SG_MAXL because it was too close to RG_MINL'
+            max_l = inds[maxs[np.argmax(xdata[maxs])]]
+
+        if np.abs(rg_minl - max_l) < 10:
+            import pdb; pdb.set_trace()
 
         msto = track.iptcri[self.ptcri.get_ptcri_name('MS_TO', sandro=False)]
         if max_l == msto:
@@ -891,10 +913,10 @@ class DefineEeps(Interpolator):
         self.add_eep(track, 'SG_MAXL', max_l, message=msg)
         return max_l
 
-    def add_eep_with_age(self, track, eep_name, age, tol=0.1):
-        iage = np.argmin(np.abs(track.data[age] - age))
-        age_diff = np.min(np.abs(track.data[age] - age))
-        msg = 'By age = %g and is %g' % (age, track.data[age][iage])
+    def add_eep_with_age(self, track, eep_name, age_, tol=0.1):
+        iage = np.argmin(np.abs(track.data[age] - age_))
+        age_diff = np.min(np.abs(track.data[age] - age_))
+        msg = 'By age = %g and is %g' % (age_, track.data[age][iage])
         #if (age_diff / age) > tol:
         #    print('possible bad age match for eep.')
         #    print('frac diff mass eep_name age_attempted age_set')
@@ -903,7 +925,7 @@ class DefineEeps(Interpolator):
         self.add_eep(track, eep_name, iage, message=msg)
         return iage, track.data[age][iage]
 
-    def add_eep(self, track, eep_name, ind, hb=False, message='no info',
+    def add_eep(self, track, eep_name, ind, message='no info',
                 loud=False):
         '''
         Will add or replace the index of Track.data to track.iptcri
@@ -914,7 +936,7 @@ class DefineEeps(Interpolator):
         if loud:
             print(track.mass, eep_name, ind, message)
 
-    def load_critical_points(self, track, ptcri, hb=False, plot_dir=None,
+    def load_critical_points(self, track, ptcri, plot_dir=None,
                              diag_plot=True, debug=False):
         '''
         Load all EEPs. First the ones defined by Sandro, then call
@@ -928,9 +950,6 @@ class DefineEeps(Interpolator):
         ptcri : flexible
             rsp.padova_tracks.critical_point object or filename of ptcri
             file
-
-        hb : bool [False]
-            is this an HB track
 
         plot_dir : str
             path to diagnostic plot directory
@@ -956,7 +975,7 @@ class DefineEeps(Interpolator):
         #    'Must supply either a ptcri file or object'
 
         if type(ptcri) is str:
-            ptcri = critical_point(ptcri, hb=hb)
+            ptcri = critical_point(ptcri, hb=track.hb)
         self.ptcri = ptcri
         eep_obj = self.ptcri.eep
         please_define = self.ptcri.please_define
@@ -1025,14 +1044,15 @@ class DefineEeps(Interpolator):
             track.iptcri[track.iptcri > len(track.data[MODE])] = 0
 
             # define the eeps
-            self.define_eep_stages(track, hb=hb, plot_dir=plot_dir,
+            self.define_eep_stages(track, plot_dir=plot_dir,
                                    diag_plot=diag_plot, debug=debug)
         else:
             # copy sandros dict.
             track.iptcri = ptcri.data_dict['M%.3f' % track.mass]
         return track
 
-    def add_quiesscent_he_eep(self, track, ycen1, start='RG_TIP'):
+    def add_quiesscent_he_eep(self, track, ycen1, start='RG_TIP',
+                              mist=True, diag=False):
         """
         Add HEB_BEG eep.
 
@@ -1062,37 +1082,69 @@ class DefineEeps(Interpolator):
         he_beg : int
             track.data index of HE_BEG
         """
-        if type(ycen1) != str:
-            inds = np.arange(start, ycen1)
-        else:
-            inds = self.ptcri.inds_between_ptcris(track, start, ycen1,
-                                                  sandro=False)
-        eep_name = 'HE_BEG'
 
-        if len(inds) == 0:
-            self.add_eep(track, eep_name, 0,
-                         message='No HE_BEG M=%.4f Z=%.4f' % (track.mass,
-                                                              track.Z))
-            return 0
+        def ala_mist(track):
+            """ T min while Ycen > Ycen_TRGB - 0.03 """
+            itrgb = track.iptcri[self.ptcri.key_dict['RG_TIP']]
+            ycen_ = track.data[ycen][itrgb] - 0.03
+            inds, = np.nonzero(track.data[ycen][itrgb:] > ycen_)
+            return np.argmin(track.data[logT][inds]) + itrgb
 
-        he_min = np.argmin(track.data['LY'][inds])
+        def ala_phil(track):
+            if type(ycen1) != str:
+                inds = np.arange(start, ycen1)
+            else:
+                inds = self.ptcri.inds_between_ptcris(track, start, ycen1,
+                                                      sandro=False)
+                he_min = np.argmin(track.data['LY'][inds])
 
-        # Sometimes there is a huge peak in LY before the min, find it...
-        npts = inds[-1] - inds[0] + 1
-        subset = npts / 3
-        he_max = np.argmax(track.data['LY'][inds[:subset]])
+            if len(inds) == 0:
+                self.add_eep(track, eep_name, 0,
+                             message='No HE_BEG M=%.4f Z=%.4f' % (track.mass,
+                                                                  track.Z))
+                return 0
 
-        # Peak isn't as important as the ratio between the start and end
-        rat = track.data['LY'][inds[he_max]] / track.data['LY'][inds[0]]
+            # Sometimes there is a huge peak in LY before the min, find it...
+            npts = inds[-1] - inds[0] + 1
+            subset = npts / 3
+            he_max = np.argmax(track.data['LY'][inds[:subset]])
 
-        # If the min is at the point next to the RG_TIP, or the ratio is huge,
-        # get the min after the peak.
-        if he_min == 0 or rat > 10:
-            amin = np.argmin(track.data['LY'][inds[he_max + 1:]])
+            # Peak isn't as important as the ratio between the start and end
+            rat = track.data['LY'][inds[he_max]] / track.data['LY'][inds[0]]
+
+            # If the min is at the point next to the RG_TIP, or the ratio is huge,
+            # get the min after the peak.
+            if he_min == 0 or rat > 10:
+                amin = np.argmin(track.data['LY'][inds[he_max + 1:]])
+
             he_min = he_max + 1 + amin
 
-        he_beg = inds[he_min]
-        self.add_eep(track, eep_name, he_beg, message='Min LY after RG_TIP')
+            return inds[he_min]
+
+        eep_name = 'HE_BEG'
+
+        if mist:
+            he_beg = ala_mist(track)
+            msg = 'Tmin while YCEN > YCEN at RGB_TIP - 0.03'
+        else:
+            he_beg = ala_phil(track)
+            msg = 'Min LY after RG_TIP'
+
+        self.add_eep(track, eep_name, he_beg, message=msg)
+        if self.debug:
+            if diag:
+                plt.ion()
+                fig, ax = plt.subplots()
+                t = track
+                ax.plot(t.data[logT], t.data[logL])
+                ax.plot(t.data[logT][he_beg], t.data[logL][he_beg], 'o', label='mist')
+                he_beg0 = ala_phil(track)
+                ax.plot(t.data[logT][he_beg0], t.data[logL][he_beg0], 'o', label='phil')
+                plt.legend()
+                ax.set_title('M {} Z {}'.format(track.mass, track.Z))
+                plt.show()
+                plt.draw()
+                import pdb; pdb.set_trace()
         return he_beg
 
 class InDevelopment(object):
@@ -1129,8 +1181,8 @@ class InDevelopment(object):
         initialized.
         '''
         ycols = ['QSCHW', 'QH1', 'QH2']
-        age = track.data[age]
-        lage = np.log10(age)
+        age_ = track.data[age]
+        lage = np.log10(age_)
 
         morigs = [t for t in self.ptcri.data_dict['M%.3f' % self.mass]
                   if t > 0 and t < len(track.data[logL])]

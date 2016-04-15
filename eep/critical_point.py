@@ -46,11 +46,10 @@ class Eep(object):
                     'MS_TO', 'SG_MAXL', 'RG_MINL', 'RG_BMP1', 'RG_BMP2',
                     'RG_TIP', 'HE_BEG', 'YCEN_0.550', 'YCEN_0.500',
                     'YCEN_0.400', 'YCEN_0.200', 'YCEN_0.100', 'YCEN_0.005',
-                    'YCEN_0.000', 'AGB_LY1', 'AGB_LY2', 'TPAGB', 'TPAGB1',
-                    'TPAGB2']
+                    'END_CHEB', 'TPAGB']
         eep_lengths = [80, 80, 80, 199, 100, 100, 70, 370, 30, 400, 40, 150,
-                       100, 60, 100, 80, 80, 80, 80, 80, 80, 100, 100]
-
+                       100, 60, 100, 80, 80, 80, 80]
+        assert (len(eep_list) == len(eep_lengths) + 1), 'Bad eep definitions'
         ihb = eep_list.index('HE_BEG')
         eep_list_hb = np.copy(eep_list[ihb:])
         eep_lengths_hb = np.copy(eep_lengths[ihb:])
@@ -77,7 +76,7 @@ class critical_point(object):
     '''
     def __init__(self, filename=None, sandro=True, debug=False, hb=False):
         self.debug = debug
-        
+
         if filename is not None:
             if 'hb' in filename:
                 hb = True
@@ -272,13 +271,13 @@ class critical_point(object):
                                    os.path.join(track.base, track.name)))
         #print('wrote %s' % filename)
 
-    def check_ptcri(self, mass, arr):
+    def check_ptcri(self, mass_, arr):
         ndefined = len(np.nonzero(arr > 0)[0])
         needed = 15
 
-        if (mass > inte_mass) and (mass <= high_mass):
+        if (mass_ > inte_mass) and (mass_ <= high_mass):
             if ndefined != needed:
-                print('check_ptcri error: M%.3f does not have enough EEPs' % mass)
+                print('check_ptcri error: M%.3f does not have enough EEPs' % mass_)
                 try:
                     masses = np.array([f.split('F7_M')[1].replace('.PMS', '')
                                        for f in self.fnames], dtype=float)
@@ -286,13 +285,13 @@ class critical_point(object):
                     masses = np.array([f.split('F7_M')[1].replace('.DAT', '')
                                        for f in self.fnames], dtype=float)
 
-                inds, = np.nonzero(mass == masses)
+                inds, = np.nonzero(mass_ == masses)
                 print('files in question:')
                 print(np.array(self.fnames)[inds])
                 for ind in inds:
                     self.fix_ptcri(np.array(self.fnames)[ind])
 
-    def fix_ptcri(self, fname):
+    def fix_ptcri(self, fname, iptcri=None):
         """
         print better values of sandro's EEPs (the basis for Phil's EEPs)
         (It is expected you will hand code the proper values in the ptcri file
@@ -362,44 +361,57 @@ class critical_point(object):
             inmsg = 'Enter new value for %s or 0 to move on: ' % ptname
             ax.plot(track.data[logT][pt], track.data[logL][pt], '*')
             plt.draw()
-            go_on = int(raw_input(inmsg))
+            go_on = raw_input(inmsg)
+            try:
+                go_on = int(go_on)
+            except:
+                import pdb; pdb.set_trace()
             if go_on != 0:
                 # don't overwrite with "move on" value
                 pt = go_on
             return go_on, pt
 
-
-        track_dir = self.base.replace('data', 'tracks')
-        tname = os.path.split(fname)[1]
+        #track_dir = self.base.replace('data', 'tracks')
+        track_dir, tname = os.path.split(fname)
+        estr = 'PMS'
+        hb = 'hb' in fname.lower()
+        if hb:
+            estr = 'HB'
         z = tname.split('Z')[1].split('Y')[0].replace('_', '')
-        mass = tname.split('M')[1].replace('.DAT', '').replace('.P', '').split('.HB')[0]
-        track_dir, = get_dirs(track_dir, z)
+        mass_ = tname.split('M')[1].replace('.DAT', '').replace('.P', '').split('.HB')[0]
+        #track_dir, = get_dirs(track_dir, '{:g}'.format(z))
 
         #track_file = os.path.join(track_dir, '/'.join(fname.split('/')[1:]))
         try:
-            track_file, = get_files(track_dir, '*{}*'.format(mass))
+            track_file, = get_files(track_dir, '*M{}*{}'.format(mass_, estr))
         except ValueError:
             # the above search text will not distiguish, e.g, M030.000 and M130.000
-            track_files = get_files(track_dir, '*{}*'.format(mass))
+            track_files = get_files(track_dir, '*{}*'.format(mass_))
             # cull mass values
+            import pdb; pdb.set_trace()
             tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1].split('.')[:-1])
                             for t in track_files], dtype=float)
             # select by mass
-            track_file, = np.array(track_files)[np.nonzero(float(mass) == tms)]
+            track_file, = np.array(track_files)[np.nonzero(float(mass_) == tms)]
+
 
         track = self.load_eeps(Track(track_file))
 
-        ax = td.plot_sandro_ptcri(track, ptcri=self)
+        if iptcri is not None:
+            track.iptcri = iptcri
+            fig, ax = plt.subplots()
+            ax.plot(track.data[logT], track.data[logL])
+            ax.plot(track.data[logT][iptcri], track.data[logL][iptcri], 'o')
+            td.annotate_plot(track, ax, logT, logL)
+        else:
+            ax = td.plot_sandro_ptcri(track, ptcri=self)
+
         print('Open sandros ptcri file and get ready to edit. {}'.format(tname))
         print('Current values:', track.sptcri)
         if len(track.sptcri) <= 3:
             print('this ptcri looks especially messed up.')
             import pdb; pdb.set_trace()
 
-        if track.mass > high_mass:
-            track.sptcri[3] = guessandcheck('pms_end', pt=track.sptcri[2])
-            print('  '.join(['%i' % i for i in np.concatenate([track.sptcri[:3], np.array(np.linspace(track.sptcri[3], len(track.data), 14)[1:-1], dtype=int)])]))
-            return
         pms_beg = guessandcheck('pms_beg', pt=track.sptcri[0])
         pms_min = guessandcheck('pms_min', pt=track.sptcri[1])
         pms_end = guessandcheck('pms_end', pt=track.sptcri[2])
@@ -452,3 +464,6 @@ class critical_point(object):
                                             loopa, loopb, loopc, fin)]))
 
         sys.exit()
+
+if __name__ == "__main__":
+    ptcri = critical_point(filename=sys.argv[1])
