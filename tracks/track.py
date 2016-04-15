@@ -114,7 +114,7 @@ class Track(object):
 
         ext = self.name.split('.')[ind]
 
-        ftmpmass = self.name.split('_M')[1]
+        ftmpmass = self.name.split('_M')[1].replace('.dat', '')
         npts = ftmpmass.count('.')
         while npts != 1:
             ftmpmass = ftmpmass[:-1]
