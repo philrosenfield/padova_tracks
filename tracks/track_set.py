@@ -2,32 +2,82 @@
 a container of track
 '''
 from __future__ import print_function
+import argparse
+import sys
 import os
 import numpy as np
+import pandas as pd
 import scipy
 
-from ..fileio import get_files
-from ..utils import sort_dict
+from ..fileio import get_files, get_dirs
+from ..utils import sort_dict, filename_data
 
 from .track import Track, AGBTrack
 from .track_diag import TrackDiag
-from ..eep.critical_point import critical_point
+from ..eep.critical_point import critical_point, Eep
 
 import logging
 logger = logging.getLogger()
 
 max_mass = 1000.
 td = TrackDiag()
-
+eep = Eep()
 
 class TrackSet(object):
     """A class to load multiple Track instances"""
-    def __init__(self, inputs=None):
-        if inputs is None:
-            self.prefix = ''
-        else:
+    def __init__(self, inputs=None, prefix='', match=False):
+        if inputs is not None:
             self.hb = inputs.hb
             self.initialize_tracks(inputs)
+
+        if len(prefix) > 0:
+            # assume we're in a set directory
+            tracks_dir = os.getcwd()
+            self.tracks_base = os.path.join(tracks_dir, prefix)
+            # look for data directory, should be at same level as tracks
+            self.prefix = prefix
+            if not match:
+
+                data_dir = os.path.join(os.path.split(tracks_dir)[0], 'data')
+                if not os.path.isdir(self.tracks_base) or not os.path.isdir(data_dir):
+                    # can't guess directory structure ... give up now!
+                    print('can not guess dir structure')
+                    self.prefix = ''
+                    return
+
+                ptcris = get_files(data_dir, 'p2m*{}*'.format(prefix))
+
+                if len(ptcris) == 0:
+                    print('no ptcris found')
+                    # parsec2match not run?
+                    self.prefix = ''
+                    return
+
+                ptcri_file, = [p for p in ptcris if not 'hb' in p]
+                hbptcri_file, = [p for p in ptcris if 'hb' in p]
+                track_search_term='*F7_*PMS'
+                hbtrack_search_term='*F7_*PMS.HB'
+                ignore = None
+            else:
+                track_search_term = '*dat.acs_wfc'
+                hbtrack_search_term = '*HB.dat.acs_wfc'
+                ptcri_file = None
+                hbptcri_file = None
+
+            self.hb = False
+            self.find_tracks(track_search_term=track_search_term,
+                             ptcri_file=ptcri_file, match=match, ignore='HB')
+            self.hb = True
+            self.find_tracks(track_search_term=hbtrack_search_term,
+                             ptcri_file=hbptcri_file, match=match)
+
+        if 'prefix' in self.__dict__.keys():
+            self.parse_prefix()
+        return
+
+    def parse_prefix(self):
+        self.prefix_dict = filename_data(self.prefix, skip=0)
+        return
 
     def initialize_tracks(self, inputs):
         self.prefix = inputs.prefix
@@ -80,7 +130,8 @@ class TrackSet(object):
         return track_names, mass
 
     def find_tracks(self, track_search_term='*F7_*PMS', masses=None,
-                    match=False, agb=False):
+                    match=False, agb=False, ptcri_file=None,
+                    ignore='ALFO0'):
         '''
         loads tracks or hb tracks and their masses as attributes
         can load subset if masses (list, float, or string) is set.
@@ -88,7 +139,7 @@ class TrackSet(object):
         '%f < 40' and it will use masses that are less 40.
         '''
 
-        track_names, mass = self.find_masses(track_search_term)
+        track_names, mass = self.find_masses(track_search_term, ignore=ignore)
 
         # only do a subset of masses
         if masses is not None:
@@ -121,13 +172,49 @@ class TrackSet(object):
             if 'AGB' in t.upper():
                 trk = AGBTrack(t)
             else:
-                trk = Track(t, match=match)
+                trk = Track(t, match=match, ptcri_file=ptcri_file)
             trks.append(trk)
         self.__setattr__(tattr, trks)
         self.__setattr__('%s' % mass_str, \
             np.array([t.mass for t in self.__getattribute__(tattr)
                       if t.flag is None], dtype=np.float))
         return
+
+    def eep_file(self, outfile=None):
+        if outfile is None:
+            outfile = '{}_eeptrack.dat'.format(self.prefix.replace('/',''))
+        header = True
+        wstr = 'w'
+        wrote = 'wrote to'
+        if os.path.isfile(outfile):
+            wstr = 'a'
+            header = False
+            wrote = 'appended to'
+        data = pd.DataFrame()
+
+        for track in np.concatenate([self.tracks, self.hbtracks]):
+            offset = 0
+            if not 'iptcri' in track.__dict__.keys():
+                print('no iptcri M={} {}/{} '.format(track.mass, track.base, track.name))
+                if track.mass > 0.6:
+                    print(track.flag)
+                    #import pdb; pdb.set_trace()
+                continue
+            inds, = np.nonzero(track.iptcri)
+            iptcri = track.iptcri[inds]
+            if track.hb:
+                # start counting iptcri for HB after RGB_TIP.
+                offset = eep.eep_list.index(eep.eep_list_hb[0])
+            df = pd.DataFrame(track.data[iptcri])
+
+            df['iptcri'] = inds + offset
+            df['hb'] = track.hb * 1
+            for k, v in self.prefix_dict.items():
+                df[k] = v
+            data = data.append(df, ignore_index=True)
+
+        data.to_csv(outfile, mode=wstr, index=False, sep=' ', header=header)
+        print('{} {}'.format(wrote, outfile))
 
     def all_inds_of_eep(self, eep_name, sandro=True, hb=False):
         '''
@@ -276,3 +363,53 @@ class TrackMix(object):
             track_set = np.concatenate((track_set, TrackSet(inputs=inputs)))
             track_set = self.sort_by_mass(track_set)
             self.track_sets = np.append(self.track_sets, track_set)
+
+
+def big_eep_file(prefix_search_term='OV*', outfile=None, match=False):
+
+    if outfile is None:
+        outfile = 'all_eeps.csv'
+
+    prefixs = get_dirs(os.getcwd(), 'OV')
+
+    for prefix in prefixs:
+        prefix = os.path.split(prefix)[1]
+        ts = TrackSet(prefix=prefix, match=match)
+        ts.eep_file(outfile=outfile)
+    return
+
+def main(argv):
+    """
+    Main function for track_set.py write eep rows to a file
+    """
+    parser = argparse.ArgumentParser(description="Plot or reformat calcsfh -ssp output")
+
+    parser.add_argument('-v', '--pdb', action='store_true',
+                        help='invoke pdb')
+
+    parser.add_argument('-a', '--all', action='store_true',
+                        help='make an EEP file for all track dirs in this directory')
+
+    parser.add_argument('-m', '--match', action='store_true',
+                        help='these are tracks for match')
+
+    parser.add_argument('-o', '--outfile', type=str, default=None,
+                        help='file name to write/append to')
+
+    parser.add_argument('-p', '--prefix', type=str,
+                        help='if not -a prefix (directory name that holds tracks) must be in cwd')
+
+    args = parser.parse_args(argv)
+
+    if args.pdb:
+        import pdb; pdb.set_trace()
+
+    if args.all:
+        big_eep_file(outfile=args.outfile, match=args.match)
+    else:
+        ts = TrackSet(prefix=args.prefix, match=args.match)
+        ts.eep_file(outfile=args.outfile)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

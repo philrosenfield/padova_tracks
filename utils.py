@@ -8,6 +8,53 @@ __all__ = ['add_data', 'count_uncert_ratio', 'between', 'brighter',
            'mp_double_gauss', 'points_inside_poly', 'smooth', 'sort_dict',
            'mp_gauss', 'minmax', 'extrema', 'replace_']
 
+
+def filename_data(fname, ext='.dat', skip=2, delimiter='_', exclude='imf'):
+    """
+    return a dictionary of key and values from a filename.
+    E.g, ssp_imf4.85_bf0.3_dav0.0.fdat
+    returns bf: 0.3, dav: 0.0
+    NB: imf is excluded because it's already included in the file.
+
+    Parameters
+    ----------
+    fname : str
+        filename
+
+    ext : str
+        extension (sub string to remove from the tail)
+
+    delimiter : str
+        how the keyvals are separated '_' in example above
+
+    skip : int
+        skip n items (skip=1 skips ssp in the above example)
+
+    exclude : str
+        do not include this key/value in the file (default: 'imf')
+
+    Returns
+    -------
+    dict of key and values from filename
+    """
+    import re
+    keyvals = fname.replace(ext, '').split(delimiter)[skip:]
+    d = {}
+    for keyval in keyvals:
+        kv = re.findall(r'\d+|[a-z]+', keyval, re.IGNORECASE)
+        neg = ''
+        if '-' in keyval:
+            neg = '-'
+        if kv[0].lower() == exclude.lower():
+            continue
+        try:
+            d[kv[0]] = float(neg + '.'.join(kv[1:]))
+        except ValueError:
+            #print e
+            #print(sys.exc_info()[1])
+            pass
+    return d
+
 def get_zy(string):
     Z, Ymore = string.replace('_','').split('Z')[1].split('Y')
     Y = ''

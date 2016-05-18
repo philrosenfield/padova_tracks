@@ -12,7 +12,7 @@ from astropy.table import Table
 logger = logging.getLogger()
 
 from ..utils import get_zy, replace_
-from ..eep.critical_point import critical_point
+from ..eep.critical_point import critical_point, Eep
 from ..config import *
 
 class Track(object):
@@ -51,8 +51,13 @@ class Track(object):
             if not match:
                 self.check_header_arg(loud=True)
                 if ptcri_file is not None:
+                    ptcri_kw = dict({'sandro': False}.items() + ptcri_kw.items())
                     ptcri = critical_point(ptcri_file, **ptcri_kw)
-                    self.iptcri = ptcri.data_dict['M%.3f' % self.mass]
+                    try:
+                        self.iptcri = ptcri.data_dict['M%.3f' % self.mass]
+                    except:
+                        print(sys.exc_info()[1])
+
 
     def check_track(self):
         '''check if age decreases'''
@@ -200,6 +205,11 @@ class Track(object):
             return logl
 
         self.col_keys = [age, mass, logT, logL, 'logg', 'CO']
+        with open(filename, 'r') as inp:
+            header = inp.readline()
+            col_keys = header.split()
+            if len(col_keys) > len(self.col_keys):
+                self.col_keys.extend(col_keys[7:])
 
         if track_data is None:
             data = np.genfromtxt(filename, names=self.col_keys,
@@ -212,6 +222,10 @@ class Track(object):
             for i in range(nrows):
                 data[i] = track_data[i]
 
+        eep = Eep()
+        iptcri = np.cumsum(eep.nticks) - 1.
+        iptcri[iptcri >= len(data)] = 0
+        self.iptcri = np.array(iptcri, dtype=int)
         self.data = data.view(np.recarray)
         return data
 
