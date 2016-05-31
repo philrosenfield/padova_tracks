@@ -169,7 +169,7 @@ class TrackSet(object):
         self.__setattr__('%s_names' % track_str, track_names[inds])
         trks = []
         for t in track_names[inds]:
-            if 'AGB' in t.upper():
+            if 'AGB' in os.path.split(t)[1].upper():
                 trk = AGBTrack(t)
             else:
                 trk = Track(t, match=match, ptcri_file=ptcri_file)
