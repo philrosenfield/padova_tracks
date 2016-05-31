@@ -123,24 +123,24 @@ class critical_point(object):
         this is iptcri, not mptcri (which start at 1 not 0)
         they will be the same inds that can be used in Track.data
         '''
+        def getind(inds, name, sandro=sandro):
+            try:
+                ind = inds[self.get_ptcri_name(name, sandro=sandro)]
+            except IndexError:
+                ind = 0
+            return ind
+        
         if sandro:
             # this must be added in Tracks.load_critical_points!
             inds = track.sptcri
         else:
             inds = track.iptcri
 
-        try:
-            first = inds[self.get_ptcri_name(name1, sandro=sandro)]
-        except IndexError:
-            first = 0
+        first = getind(inds, name1, sandro=sandro)
+        second = getind(inds, name2, sandro=sandro)
 
-        try:
-            second = inds[self.get_ptcri_name(name2, sandro=sandro)]
-        except IndexError:
-            second = 0
+        return np.arange(first, second)
 
-        inds = np.arange(first, second)
-        return inds
 
     def get_ptcri_name(self, val, sandro=True, hb=False):
         '''
@@ -170,19 +170,18 @@ class critical_point(object):
             begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
                       and 'F7' in lines[i]]
         else:
+            begin = -1
             if 'p2m' in filename:
                 begin = 0
-            else:
-                begin = -1
 
         if sandro and not hb:
             try:
                 self.fnames = [l.strip().split('../F7/')[1]
                                for l in lines[(begin+2):]]
             except IndexError:
+                # last two lines of Sandro's files have a different format
                 self.fnames = [l.strip().split('../F7/')[1]
                                for l in lines[(begin+2):-2]]
-
 
         # the final column is a filename.
         all_keys = lines[begin + 1].replace('#', '').strip().split()
@@ -226,7 +225,6 @@ class critical_point(object):
             # are no HB eeps in the ptcri files. Define them all here.
             #self.please_define_hb = eep_obj.eep_list_hb
 
-        if sandro:
             [self.check_ptcri(self.masses[i], data[i][3:].astype(int))
              for i in range(len(data))]
 
@@ -237,6 +235,7 @@ class critical_point(object):
         except KeyError:
             track.flag = 'No M%.3f in ptcri.data_dict.' % track.mass
             return track
+        
         if sandro:
             track.sptcri = \
                 np.concatenate([np.nonzero(track.data[MODE] == m)[0]

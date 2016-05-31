@@ -365,12 +365,12 @@ class TrackMix(object):
             self.track_sets = np.append(self.track_sets, track_set)
 
 
-def big_eep_file(prefix_search_term='OV*', outfile=None, match=False):
+def big_eep_file(prefix_search_term='OV', outfile=None, match=False):
 
     if outfile is None:
         outfile = 'all_eeps.csv'
 
-    prefixs = get_dirs(os.getcwd(), 'OV')
+    prefixs = get_dirs(os.getcwd(), prefix_search_term)
 
     for prefix in prefixs:
         prefix = os.path.split(prefix)[1]
@@ -396,6 +396,9 @@ def main(argv):
     parser.add_argument('-o', '--outfile', type=str, default=None,
                         help='file name to write/append to')
 
+    parser.add_argument('-s', '--search', type=str, default='OV',
+                        help='Prefix search term')
+    
     parser.add_argument('-p', '--prefix', type=str,
                         help='if not -a prefix (directory name that holds tracks) must be in cwd')
 
@@ -405,7 +408,7 @@ def main(argv):
         import pdb; pdb.set_trace()
 
     if args.all:
-        big_eep_file(outfile=args.outfile, match=args.match)
+        big_eep_file(prefix_search_term=args.search, outfile=args.outfile, match=args.match)
     else:
         ts = TrackSet(prefix=args.prefix, match=args.match)
         ts.eep_file(outfile=args.outfile)
