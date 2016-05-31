@@ -59,8 +59,8 @@ class TrackSet(object):
                 hbtrack_search_term='*F7_*PMS.HB'
                 ignore = None
             else:
-                track_search_term = '*dat.acs_wfc'
-                hbtrack_search_term = '*HB.dat.acs_wfc'
+                track_search_term = '*dat'
+                hbtrack_search_term = '*HB.dat'
                 ptcri_file = None
                 hbptcri_file = None
 
