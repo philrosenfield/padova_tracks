@@ -23,6 +23,7 @@ max_mass = 1000.
 td = TrackDiag()
 eep = Eep()
 
+
 class TrackSet(object):
     """A class to load multiple Track instances"""
     def __init__(self, inputs=None, prefix='', match=False):
@@ -167,13 +168,8 @@ class TrackSet(object):
 
         tattr = '%ss' % track_str
         self.__setattr__('%s_names' % track_str, track_names[inds])
-        trks = []
-        for t in track_names[inds]:
-            if 'AGB' in os.path.split(t)[1].upper():
-                trk = AGBTrack(t)
-            else:
-                trk = Track(t, match=match, ptcri_file=ptcri_file)
-            trks.append(trk)
+        trks = [Track(t, match=match, ptcri_file=ptcri_file)
+                for t in track_names[inds]]
         self.__setattr__(tattr, trks)
         self.__setattr__('%s' % mass_str, \
             np.array([t.mass for t in self.__getattribute__(tattr)
@@ -341,6 +337,7 @@ class TrackSet(object):
         else:
             pass
 
+
 class TrackMix(object):
     """A class to hold multiple TrackSet intances"""
     def __init__(self, inputs=None):
@@ -398,7 +395,7 @@ def main(argv):
 
     parser.add_argument('-s', '--search', type=str, default='OV',
                         help='Prefix search term')
-    
+
     parser.add_argument('-p', '--prefix', type=str,
                         help='if not -a prefix (directory name that holds tracks) must be in cwd')
 

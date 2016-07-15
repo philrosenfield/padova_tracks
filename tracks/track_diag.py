@@ -267,7 +267,9 @@ class TrackDiag(object):
 
         default = {'hb': hb}
         pat_kw = pat_kw or {}
-        pat_kw = dict(default.items() + pat_kw.items())
+        default.update(pat_kw)
+        pat_kw = default.copy()
+
         if 'ptcri' in pat_kw.keys():
             if type(pat_kw['ptcri']) is str:
                 pat_kw['ptcri'] = critical_point(pat_kw['ptcri'], hb=hb,
@@ -329,10 +331,13 @@ class TrackDiag(object):
                         ptcri=None, hb=False, line_pltkw={}, point_pltkw={},
                         clean=True):
         '''plot all tracks and annotate eeps'''
-        line_pltkw = dict({'alpha': 0.5}.items() + line_pltkw.items())
+        default = {'alpha': 0.5}
+        default.update(line_pltkw)
+        line_pltkw = default.copy()
 
-        point_pltkw = dict({'marker': 'o', 'ls': '', 'alpha': 0.3}.items() + \
-                            point_pltkw.items())
+        default = {'marker': 'o', 'ls': '', 'alpha': 0.3}
+        default.update(point_pltkw)
+        point_pltkw = default.copy()
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(16, 9))

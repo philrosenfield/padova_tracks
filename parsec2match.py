@@ -5,46 +5,25 @@ This code calls padova_tracks:
 2) Interpolates the tracks so they all have the same number of points between
    defined EEPs.
 '''
-from __future__ import print_function
+from __future__ import print_function, division
 from copy import deepcopy
 import numpy as np
 import os
 import sys
 
-from ResolvedStellarPops import fileio
-from eep.define_eep import DefineEeps
-from eep.critical_point import critical_point, Eep
-from match import TracksForMatch
-from match import CheckMatchTracks
-from prepare_makemod import prepare_makemod
+from . import fileio
+from .eep.define_eep import DefineEeps
+from .eep.critical_point import critical_point, Eep
+from .match import TracksForMatch
+from .check_match_tracks import CheckMatchTracks
+from .prepare_makemod import prepare_makemod
+from .utils import add_version_info
 
 import logging
 logger = logging.getLogger()
 
 __all__ = ['initialize_inputs']
 
-
-def add_version_info(input_file):
-    """Copy the input file and add the git hash and time the run started."""
-    from time import localtime, strftime
-
-    # create info file with time of run
-    now = strftime("%Y-%m-%d %H:%M:%S", localtime())
-    fname = fileio.replace_ext(input_file, '.info')
-    with open(fname, 'w') as out:
-        out.write('parsec2match run started %s \n' % now)
-        out.write('padova_tracks git hash: ')
-
-    # the best way to get the git hash?
-    here = os.getcwd()
-    rsp_home = os.path.split(os.path.split(fileio.__file__)[0])[0]
-    os.chdir(rsp_home)
-    os.system('git rev-parse --short HEAD >> %s' % os.path.join(here, fname))
-    os.chdir(here)
-
-    # add the input file
-    os.system('cat %s >> %s' % (input_file, fname))
-    return fname
 
 def parsec2match(input_obj, loud=False):
     '''do an entire set and make the plots'''
@@ -67,7 +46,7 @@ def parsec2match(input_obj, loud=False):
 
         if not inps.from_p2m:
             # find the parsec2match eeps for these tracks.
-            #if not inps.hb:
+            # if not inps.hb:
             #    ptcri_file = load_ptcri(inps, find=True, from_p2m=True)
 
             if not inps.overwrite_ptcri and os.path.isfile(ptcri_file):
@@ -89,7 +68,7 @@ def parsec2match(input_obj, loud=False):
                     pat_kw = {'ptcri': inps.ptcri_hb}
                 else:
                     pat_kw = {'ptcri': inps.ptcri}
-                    #tfm.diag_plots(xcols=xcols, pat_kw=pat_kw)
+                    # tfm.diag_plots(xcols=xcols, pat_kw=pat_kw)
 
                 tfm.diag_plots(tfm.hbtracks, hb=inps.hb, pat_kw=pat_kw,
                                extra='parsec', plot_dir=inps.plot_dir)
@@ -125,8 +104,8 @@ def set_prefixs(inputs, harsh=True):
     if inputs.prefixs == 'all':
         # find all dirs in tracks dir skip .DS_Store and crap
         prefixs = [d for d in os.listdir(tracks_dir)
-                   if os.path.isdir(os.path.join(tracks_dir, d))
-                   and not d.startswith('.')]
+                   if os.path.isdir(os.path.join(tracks_dir, d)) and
+                   not d.startswith('.')]
     elif inputs.prefixs is not None:
         # some subset listed in the input file (seperated by comma)
         prefixs = inputs.prefixs
@@ -168,7 +147,7 @@ def load_ptcri(inputs, find=False, from_p2m=False):
         if inputs.hb:
             ptcri_file, = [p for p in ptcri_files if 'hb' in p]
         else:
-            ptcri_file, = [p for p in ptcri_files if not 'hb' in p]
+            ptcri_file, = [p for p in ptcri_files if 'hb' not in p]
 
     assert os.path.isfile(ptcri_file), 'ptcri file not found.'
     if find:
@@ -194,7 +173,7 @@ def define_eeps(tfm, inputs):
         filename = 'define_eeps_hb_%s.log'
     else:
         track_str = 'tracks'
-        #defined = inputs.ptcri.please_define
+        # defined = inputs.ptcri.please_define
         defined = Eep().eep_list
         filename = 'define_eeps_%s.log'
 
@@ -269,7 +248,7 @@ def initialize_inputs():
     input options.
     '''
     input_dict = {'track_search_term': '*F7_*PMS',
-                  'hbtrack_search_term':'*F7_*PMS.HB',
+                  'hbtrack_search_term': '*F7_*PMS.HB',
                   'from_p2m': False,
                   'masses': None,
                   'hbmasses': None,
@@ -324,4 +303,5 @@ if __name__ == '__main__':
         inp_obj.prefixs = prefixs
         call_prepare_makemod(inp_obj)
 
-    os.system('mv {} {}'.format(fname, os.path.join(inp_obj.tracks_dir, 'logs')))
+    os.system('mv {} {}'.format(fname, os.path.join(inp_obj.tracks_dir,
+                                'logs')))

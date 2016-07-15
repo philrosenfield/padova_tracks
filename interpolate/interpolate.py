@@ -3,6 +3,7 @@ from scipy.interpolate import splev, splprep
 from .. import utils
 from ..config import *
 
+
 class Interpolator(object):
     def __init__(self):
         pass

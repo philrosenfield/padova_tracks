@@ -4,6 +4,7 @@ import numpy as np
 import seaborn
 seaborn.set()
 
+
 def plot_alfov(alfov_report):
     """
     Plot ALFOV vs mass from a file containing PARSEC parameter calls.
@@ -22,17 +23,17 @@ def plot_alfov(alfov_report):
     # Assuming format: *M1.30.P*
     mass = np.array([fname.split('M')[1].split('.P')[0],
                      for fname in fnames], dtype=float)
-    
+
     uinds, uarr = np.unique(ovfile, return_index=True)
     uarr = np.append(uarr, len(fnames) - 1)
-    
+
     fig, ax = plt.subplots()
     for i in range(len(uarr) - 1):
         inds = np.arange(uarr[i], uarr[i+1])
         smass = np.sort(mass[inds])
         salf = alf[inds][np.argsort(mass[inds])]
         l, = ax.plot(smass, salf, label=np.unique(ovfile[inds]))
-            ax.plot(smass, salf, 'o', color=l.get_color())
+        ax.plot(smass, salf, 'o', color=l.get_color())
 
     plt.legend(loc='best')
     ax.set_ylabel(r'$\rm{ALFOV}$')
@@ -42,11 +43,13 @@ def plot_alfov(alfov_report):
     plt.savefig('alfov_mass.png')
     return ax
 
-def main(args)
+
+def main(args):
     parser = argparse.ArgumentParser(description="Plot ALFOV vs Mass")
 
     parser.add_argument('alfov_report', type=str,
-                        help='ALFOV report e.g., grep "ALFOV=" */*F7_*.PMS > alfov_report.txt')
+                        help=('ALFOV report e.g., ',
+                              'grep "ALFOV=" */*F7_*.PMS > alfov_report.txt'))
 
     args = parser.parse_args(argv)
     plot_alfov(args.alfov_report)

@@ -7,7 +7,7 @@ from StringIO import StringIO
 def parse_plist(plist):
     """Parse dbert files grep'd by EEP with M= formatting cut out"""
     # genfromtext will not allow "." in column name
-    ptcriname = plist[0].strip().split()[-1].replace('.', '').replace('#','')
+    ptcriname = plist[0].strip().split()[-1].replace('.', '').replace('#', '')
     col_keys = ['age', 'logl', 'logte', 'idx', ptcriname, 'ptcriname']
     dtype = [(c, '<f8') for c in col_keys]
     dtype[-1] = (col_keys[-1], '|S15')
@@ -16,9 +16,11 @@ def parse_plist(plist):
 
 
 def format_ptcriHB(filename, nptcri=5):
-    """ reformat ptcri*.dat.HB (from dbert/) file to a ptcri*.dat file (from data/) """
+    """
+    Reformat ptcri*.dat.HB (from dbert/) file to a ptcri*.dat file (from data/)
+    """
     # ../F7/CAF09_MC_S15/OV0.6_Z0.0005_Y0.249/Z0.0005Y0.249OUTA1.74_F7_M20.0.PMS
-    pref = filename.replace('ptcri_','').split('.dat')[0]
+    pref = filename.replace('ptcri_', '').split('.dat')[0]
     pref = "../F7/" + pref
     outfile = filename.replace('.HB', '').replace('ptcri_', 'ptcri_hb_')
     with open(filename, 'r') as inp:
@@ -38,7 +40,8 @@ def format_ptcriHB(filename, nptcri=5):
             metad = [l.split('M')[1] for l in plist]
             # position 1 because "=" would be poisiton 0
             mass = np.array([m.strip().split()[1] for m in metad], dtype=float)
-            kind = np.array([float(m.strip().split('=')[-1]) for m in metad], dtype=int)
+            kind = np.array([float(m.strip().split('=')[-1])
+                             for m in metad], dtype=int)
             data = np.column_stack((np.arange(len(mass)) + 1, mass, kind))
             plist = [l.split('M')[0]+'\n' for l in plist]
 
@@ -54,12 +57,14 @@ def format_ptcriHB(filename, nptcri=5):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description="convert a dbert HB file to a data HB file")
+    parser = argparse.ArgumentParser(
+        description="convert a dbert HB file to a data HB file")
 
-    parser.add_argument('filename', type=str, nargs='*', help='ptcri*.dat.HB files to work on')
+    parser.add_argument('filename', type=str, nargs='*',
+                        help='ptcri*.dat.HB files to work on')
 
     args = parser.parse_args(argv)
-    import pdb; pdb.set_trace()
+
     [format_ptcriHB(f) for f in args.filename]
 
 if __name__ == "__main__":

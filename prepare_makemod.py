@@ -4,8 +4,8 @@ import numpy as np
 import os
 import sys
 
-from ResolvedStellarPops import fileio
-from eep.critical_point import Eep
+from . import fileio
+from .eep.critical_point import Eep
 """
 MIST debug
 import os

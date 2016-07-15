@@ -4,10 +4,11 @@ import numpy as np
 import sys
 
 from ..config import *
-
+from ..utils import sort_dict
 import logging
-from ..config import *
+
 logger = logging.getLogger()
+
 
 class Eep(object):
     '''
@@ -16,41 +17,17 @@ class Eep(object):
     The lengths are then used in match.py
     '''
     def __init__(self):
-        '''hard coded default eep_list and lengths
-        eeps = {'PMS_BEG': 60,
-                    'PMS_MIN': 60,
-                    'PMS_END': 80,
-                    'MS_BEG': 199,
-                    'MS_TMIN': 100,
-                    'MS_TO': 100,
-                    'SG_MAXL': 70,
-                    'RG_MINL': 370,
-                    'RG_BMP1': 30,
-                    'RG_BMP2': 400,
-                    'RG_TIP': 40,
-                    'HE_BEG': 150,
-                    'YCEN_0.550': 100,
-                    'YCEN_0.500': 60,
-                    'YCEN_0.400': 100,
-                    'YCEN_0.200': 80,
-                    'YCEN_0.100': 80,
-                    'YCEN_0.005': 80,
-                    'YCEN_0.000': 40,
-                    'AGB_LY1': 40,
-                    'AGB_LY2': 20,
-                    'TPAGB': -1}
-        eep_list = eeps.keys()
-        eep_lengths = eeps.values()
-        '''
+        '''hard coded default eep_list and lengths'''
         eep_list = ['PMS_BEG', 'PMS_MIN', 'PMS_END', 'MS_BEG', 'MS_TMIN',
                     'MS_TO', 'SG_MAXL', 'RG_MINL', 'RG_BMP1', 'RG_BMP2',
                     'RG_TIP', 'HE_BEG', 'YCEN_0.550', 'YCEN_0.500',
                     'YCEN_0.400', 'YCEN_0.200', 'YCEN_0.100', 'YCEN_0.005',
-                    'END_CHEB', 'TPAGB']
+                    'END_CHEB', 'TPAGB', 'TPAGB1', 'TPAGB2']
         eep_lengths = [80, 80, 80, 199, 100, 100, 70, 370, 30, 400, 40, 150,
-                       100, 60, 100, 80, 80, 80, 80]
+                       100, 60, 100, 80, 80, 80, 80, 80, 80]
         assert (len(eep_list) == len(eep_lengths) + 1), 'Bad eep definitions'
         ihb = eep_list.index('HE_BEG')
+        itp = eep_list.index('TPAGB')
         eep_list_hb = np.copy(eep_list[ihb:])
         eep_lengths_hb = np.copy(eep_lengths[ihb:])
 
@@ -60,13 +37,15 @@ class Eep(object):
         self.nticks_hb = eep_lengths_hb
 
         # usefull to check match compatibility
+        self.ntot = np.sum(eep_lengths)
+        self.nok = self.ntot - np.sum(eep_lengths[:itp])
         ims = eep_list.index('MS_TO')
         trans = ihb - 1
         self.nlow = np.sum(eep_lengths[:ims])
-        self.nhb = np.sum(eep_lengths_hb)
+        self.nhb = np.sum(eep_lengths_hb) - self.nok
         self.nms = np.sum(eep_lengths[:trans])
-        self.ntot = self.nms + self.nhb + eep_lengths[trans]
         self.trans = eep_lengths[trans]
+
 
 class critical_point(object):
     '''
@@ -129,7 +108,7 @@ class critical_point(object):
             except IndexError:
                 ind = 0
             return ind
-        
+
         if sandro:
             # this must be added in Tracks.load_critical_points!
             inds = track.sptcri
@@ -140,7 +119,6 @@ class critical_point(object):
         second = getind(inds, name2, sandro=sandro)
 
         return np.arange(first, second)
-
 
     def get_ptcri_name(self, val, sandro=True, hb=False):
         '''
@@ -167,8 +145,8 @@ class critical_point(object):
 
         # the lines have the path name, and the path has F7.
         if not hb:
-            begin, = [i for i in range(len(lines)) if lines[i].startswith('#')
-                      and 'F7' in lines[i]]
+            begin, = [i for i in range(len(lines))
+                      if lines[i].startswith('#') and 'F7' in lines[i]]
         else:
             begin = -1
             if 'p2m' in filename:
@@ -188,7 +166,7 @@ class critical_point(object):
         col_keys = all_keys[3:-1]
         # ptcri file has filename as col #19 so skip the last column
         usecols = range(0, len(all_keys) - 1)
-        if hb and not 'p2m' in filename:
+        if hb and 'p2m' not in filename:
             col_keys = all_keys[3:]
             usecols = range(0, len(all_keys))
         try:
@@ -219,11 +197,8 @@ class critical_point(object):
             # loading sandro's eeps means they will be used for match
             self.sandro_eeps = col_keys
             self.sandros_dict = dict(zip(col_keys, range(len(col_keys))))
-            self.please_define = [c for c in self.eep_list if c not in col_keys]
-
-            # there is no mixture between Sandro's HB eeps since there
-            # are no HB eeps in the ptcri files. Define them all here.
-            #self.please_define_hb = eep_obj.eep_list_hb
+            self.please_define = [c for c in self.eep_list
+                                  if c not in col_keys]
 
             [self.check_ptcri(self.masses[i], data[i][3:].astype(int))
              for i in range(len(data))]
@@ -235,7 +210,7 @@ class critical_point(object):
         except KeyError:
             track.flag = 'No M%.3f in ptcri.data_dict.' % track.mass
             return track
-        
+
         if sandro:
             track.sptcri = \
                 np.concatenate([np.nonzero(track.data[MODE] == m)[0]
@@ -253,22 +228,22 @@ class critical_point(object):
             if hb:
                 filename = filename.replace('p2m', 'p2m_hb')
 
-        sorted_keys, inds = zip(*sorted(self.key_dict.items(),
-                                        key=lambda (k, v): (v, k)))
+        sorted_keys = sort_dict(self.key_dict).keys()
 
-        header = '# critical points in F7 files defined by sandro, basti, and phil \n'
+        header = '# critical points defined by sandro, basti, and phil \n'
         header += '# i mass kind_track %s fname \n' % (' '.join(sorted_keys))
         with open(filename, 'w') as f:
             f.write(header)
             linefmt = '%2i %.3f 0.0 %s %s \n'
             for i, track in enumerate(tracks):
                 if track.flag is not None:
-                    print('save_ptcri skipping %s: %s' % (track.name, track.flag))
+                    print('save_ptcri skipping {}: {}'.format(track.name,
+                                                              track.flag))
                     continue
                 ptcri_str = ' '.join(['%5d' % p for p in track.iptcri])
                 f.write(linefmt % (i+1, track.mass, ptcri_str,
                                    os.path.join(track.base, track.name)))
-        #print('wrote %s' % filename)
+        # print('wrote %s' % filename)
 
     def check_ptcri(self, mass_, arr):
         ndefined = len(np.nonzero(arr > 0)[0])
@@ -276,7 +251,8 @@ class critical_point(object):
 
         if (mass_ > inte_mass) and (mass_ <= high_mass):
             if ndefined != needed:
-                print('check_ptcri error: M%.3f does not have enough EEPs' % mass_)
+                print('check_ptcri error: M{:.3f} does not have enough EEPs'
+                      .format(mass_))
                 try:
                     masses = np.array([f.split('F7_M')[1].replace('.PMS', '')
                                        for f in self.fnames], dtype=float)
@@ -300,8 +276,8 @@ class critical_point(object):
         The errors were typically:
         1) MS_BEG is at the point in the track that should be POINT_C
         2) POINT_C is at the point in the track that should be LOOP_B
-        3) RG_TIP is at the point in the track that should probably be the final
-            EEP.
+        3) RG_TIP is at the point in the track that should probably be the
+           final EEP.
         4) LOOP_A, B, C, TPAGB/CBUR EEPS are all 0.
             This final issue could be accounted for in the ptcri reader, but
             it is taken as a sign that the other EEPs are probably wrong.)
@@ -364,35 +340,43 @@ class critical_point(object):
             try:
                 go_on = int(go_on)
             except:
-                import pdb; pdb.set_trace()
+                import pdb
+                pdb.set_trace()
             if go_on != 0:
                 # don't overwrite with "move on" value
                 pt = go_on
             return go_on, pt
 
-        #track_dir = self.base.replace('data', 'tracks')
+        # track_dir = self.base.replace('data', 'tracks')
         track_dir, tname = os.path.split(fname)
         estr = 'PMS'
         hb = 'hb' in fname.lower()
         if hb:
             estr = 'HB'
         z = tname.split('Z')[1].split('Y')[0].replace('_', '')
-        mass_ = tname.split('M')[1].replace('.DAT', '').replace('.P', '').split('.HB')[0]
-        #track_dir, = get_dirs(track_dir, '{:g}'.format(z))
+        mass_ = tname.split('M')[1].replace('.DAT', '') \
+                     .replace('.P', '').split('.HB')[0]
+        # track_dir, = get_dirs(track_dir, '{:g}'.format(z))
 
-        #track_file = os.path.join(track_dir, '/'.join(fname.split('/')[1:]))
+        # track_file = os.path.join(track_dir, '/'.join(fname.split('/')[1:]))
         try:
             track_file, = get_files(track_dir, '*M{}*{}'.format(mass_, estr))
         except ValueError:
-            # the above search text will not distiguish, e.g, M030.000 and M130.000
+            # the above search will not distiguish, e.g, M030.000 and M130.000
             track_files = get_files(track_dir, '*{}*'.format(mass_))
             # cull mass values
-            import pdb; pdb.set_trace()
-            tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1].split('.')[:-1])
-                            for t in track_files], dtype=float)
-            # select by mass
-            track_file, = np.array(track_files)[np.nonzero(float(mass_) == tms)]
+            try:
+                tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1]
+                                         .split('.')[:-1])
+                                for t in track_files], dtype=float)
+            except:
+                tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1]
+                                         .split('.')[:-3])
+                                for t in track_files], dtype=float)
 
+            # select by mass
+            track_file, = \
+                np.array(track_files)[np.nonzero(float(mass_) == tms)]
 
         track = self.load_eeps(Track(track_file))
 
@@ -405,11 +389,13 @@ class critical_point(object):
         else:
             ax = td.plot_sandro_ptcri(track, ptcri=self)
 
-        print('Open sandros ptcri file and get ready to edit. {}'.format(tname))
+        print('Open sandros ptcri file and get ready to edit. {}'
+              .format(tname))
         print('Current values:', track.sptcri)
         if len(track.sptcri) <= 3:
             print('this ptcri looks especially messed up.')
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
         pms_beg = guessandcheck('pms_beg', pt=track.sptcri[0])
         pms_min = guessandcheck('pms_min', pt=track.sptcri[1])
@@ -445,22 +431,22 @@ class critical_point(object):
         # Take the final point of the track, either the final, or where
         # Sandro cut it
         fin = track.data[MODE][-1]
-        fin_sandro = track.sptcri[np.nonzero(track.sptcri>0)][-1]
+        fin_sandro = track.sptcri[np.nonzero(track.sptcri > 0)][-1]
         if fin > fin_sandro:
-            print('last point in track %i, Sandro cut at %i.' %  (fin, fin_sandro))
+            print('last point in track {}, Sandro cut at {}.'
+                  .format(fin, fin_sandro))
             fin = guessandcheck('final point', pt=fin_sandro)
 
-        # I don't use Sandro's loops, so I don't care, here are non zero points that
-        # ensure age increase.
+        # I don't use Sandro's loops, so I don't care, here are non zero points
+        # that ensure age increase.
         loopa, loopb, loopc = np.linspace(rg_tip, fin, 5, endpoint=False)[1:-1]
-
 
         print(track.sptcri[:3])
         print('suggested line ptcri line:')
-        print(''.join(['%10i' % i for i in (pms_beg, pms_min, pms_end, near_zam,
-                                            ms_beg, point_b, point_c, rg_base,
-                                            int(rgbmp1), int(rgbmp2), rg_tip,
-                                            loopa, loopb, loopc, fin)]))
+        print(''.join(['%10i' % i for i in
+                       (pms_beg, pms_min, pms_end, near_zam, ms_beg, point_b,
+                        point_c, rg_base, int(rgbmp1), int(rgbmp2), rg_tip,
+                        loopa, loopb, loopc, fin)]))
 
         sys.exit()
 

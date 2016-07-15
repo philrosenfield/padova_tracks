@@ -1,94 +1,21 @@
 """Interpolate tracks for match and check the interpolations"""
 from __future__ import print_function
+import logging
 import numpy as np
 import os
+import pdb
 
-from interpolate import Interpolator
-import fileio
-from eep import critical_point, DefineEeps
-from tracks import TrackSet, Track, TrackDiag
 from scipy.interpolate import splev
 from scipy.interpolate import interp1d
-import pdb
-import logging
-from config import mass, logT, age, logL
+
+from . import fileio
+from .config import mass, logT, age, logL
+from .eep import critical_point
+from .eep.define_eep import DefineEeps
+from .interpolate.interpolate import Interpolator
+from .tracks import TrackSet, Track, TrackDiag
 
 logger = logging.getLogger()
-
-class CheckMatchTracks(critical_point.Eep, TrackSet, TrackDiag):
-    """a simple check of the output from TracksForMatch."""
-    def __init__(self, inputs):
-        TrackDiag.__init__(self)
-        critical_point.Eep.__init__(self)
-        inputs.match = True
-        if inputs.hb:
-            inputs.hbtrack_search_term += '.dat'
-            inputs.hbtrack_search_term = inputs.hbtrack_search_term.replace('PMS', '')
-        TrackSet.__init__(self, inputs=inputs)
-        self.flag_dict = inputs.flag_dict
-        if not inputs.hb:
-            tracks = self.tracks
-        else:
-            tracks = self.hbtracks
-
-        self.check_tracks(tracks)
-
-    def check_tracks(self, tracks):
-        """
-        Check the tracks for identical and non-monotontically increasing ages
-
-        Results go into self.match_info dictionary whose keys are set by
-        M%.3f % track.mass and values filled with a list of strings with the
-        information.
-
-        If the track has already been flagged (track.flag), no test occurs.
-
-        Parameters
-        ----------
-        tracks: list of padova_tracks.Track objects
-        """
-        self.match_info = {}
-        for t in tracks:
-            key = 'M%.3f' % t.mass
-
-            if not key in self.flag_dict.keys():
-                print('check_tracks: No %s in flag dict, skipping.' % key)
-                continue
-
-            if self.flag_dict[key] is not None:
-                print('check_tracks: skipping %s: %s' % (t.mass, t.flag))
-                continue
-
-            test = np.diff(t.data[age]) > 0
-            if False in test:
-                # age where does age decrease
-                bads, = np.nonzero(np.diff(t.data[age]) < 0)
-                edges = np.cumsum(self.nticks)
-                if len(bads) != 0:
-                    if not key in self.match_info:
-                        self.match_info[key] = []
-                        match_info = self.match_info[key]
-                    match_info.append('Age not monotonicly increasing near')
-                    nears = np.concatenate([np.nonzero(j - edges < 0)[0]
-                                            for j in bads])
-                    bad_inds = np.unique(nears)
-                    match_info.append([np.array(self.eep_list)[bad_inds],
-                                       t.data[age][bads]])
-                    self.flag_dict['M%.3f' % t.mass] = 'age decreases on track'
-                # identical values of age
-                bads1, = np.nonzero(np.diff(t.data[age]) == 0)
-                if len(bads1) != 0:
-                    if not key in self.match_info:
-                        self.match_info[key] = []
-                        match_info = self.match_info[key]
-                    match_info.append(['%i identical age values' % len(bads1)])
-                    nears = np.concatenate([np.nonzero(j - edges < 0)[0]
-                                            for j in bads1])
-                    bad_inds = np.unique(nears)
-                    match_info.append(['near',
-                                       np.array(self.eep_list)[bad_inds]])
-                    match_info.append(['log ages:', t.data[age][bads1]])
-                    match_info.append(['inds:', bads1])
 
 
 class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
@@ -149,15 +76,15 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
                 continue
 
             # interpolate tracks for match
-            outfile = os.path.join(inputs.outfile_dir, \
-                        'match_%s.dat' % track.name.replace('.PMS', ''))
+            outfile = \
+                os.path.join(inputs.outfile_dir,
+                             'match_%s.dat' % track.name.replace('.PMS', ''))
 
             if not inputs.overwrite_match and os.path.isfile(outfile):
                 print('not overwriting %s' % outfile)
                 continue
-            match_track = self.prepare_track(track, inputs.ptcri, outfile,
-                                             hb=inputs.hb,
-                                             hb_age_offset_fraction=inputs.hb_age_offset_fraction)
+            match_track = \
+                self.prepare_track(track, inputs.ptcri, outfile, hb=inputs.hb)
 
             info_dict['M%.3f' % track.mass] = track.info
 
@@ -177,9 +104,9 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             dp_kw = {'hb': inputs.hb, 'plot_dir': inputs.plot_dir,
                      'pat_kw': {'ptcri': inputs.ptcri}, 'match_tracks': True}
             if inputs.hb:
-                self.diag_plots(self.hbtracks, **dp_kw)
+                self.diag_plots([t for t in self.mtracks if t.hb], **dp_kw)
             else:
-                self.diag_plots(self.tracks, **dp_kw)
+                self.diag_plots([t for t in self.mtracks if not t.hb], **dp_kw)
         logfile = os.path.join(inputs.log_dir, filename % self.prefix.lower())
         self.write_log(logfile, info_dict)
         return flag_dict
@@ -189,7 +116,8 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         def sortbyval(d):
             """sortes keys and values of dict by values"""
             keys, vals = zip(*d.items())
-            mkeys = np.array([k.replace('M', '') for k in d.keys()], dtype=float)
+            mkeys = np.array([k.replace('M', '') for k in d.keys()],
+                             dtype=float)
             ikeys = np.argsort(mkeys)
             skeys = np.array(keys)[ikeys]
             svals = np.array(vals)[ikeys]
@@ -246,7 +174,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         -------
         adds MATCH interpolated data to track object as to_write attribute
         """
-        header = '# logAge Mass logTe Mbol logg C/O \n'
+        header = 'logAge Mass logTe Mbol logg C/O'
 
         if hb:
             nticks = ptcri.eep.nticks_hb
@@ -257,6 +185,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         logL = np.array([])
         logAge = np.array([])
         Mass = np.array([])
+        co = np.array([])
 
         ptcri_kw = {'sandro': False, 'hb': hb}
         track = ptcri.load_eeps(track, sandro=False)
@@ -291,6 +220,24 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             lagenew, lnew, tenew, massnew = \
                 self.interpolate_along_track(track, inds, nticks[i], mess=mess)
 
+            conew = np.zeros(len(massnew))
+            if track.agb:
+                cocheck = track.data['CO'][inds]
+                cocheck[np.isnan(cocheck)] = 0.
+                if np.sum(cocheck) > 0:
+                    ntps = len(np.nonzero(cocheck)[0])
+                    if ntps == 1:
+                        iloc, = np.nonzero(cocheck)
+                        loc = iloc / (len(cocheck) - 1)
+                        conew[int(nticks[i] * loc) - 1] = cocheck[iloc]
+                    elif len(np.unique(cocheck)) == 1:
+                        conew += np.unique(cocheck)
+                    else:
+                        # import pdb; pdb.set_trace()
+                        fco = interp1d(np.log10(track.data[age][inds]),
+                                       cocheck, bounds_error=0)
+                        conew = fco(lagenew)
+
             if hb is True:
                 lagenew = lagenew * (1. + hb_age_offset_fraction)
 
@@ -304,30 +251,27 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             logL = np.append(logL, lnew)
             logAge = np.append(logAge, lagenew)
             Mass = np.append(Mass, massnew)
+            co = np.append(co, conew)
 
         Mbol = 4.77 - 2.5 * logL
-        logg = -10.616 + np.log10(track.mass) + 4.0 * logTe - logL
-        # CO place holder!
-        CO = np.zeros(len(logL))
-        mass_arr = np.repeat(track.mass, len(logL))
+        logg = -10.616 + np.log10(Mass) + 4.0 * logTe - logL
+        # mass_arr = np.repeat(track.mass, len(logL))
 
-        inds, = np.nonzero(track.data[age] > 0.2)
-        umass = np.unique(track.data[mass][inds])
-        #if len(umass) > 1 or umass[0] != mass_arr[0]:
-        #    logger.warning('mass array is a copy of the track.mass is that kosher?')
-        #    pdb.set_trace()
+        # inds, = np.nonzero(track.data[age] > 0.2)
+        # umass = np.unique(track.data[mass][inds])
         eep = critical_point.Eep()
-        if len(logL) not in [eep.nms, eep.nhb, eep.nlow, eep.ntot]:
+        if len(logL) not in [eep.nms, eep.nhb, eep.nlow, eep.ntot,
+                             eep.nhb + eep.nok, eep.ntot + eep.nok]:
             print('array size is wrong')
             if self.debug:
                 pdb.set_trace()
 
-        to_write = np.column_stack((logAge, mass_arr, logTe, Mbol, logg, CO))
-        fileio.savetxt(outfile, to_write, header=header, fmt='%.8f',
-                       overwrite=True)
+        to_write = np.column_stack([logAge, Mass, logTe, Mbol, logg, co])
+        np.savetxt(outfile, to_write, header=header, fmt='%.8f')
         return Track(outfile, track_data=to_write, match=True)
 
-    def interpolate_along_track(self, track, inds, nticks, mess=None):
+    def interpolate_along_track(self, track, inds, nticks, zcol=None,
+                                mess=None, zmsg=''):
         """
         interpolate along a segment of a track in one of three ways:
 
@@ -392,11 +336,17 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             logte = track.data[logT][inds]
             lage = np.log10(track.data[age][inds])
             mass_ = track.data[mass][inds]
-            lagenew = np.linspace(lage[0], lage[-1], nticks)
+            try:
+                lagenew = np.linspace(lage[0], lage[-1], nticks)
+            except:
+                lagenew = np.linspace(lage.iloc[0], lage.iloc[-1], nticks)
             if np.sum(np.abs(np.diff(mass_))) > 0.01:
                 msg += ' with mass'
             else:
-                massnew = np.repeat(track.data[mass][inds][0], len(lagenew))
+                try:
+                    massnew = np.repeat(mass_.iloc[0], len(lagenew))
+                except:
+                    massnew = np.repeat(mass_[0], len(lagenew))
             if len(np.nonzero(np.diff(logl))[0]) == 0:
                 # all LOG_Ls are the same
                 lnew = np.zeros(len(lagenew)) + logl[0]
@@ -430,14 +380,13 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         # need to check if mass loss is important enough to include
         # in interopolation
         mass_ = track.data[mass][inds]
-        zcol = None
         if np.sum(np.abs(np.diff(mass_))) > 0.01:
             frac_mloss = len(np.unique(mass))/float(len(mass))
             if frac_mloss >= 0.25:
                 zcol = mass
             else:
-                print('interpolate_along_track: {} frac mloss, mi, mf: {} {} {}'.format(mess, frac_mloss, mass_[0], mass_[-1]))
-                #import pdb; pdb.set_trace()
+                print('interpolate_along_track: {} frac mloss, mi, mf: ',
+                      '{} {} {}'.format(mess, frac_mloss, mass_[0], mass_[-1]))
 
         # parafunc = np.log10 means np.log10(AGE)
         tckp, _, non_dupes = self._interpolate(track, inds, s=0,
@@ -447,8 +396,8 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
         if type(non_dupes) is int:
             # if one variable doesn't change, call interp1d
-            lagenew, tenew, lnew, massnew = call_interp1d(track, inds, nticks,
-                                                 mess=mess)
+            lagenew, tenew, lnew, massnew = \
+                call_interp1d(track, inds, nticks, mess=mess)
         else:
             if len(non_dupes) <= 3:
                 # linear interpolation is automatic in self._interpolate
@@ -457,16 +406,20 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             if zcol is None:
                 lagenew, tenew, lnew = splev(arb_arr, tckp)
             else:
-                track.info[mess] += ' interpolation with mass'
+                track.info[mess] += ' interpolation with {}'.format(zcol)
                 lagenew, tenew, lnew, massnew = splev(arb_arr, tckp)
 
             # if non-monotonic increase in age, call interp1d
             all_positive = np.diff(lagenew) > 0
             if False in all_positive:
                 # probably too many nticks
-                track.info[mess] += ' non-monotonic increase in age. Forced linear interpolation'
-                lagenew, lnew, tenew, massnew = call_interp1d(track, inds, nticks,
-                                                     mess=mess)
+                track.info[mess] += \
+                    ' non-monotonic increase in age. Linear interpolation'
+                lagenew, lnew, tenew, massnew = \
+                    call_interp1d(track, inds, nticks, mess=mess)
         if zcol is None:
-            massnew = np.repeat(track.data[mass][inds][0], len(lagenew))
+            try:
+                massnew = np.repeat(mass_[0], len(lagenew))
+            except:
+                massnew = np.repeat(mass_.iloc[0], len(lagenew))
         return lagenew, lnew, tenew, massnew
