@@ -162,6 +162,7 @@ class DefineEeps(Interpolator, CriticalPoint):
         if len(track.sptcri) <= 4 or track.data[xcen][track.sptcri[4]] < .6:
             # no MSTO in Sandro's track?
             print('WTF?')
+            import pdb; pdb.set_trace()
             try:
                 track.info['MS_BEG'] = \
                     'Sandro\'s MS_BEG but could be wrong XCEN < 0.6, %.f' % \
@@ -170,19 +171,22 @@ class DefineEeps(Interpolator, CriticalPoint):
                 track.info['MS_BEG'] = 'Incomplete track?'
                 print('incomplete track?!', track.mass)
 
-        # high mass
-        if track.mass >= high_mass:
-            return self.high_mass_eeps(track)
         # Low mass tracks
         if len(track.sptcri[track.sptcri > 0]) <= 6:
             return self.low_mass_eeps(track)
+
+        # XCEN = 0.3, <1e-8
+        self.add_ms_eeps(track)
+
+        # high mass
+        if track.mass >= high_mass:
+            return self.high_mass_eeps(track)
         # Intermediate mass tracks
         else:
             return self.int_mass_eeps(track)
 
     def int_mass_eeps(self, track):
         nsandro_pts = len(np.nonzero(track.sptcri != 0)[0])
-        self.add_ms_eeps(track)
 
         ihe_beg = 0
         self.add_eep(track, 'HE_BEG', ihe_beg, message='Initializing')
@@ -200,7 +204,7 @@ class DefineEeps(Interpolator, CriticalPoint):
             self.add_agb_eeps(track)
 
         #self.add_sg_rg_eeps(track)
-        self.add_rg_minl_eep(track)
+        #self.add_rg_minl_eep(track)
         self.check_for_monotonic_increase(track)
 
     def low_mass_eeps(self, track):
@@ -278,6 +282,7 @@ class DefineEeps(Interpolator, CriticalPoint):
         return
 
     def high_mass_eeps(self, track):
+        """
         def add_msbeg(track, start, end):
             # I think Sandro's PMS_END is a little early on the low Z massive
             # tracks...
@@ -315,7 +320,7 @@ class DefineEeps(Interpolator, CriticalPoint):
             self.add_eep(track, 'MS_TMIN', ms_tmin, message=message)
             return ms_tmin
 
-        ms_to = np.nonzero(track.data[xcen] == 0)[0][0]
+        ms_to = np.nonzero(track.data[xcen] < 1e-8)[0][0]
         self.add_eep(track, 'MS_TO', ms_to, message='XCEN==0')
 
         if track.Z > 0.01:
@@ -335,8 +340,9 @@ class DefineEeps(Interpolator, CriticalPoint):
             halfway = (track.data[age][ms_to] + track.data[age][ms_beg])/2.
             ms_tmin = np.argmin(np.abs(track.data[age] - halfway))
             self.add_eep(track, 'MS_TMIN', ms_tmin, message=msg)
-
+        """
         fin = len(track.data[logL]) - 1
+        ms_to = track.iptcri[self.pdict['MS_TO']]
         cens = self.add_cen_eeps(track, istart=ms_to)
         # in some high mass tracks, YCEN drops very fast so
         # YCEN=0.005's closest match will be at 0.000, in that case
@@ -350,33 +356,26 @@ class DefineEeps(Interpolator, CriticalPoint):
         heb_beg = self.add_quiesscent_he_eep(track, cens[0], start=ms_to)
         self.add_eep(track, 'TPAGB', fin, message='Last track value')
 
+        ind = np.argmin(np.abs(track.data[ycen][ms_to:] -
+                               (track.data[ycen][ms_to] - 0.01)))
+        inds = np.arange(ms_to, ms_to + ind + 1)
+        rg_tip = inds[np.min([np.argmax(track.data[logL][inds]),
+                              np.argmin(track.data[logT][inds])])]
         # between ms_to and heb_beg eeps that are meaningless at high mass:
-        _, sg_maxl, rg_minl, rg_bmp1, rg_bmp2, rg_tip, _ = \
-            map(int, np.round(np.linspace(ms_to, heb_beg, 7)))
-        msg = 'linspace between MS_TO, HE_BEG'
-        self.add_eep(track, 'SG_MAXL', sg_maxl, message=msg)
-        self.add_eep(track, 'RG_MINL', rg_minl, message=msg)
-        self.add_eep(track, 'RG_BMP1', rg_bmp1, message=msg)
-        self.add_eep(track, 'RG_BMP2', rg_bmp2, message=msg)
+        _, rg_tip, _ = map(int, np.round(np.linspace(ms_to, heb_beg, 3)))
+        msg = 'Max L or Min T before YCEN = YCEN,MSTO - 0.01 (Dotter2016)'
+        #import pdb; pdb.set_trace()
+
         self.add_eep(track, 'RG_TIP', rg_tip, message=msg)
         self.add_agb_eeps(track)
         # there is a switch for high mass tracks in the add_cen_eeps and
         # add_quiesscent_he_eep functions. If the mass is higher than
         # high_mass the functions use MS_TO as the initial EEP for peak_finder.
 
-        eeps = np.concatenate(([ms_beg, ms_tmin, ms_to, sg_maxl,
-                                rg_minl, rg_bmp1, rg_bmp2, rg_tip,
-                                heb_beg], cens, [fin]))
-        test, = np.nonzero(np.diff(eeps) <= 0)
-
-        if len(test) > 0:
-            print('Tracks not monotonically increasing M=%.3f' % track.mass)
-            self.check_for_monotonic_increase(track)
-
         if cens[-1] >= fin:
             track.flag = 'final track point < final ycen M=%.3f' % track.mass
 
-        _ = np.concatenate(([ms_beg, ms_tmin, ms_to, heb_beg], cens, [fin]))
+        # _ = np.concatenate(([ms_beg, ms_tmin, ms_to, heb_beg], cens, [fin]))
         return self.check_for_monotonic_increase(track)
 
     def add_cen_eeps(self, track, tol=0.01, istart=None):
@@ -532,6 +531,17 @@ class DefineEeps(Interpolator, CriticalPoint):
             xdata = track.data[col]
             return np.abs(np.diff((xdata[before], xdata[after])))
 
+        xcen_mstmin = 0.3
+        xcen_msto = 1e-8
+
+        ms_to = np.nonzero(track.data[xcen] < xcen_msto)[0][0]
+        msg = 'XCEN=={0:g}'.format(xcen_msto)
+        self.add_eep(track, 'MS_TO', ms_to, message=msg)
+
+        ms_tmin = np.argmin(np.abs(track.data[xcen][:ms_to] - xcen_mstmin))
+        msg = 'XCEN=={0:.1f}'.format(xcen_mstmin)
+        self.add_eep(track, 'MS_TMIN', ms_tmin, message=msg)
+        """
         inds = ibetween_ptcri(track.sptcri, self.sdict, 'MS_BEG', 'POINT_C')
         # transition mass
         #if track.mass <= 0.9 and track.mass >= 0.7 and len(inds) == 0:
@@ -559,7 +569,7 @@ class DefineEeps(Interpolator, CriticalPoint):
             msg = 'XCEN==%.1f' % xcen_
             print(msg)
         self.add_eep(track, 'MS_TMIN', ms_tmin, message=msg)
-        import pdb; pdb.set_trace()
+
         if ms_tmin == 0:
             ms_to = 0
             msg = 'no MS_TMIN'
@@ -575,12 +585,12 @@ class DefineEeps(Interpolator, CriticalPoint):
                 eep2 = 'final track point'
                 inds = np.arange(ms_tmin, len(track.data[logT]) - 1)
 
-            ms_to, = np.nonzero(track.data[xcen] < 1e-8)
+            ms_to = np.nonzero(track.data[xcen] < 1e-8)[0][0]
             #ms_to = inds[np.argmax(track.data[logT][inds])]
             #msg = 'Max logT between MS_TMIN and %s' % eep2
             msg = 'xcen < 1e-8'
             #delta_te = delta_eeps(track, ms_to, ms_tmin)
-            """
+
             if delta_te < 0.01:
                 # first try with parametric interpolation
                 pf_kw = {'get_max': True,
@@ -613,7 +623,9 @@ class DefineEeps(Interpolator, CriticalPoint):
                 # tried four ways!?!!
                 msg = 'No MS_TO found after four methods'
                 ms_to = 0
-            """
+
+
+
         self.add_eep(track, 'MS_TO', ms_to, message=msg)
 
         if ms_to == 0:
@@ -626,6 +638,7 @@ class DefineEeps(Interpolator, CriticalPoint):
                          message='Half way from MS_BEG to Fin')
             # self.add_eep_with_age(track, 'MS_TMIN', (13.7e9/2.))
             self.add_eep_with_age(track, 'MS_TO', max_age)
+        """
         return ms_tmin, ms_to
 
     def add_sg_rg_eeps(self, track):
@@ -966,7 +979,7 @@ class DefineEeps(Interpolator, CriticalPoint):
                 inds = np.arange(start, ycen1)
             else:
                 inds = ibetween_ptcri(track.iptcri, self.pdict, start, ycen1)
-                he_min = np.argmin(track.data['LY'][inds])
+            he_min = np.argmin(track.data['LY'][inds])
 
             if len(inds) == 0:
                 msg = 'No HE_BEG M=%.4f Z=%.4f' % (track.mass, track.Z)
@@ -982,6 +995,7 @@ class DefineEeps(Interpolator, CriticalPoint):
 
             # If the min is at the point next to the RG_TIP, or
             # the ratio is huge, get the min after the peak.
+            amin = 0
             if he_min == 0 or rat > 10:
                 amin = np.argmin(track.data['LY'][inds[he_max + 1:]])
 

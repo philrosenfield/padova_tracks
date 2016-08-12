@@ -5,7 +5,7 @@ import sys
 
 from ..config import *
 from ..utils import sort_dict, get_zy
-from ..fileio import get_files
+from ..fileio import get_files, load_eepdefs
 import logging
 
 logger = logging.getLogger()
@@ -35,14 +35,8 @@ class Eep(object):
     '''
     def __init__(self):
         '''hard coded default eep_list and lengths'''
-        eep_list = ['PMS_BEG', 'PMS_MIN', 'PMS_END', 'MS_BEG', 'MS_TMIN',
-                    'MS_TO', 'SG_MAXL', 'RG_MINL', 'RG_BMP1', 'RG_BMP2',
-                    'RG_TIP', 'HE_BEG', 'YCEN_0.550', 'YCEN_0.500',
-                    'YCEN_0.400', 'YCEN_0.200', 'YCEN_0.100', 'YCEN_0.005',
-                    'END_CHEB', 'TPAGB', 'TPAGB1', 'TPAGB2']
-        eep_lengths = [80, 80, 80, 199, 100, 100, 70, 370, 30, 400, 40, 150,
-                       100, 60, 100, 80, 80, 80, 80, 80, 80]
-        assert (len(eep_list) == len(eep_lengths) + 1), 'Bad eep definitions'
+        eep_list, eep_lengths = load_eepdefs()
+
         ihb = eep_list.index('HE_BEG')
         itp = eep_list.index('TPAGB')
         eep_list_hb = np.copy(eep_list[ihb:])
@@ -123,7 +117,7 @@ class CriticalPoint(object):
         if self.sandro:
             pdict = self.sandros_dict
         else:
-            pdict = self.key_dict
+            pdict = self.pdict
 
         if type(val) == int:
             return [name for name, pval in pdict.items() if pval == val][0]
@@ -213,7 +207,7 @@ class CriticalPoint(object):
             if self.hb:
                 filename = filename.replace('p2m', 'p2m_hb')
 
-        sorted_keys = sort_dict(self.key_dict).keys()
+        sorted_keys = sort_dict(self.pdict).keys()
 
         header = '# critical points defined by sandro, basti, and phil \n'
         header += '# i mass kind_track %s fname \n' % (' '.join(sorted_keys))

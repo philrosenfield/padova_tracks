@@ -2,13 +2,13 @@ from __future__ import print_function, division
 import os
 import glob
 import json
-from pprint import pprint
 from ..utils import is_numeric
+import collections
 from ast import literal_eval
 
 import logging
 
-__all__ = ['ensure_dir', 'ensure_file', 'get_files', 'load_input',
+__all__ = ['ensure_dir', 'ensure_file', 'get_files', 'load_input', 'load_eepdefs',
            'replace_ext', 'tfm_indict', 'ts_indict', 'get_dirs']
 
 
@@ -28,6 +28,20 @@ def tfm_indict():
         if k.endswith('dir'):
             indict[k] = os.getcwd()
     return indict
+
+
+def load_eepdefs():
+    base = os.path.split(os.path.split(__file__)[0])[0]
+    inp_par = os.path.join(base, 'inputs/eeps.json')
+    with open(inp_par, 'r') as inp:
+        indict = json.load(inp, object_pairs_hook=collections.OrderedDict)
+
+    eep_list, eep_lengths = zip(*indict.items())
+
+    eep_list = list(eep_list)
+    eep_lengths = list(eep_lengths)[:-1]
+    assert (len(eep_list) == len(eep_lengths) + 1), 'Bad eep definitions'
+    return eep_list, eep_lengths
 
 
 def ts_indict():
