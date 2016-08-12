@@ -3,14 +3,14 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ..config import *
+from ..config import logL, logT, mass, age
 from ..graphics.graphics import plot_all_tracks, plot_track, annotate_plot
 from ..graphics.utils import setup_multiplot, offset_axlims, discrete_colors
 from ..utils import add_ptcris
 from ..eep.critical_point import Eep, CriticalPoint
 
 
-def check_eep_hrd(tracks, ptcri_loc, between_ptcris=[0, -2], sandro=True):
+def check_eep_hrd(tracks, ptcri_loc, between_ptcris='default', sandro=True):
     '''
     a simple debugging tool.
     Load in tracks (string or Track obj)
@@ -19,6 +19,8 @@ def check_eep_hrd(tracks, ptcri_loc, between_ptcris=[0, -2], sandro=True):
     returns the track set and the axs (one for each Z)
 
     '''
+    if between_ptcris == 'default':
+        between_ptcris = [0, -2]
     from ..track_set import TrackSet
     if type(tracks[0]) is str:
         from ..tracks.track import Track
@@ -74,9 +76,9 @@ def diag_plots(tracks, pat_kw=None, xcols=[logT, age],
 
     pat_kw = pat_kw or {}
 
-    if 'ptcri' in pat_kw.keys():
-        if type(pat_kw['ptcri']) is str:
-            pat_kw['ptcri'] = CriticalPoint(pat_kw['ptcri'])
+    if 'ptcri' in pat_kw.keys() and type(pat_kw['ptcri']) is str:
+        pat_kw['ptcri'] = CriticalPoint(pat_kw['ptcri'])
+
     if hb:
         extra += 'hb_'
 
@@ -108,7 +110,7 @@ def diag_plots(tracks, pat_kw=None, xcols=[logT, age],
         if len(its) == 0:
             continue
 
-        for j in range(len(xcols)):
+        for j, _ in enumerate(xcols):
             pat_kw['xcol'] = xcols[j]
             ax = plot_all_tracks(np.asarray(tracks)[its], **pat_kw)
             if match_tracks is not None:

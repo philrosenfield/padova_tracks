@@ -4,16 +4,17 @@ import numpy as np
 
 from .graphics import annotate_plot
 
-from ..config import *
+from ..config import logT, ycen, xc_cen, xo_cen, age
 from ..eep.critical_point import Eep
 from ..utils import add_ptcris
 
 
 def kippenhahn(track, col_keys=None, heb_only=True, ptcri=None,
                four_tops=False, xscale='linear', between_ptcris=[0, -2],
-               khd_dict=None, ax=None, norm='', annotate=False,
+               khd_dict=None, ax=None, norm=None, annotate=False,
                legend=False, fusion=True, convection=True):
     pinds = add_ptcris(track, between_ptcris, sandro=False)
+    norm = norm or ''
     if heb_only:
         # Core HeB:
         inds, = np.nonzero((track.data['LY'] > 0) & (track.data.QHE1 == 0))

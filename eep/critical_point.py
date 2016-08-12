@@ -178,7 +178,7 @@ class CriticalPoint(object):
         self.masses = data[:, 1]
 
         data_dict = {}
-        for i in range(len(data)):
+        for i, _ in enumerate(data):
             str_mass = 'M%.3f' % self.masses[i]
             data_dict[str_mass] = data[i][3:].astype(int)
 
@@ -232,22 +232,21 @@ class CriticalPoint(object):
         ndefined = len(np.nonzero(arr > 0)[0])
         needed = 15
 
-        if (mass_ > inte_mass) and (mass_ <= high_mass):
-            if ndefined != needed:
-                print('check_ptcri error: M{:.3f} does not have enough EEPs'
-                      .format(mass_))
-                try:
-                    masses = np.array([f.split('F7_M')[1].replace('.PMS', '')
-                                       for f in self.fnames], dtype=float)
-                except:
-                    masses = np.array([f.split('F7_M')[1].replace('.DAT', '')
-                                       for f in self.fnames], dtype=float)
+        if (inte_mass < mass_ <= high_mass) and ndefined != needed:
+            print('check_ptcri error: M{:.3f} does not have enough EEPs'
+                  .format(mass_))
+            try:
+                masses = np.array([f.split('F7_M')[1].replace('.PMS', '')
+                                   for f in self.fnames], dtype=float)
+            except:
+                masses = np.array([f.split('F7_M')[1].replace('.DAT', '')
+                                   for f in self.fnames], dtype=float)
 
-                inds, = np.nonzero(mass_ == masses)
-                print('files in question:')
-                print(np.array(self.fnames)[inds])
-                for ind in inds:
-                    self.fix_ptcri(np.array(self.fnames)[ind])
+            inds, = np.nonzero(mass_ == masses)
+            print('files in question:')
+            print(np.array(self.fnames)[inds])
+            for ind in inds:
+                self.fix_ptcri(np.array(self.fnames)[ind])
 
     def fix_ptcri(self, fname=None, iptcri=None, track=None):
         """

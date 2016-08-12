@@ -13,25 +13,25 @@ class TrackPlots(object):
         pass
 
     def annotate_plot(self, *args, **kwargs):
-        return annotate_plot(*args, **kwargs)
+        return annotate_plot(self, *args, **kwargs)
 
     def kippenhahn(self, *args, **kwargs):
-        return kippenhahn(*args, **kwargs)
+        return kippenhahn(self, *args, **kwargs)
 
     def hrd(self, *args, **kwargs):
-        return quick_hrd(*args, **kwargs)
+        return quick_hrd(self, *args, **kwargs)
 
     def plot_track(self, *args, **kwargs):
-        return plot_track(*args, **kwargs)
+        return plot_track(self, *args, **kwargs)
 
     def diag_plots(self, *args, **kwargs):
-        return diag_plots(*args, **kwargs)
+        return diag_plots(self, *args, **kwargs)
 
     def plot_all_tracks(self, *args, **kwargs):
-        return plot_all_tracks(*args, **kwargs)
+        return plot_all_tracks(self, *args, **kwargs)
 
     def check_ptcris(self, *args, **kwargs):
-        return check_ptcris(*args, **kwargs)
+        return check_ptcris(self, *args, **kwargs)
 
     def plot_sandro_ptcri(self, *args, **kwargs):
-        return plot_sandro_ptcri(*args, **kwargs)
+        return plot_sandro_ptcri(self, *args, **kwargs)

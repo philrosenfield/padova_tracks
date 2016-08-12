@@ -18,8 +18,7 @@ def add_ptcris(track, between_ptcris, sandro=False):
     return pinds
 
 
-def column_to_data(track, xcol, ycol, xdata=None, ydata=None, cmd=False,
-                   convert_mag_kw={}, norm=''):
+def column_to_data(track, xcol, ycol, xdata=None, ydata=None, norm=None):
     '''
     convert a string column name to data
 
@@ -28,27 +27,12 @@ def column_to_data(track, xcol, ycol, xdata=None, ydata=None, cmd=False,
     norm: 'xy', 'x', 'y' for which or both axis to normalize
     can also pass xdata, ydata to normalize or if its a cmd (Mag2mag only)
     '''
+    norm = norm or ''
     if ydata is None:
         ydata = track.data[ycol]
 
     if xdata is None:
-        if cmd:
-            if len(convert_mag_kw) != 0:
-                from ResolvedStellarPops import astronomy_utils
-                photsys = convert_mag_kw['photsys']
-                dmod = convert_mag_kw.get('dmod', 0.)
-                Av = convert_mag_kw.get('Av', 0.)
-                Mag1 = track.data[xcol]
-                Mag2 = track.data[ycol]
-                avdmod = {'Av': Av, 'dmod': dmod}
-                mag1 = astronomy_utils.Mag2mag(Mag1, xcol, photsys, **avdmod)
-                mag2 = astronomy_utils.Mag2mag(Mag2, ycol, photsys, **avdmod)
-                xdata = mag1 - mag2
-                ydata = mag2
-            else:
-                xdata = track.data[xcol] - track.data[ycol]
-        else:
-            xdata = track.data[xcol]
+        xdata = track.data[xcol]
 
     if 'x' in norm:
         xdata /= np.max(xdata)

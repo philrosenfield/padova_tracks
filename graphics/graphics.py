@@ -3,16 +3,17 @@ import numpy as np
 
 from .utils import discrete_colors
 
-from ..config import *
+from ..config import logL, logT, mass, age
 from ..eep.critical_point import Eep
 from ..utils import column_to_data
 
 
-def quick_hrd(track, ax=None, inds=None, reverse='', plt_kw={}):
+def quick_hrd(track, ax=None, inds=None, reverse=None, plt_kw={}):
     '''
     make an hrd.
     written for interactive use (usually in pdb)
     '''
+    reverse = reverse or ''
     if ax is None:
         _, ax = plt.subplots()
 
@@ -111,7 +112,7 @@ def plot_all_tracks(tracks, xcol=logT, ycol=logL, ax=None,
         else:
             ax.plot(xdata, ydata, **line_pltkw)
         if len(inds) < len(xdata):
-            for i in range(len(inds)):
+            for i, _ in enumerate(inds):
                 x = xdata[inds[i]]
                 y = ydata[inds[i]]
                 try:
@@ -157,12 +158,9 @@ def plot_track(track, xcol, ycol, reverse='', ax=None, inds=None, plt_kw=None,
     if ax is None:
         fig, ax = plt.subplots()
 
-    if len(plt_kw) != 0:
-        # not sure why, but every time I send marker='o' it also sets
-        # linestyle = '-' ...
-        if 'marker' in plt_kw.keys():
-            if 'ls' not in plt_kw.keys() or 'linestyle' not in plt_kw.keys():
-                plt_kw['ls'] = ''
+    if (len(plt_kw) != 0) and ('marker' in plt_kw.keys()) and \
+       ('ls' not in plt_kw.keys() or 'linestyle' not in plt_kw.keys()):
+        plt_kw['ls'] = ''
 
     if clean and inds is None:
         # non-physical inds go away.

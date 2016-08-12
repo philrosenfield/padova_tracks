@@ -8,7 +8,7 @@ import seaborn
 import numpy as np
 import pandas as pd
 
-from .config import *
+from .config import logL, logT, mass, age
 from .fileio import get_files, get_dirs, ensure_dir
 from .utils import replace_, get_zy
 from .tracks.track import Track, AGBTrack
@@ -229,8 +229,8 @@ def attach(parsec, colibri, onetpm, output, diag=True):
     tmatch = 10 ** parsec.data[logT][ipmatch] - \
         10 ** colibri.data[logT].iloc[icmatch]
     if np.abs(tmatch) > 100 or np.abs(lmatch) > 0.1:
-        err = 'bad 1TP? {} {} {} {}'.format(parsec.Z, parsec.mass, lmatch,
-                                            tmatch)
+        err = 'bad 1TP? {0} {1} {2} {3}'.format(parsec.Z, parsec.mass, lmatch,
+                                                tmatch)
         print(err)
         return err
     ptrack = pd.DataFrame(parsec.data[:ipmatch - 1])
@@ -296,9 +296,9 @@ def plot_hrd(all_data, colibri, parsec, icmatch, ipmatch, onetpm, output,
 
 def print_diffs(cval, pval):
     fmt = '{:.4f} {:.4f} {:.5f} {:.5f}\n'
-    dlogL = cval[logL] - pval[logL]
-    dlogT = cval[logT] - pval[logT]
-    return fmt.format(cval['Z'], pval[mass], dlogL, dlogT)
+    dlogl = cval[logL] - pval[logL]
+    dlogt = cval[logT] - pval[logT]
+    return fmt.format(cval['Z'], pval[mass], dlogl, dlogt)
 
 
 def main(argv):
