@@ -6,183 +6,121 @@ This code calls padova_tracks:
    defined EEPs.
 '''
 from __future__ import print_function, division
-from copy import deepcopy
+import argparse
 import numpy as np
 import os
 import sys
 
-from . import fileio
-from .eep.define_eep import DefineEeps
-from .eep.critical_point import critical_point, Eep
+from .fileio import load_input, tfm_indict
 from .match import TracksForMatch
-from .check_match_tracks import CheckMatchTracks
 from .prepare_makemod import prepare_makemod
 from .utils import add_version_info
 
 import logging
 logger = logging.getLogger()
 
-__all__ = ['initialize_inputs']
 
-
-def parsec2match(input_obj, loud=False):
+def parsec2match(infile, loud=False):
     '''do an entire set and make the plots'''
     if loud:
         print('setting prefixs')
-    prefixs = set_prefixs(input_obj)
+    indict = load_parsec2match_inp(infile)
+
+    if indict['debug']:
+        import pdb
+        pdb.set_trace()
+
+    prefixs = indict['prefixs']
 
     for prefix in prefixs:
-        print('Current mix: %s' % prefix)
-        inps = set_outdirs(input_obj, prefix)
-
         if loud:
-            print('loading ptcri')
-
-        inps = load_ptcri(inps)
+            print('Current mix: {}'.format(prefix))
+        indict['prefix'] = prefix
 
         if loud:
             print('loading Tracks')
-        tfm = TracksForMatch(inps)
+        tfm = TracksForMatch(**indict)
 
-        if not inps.from_p2m:
-            # find the parsec2match eeps for these tracks.
-            # if not inps.hb:
-            #    ptcri_file = load_ptcri(inps, find=True, from_p2m=True)
-
-            if not inps.overwrite_ptcri and os.path.isfile(ptcri_file):
-                print('not overwriting %s' % ptcri_file)
-            else:
-                if loud:
-                    print('defining eeps')
-                tfm = define_eeps(tfm, inps)
-
-            if inps.diag_plot and not inps.do_interpolation:
-                # make diagnostic plots using new ptcri file
-                inps.ptcri_file = None
-                inps.from_p2m = True
-                inps = load_ptcri(inps)
-                if loud:
-                    print('making parsec diag plots')
-
-                if inps.hb:
-                    pat_kw = {'ptcri': inps.ptcri_hb}
-                else:
-                    pat_kw = {'ptcri': inps.ptcri}
-                    # tfm.diag_plots(xcols=xcols, pat_kw=pat_kw)
-
-                tfm.diag_plots(tfm.hbtracks, hb=inps.hb, pat_kw=pat_kw,
-                               extra='parsec', plot_dir=inps.plot_dir)
+        if loud:
+            print('defining eeps')
+        define_eeps(tfm, hb=False, diag_plot=indict['diag_plot'])
+        if indict['both']:
+            define_eeps(tfm, hb=True, diag_plot=indict['diag_plot'])
 
         # do the match interpolation (produce match output files)
-        if inps.do_interpolation:
-            # force reading of my eeps
-            inps.ptcri_file = None
-            inps.from_p2m = True
-            inps = load_ptcri(inps)
-
+        if indict['do_interpolation']:
             if loud:
                 print('doing match interpolation')
-            inps.flag_dict = tfm.match_interpolation(inps)
+            indict['flag_dict'] = tfm.match_interpolation(hb=False)
+            if indict['both']:
+                indict['flag_dict_hb'] = tfm.match_interpolation(hb=True)
 
             # check the match interpolation
-            if loud:
-                print('checking interpolation')
-            CheckMatchTracks(inps)
-            del inps.flag_dict
+            # if loud:
+            #    print('checking interpolation')
+            # CheckMatchTracks(indict)
 
     print('DONE')
     return prefixs
 
 
-def set_prefixs(inputs, harsh=True):
+def load_parsec2match_inp(infile):
     '''
     find which prefixes (Z, Y mixes) to run based on inputs.prefix or
     inputs.prefixs.
     '''
+    # Prefixs = track sub directory names
+    indict = load_input(infile, default_dict=tfm_indict())
+    prefs = indict['prefixs']
+
+    if prefs is None:
+        print('prefix or prefixs not set')
+        sys.exit(2)
+
     # tracks location
-    tracks_dir = inputs.tracks_dir
-    if inputs.prefixs == 'all':
+    tracks_dir = indict['tracks_dir']
+
+    if prefs == 'all':
         # find all dirs in tracks dir skip .DS_Store and crap
         prefixs = [d for d in os.listdir(tracks_dir)
                    if os.path.isdir(os.path.join(tracks_dir, d)) and
-                   not d.startswith('.')]
-    elif inputs.prefixs is not None:
+                   not d.startswith('.')]  # FU .DS_Store
+    else:
         # some subset listed in the input file (seperated by comma)
-        prefixs = inputs.prefixs
-    else:
-        if inputs.prefix is None:
-            print('prefix or prefixs not set')
-            sys.exit(2)
-        # just do one
-        prefixs = [inputs.prefix]
+        prefixs = prefs
+        if isinstance(prefixs, str):
+            prefixs = [prefs]
 
-    if harsh:
-        del inputs.prefixs
     assert type(prefixs) == list, 'prefixs must be a list'
-    return prefixs
+    indict['prefixs'] = prefixs
+    return indict
 
 
-def load_ptcri(inputs, find=False, from_p2m=False):
-    '''
-    load the ptcri file, either sandro's or mine
-    if find is True, just return the file name, otherwise, return inputs with
-    ptcri and ptcri_file attributes set.
-
-    if from_p2m is True, force find/load my ptcri file regardless
-    of inputs.from_p2m value.
-    '''
-
-    # find the ptcri file
-    sandro = True
-    search_term = 'pt*'
-    if inputs.from_p2m or from_p2m:
-        sandro = False
-        search_term = 'p2m*'
-
-    search_term += '%sY*dat' % inputs.prefix.split('Y')[0]
-    if inputs.ptcri_file is not None:
-        ptcri_file = inputs.ptcri_file
-    else:
-        ptcri_files = fileio.get_files(inputs.ptcrifile_loc, search_term)
-        if inputs.hb:
-            ptcri_file, = [p for p in ptcri_files if 'hb' in p]
-        else:
-            ptcri_file, = [p for p in ptcri_files if 'hb' not in p]
-
-    assert os.path.isfile(ptcri_file), 'ptcri file not found.'
-    if find:
-        return ptcri_file
-    else:
-        inputs.ptcri_file = ptcri_file
-        inputs.ptcri = critical_point(inputs.ptcri_file, sandro=sandro,
-                                      hb=inputs.hb)
-        return inputs
-
-
-def define_eeps(tfm, inputs):
+def define_eeps(tfm, hb=False, save_p2m=True, diag_plot=False):
     '''add the ptcris to the tracks'''
     # assign eeps track.iptcri and track.sptcri
-    de = DefineEeps()
-    crit_kw = {'plot_dir': inputs.plot_dir,
-               'diag_plot': inputs.track_diag_plot,
-               'debug': inputs.debug}
 
-    if inputs.hb:
+    if hb:
         track_str = 'hbtracks'
-        defined = Eep().eep_list_hb
+        defined = tfm.eep.eep_list_hb
         filename = 'define_eeps_hb_%s.log'
     else:
         track_str = 'tracks'
-        # defined = inputs.ptcri.please_define
-        defined = Eep().eep_list
+        defined = tfm.eep.eep_list
         filename = 'define_eeps_%s.log'
 
-    # load critical points calls de.define_eep
-    tracks = [de.load_critical_points(track, inputs.ptcri, **crit_kw)
+    # define the eeps
+    tracks = [tfm.define_eep_stages(track)
               for track in tfm.__getattribute__(track_str)]
 
+    p2m_file = tfm.save_ptcri(tracks)
+
+    if diag_plot:
+        tfm.diag_plots(tracks, hb=inps.hb, pat_kw={'ptcri': p2m_file},
+                       extra='p2m', plot_dir=tfm.plot_dir)
+
     # write log file
-    info_file = os.path.join(inputs.log_dir, filename % inputs.prefix.lower())
+    info_file = os.path.join(inputs.log_dir, filename % tfm.prefix.lower())
     with open(info_file, 'w') as out:
         for t in tracks:
             if t.flag is not None:
@@ -197,111 +135,34 @@ def define_eeps(tfm, inputs):
                         out.write('%s: %s\n' % (ptc, t.info[ptc]))
                     except:
                         out.write('%s: %s\n' % (ptc, 'Copied from Sandro'))
-    if not inputs.from_p2m:
-        inputs.ptcri.save_ptcri(tracks, hb=inputs.hb)
-
-    tfm.__setattr__(track_str, tracks)
     return tfm
 
 
-def set_outdirs(input_obj, prefix):
-    '''
-    set up and ensure the directories for output and plotting
-    diagnostic plots: tracks_dir/diag_plots/prefix
-    match output: tracks_dir/match/prefix
-    define_eep and match_interp logs: tracks_dir/logs/prefix
-    Parameters
-    ----------
-    input_obj : rsp.fileio.InputParameters object
-        must have attrs: tracks_dir, prefix, plot_dir, outfile_dir
-        the final two can be 'default'
-
-    Returns
-    -------
-    new_inputs : A copy of input_obj with plot_dir, log_dir, outfile_dir set
-    '''
-    new_inputs = deepcopy(input_obj)
-    new_inputs.prefix = prefix
-
-    if input_obj.plot_dir == 'default':
-        new_inputs.plot_dir = os.path.join(input_obj.tracks_dir,
-                                           'diag_plots',
-                                           new_inputs.prefix)
-
-    if input_obj.outfile_dir == 'default':
-        new_inputs.outfile_dir = os.path.join(input_obj.tracks_dir,
-                                              'match',
-                                              new_inputs.prefix)
-        fileio.ensure_dir(new_inputs.outfile_dir)
-        new_inputs.log_dir = os.path.join(input_obj.tracks_dir, 'logs')
-
-    for d in [new_inputs.plot_dir, new_inputs.outfile_dir, new_inputs.log_dir]:
-        fileio.ensure_dir(d)
-
-    return new_inputs
-
-
-def initialize_inputs():
-    '''
-    Load default inputs, the eep lists, and number of equally spaced points
-    between eeps. Input file will overwrite these. These should be all possible
-    input options.
-    '''
-    input_dict = {'track_search_term': '*F7_*PMS',
-                  'hbtrack_search_term': '*F7_*PMS.HB',
-                  'from_p2m': False,
-                  'masses': None,
-                  'hbmasses': None,
-                  'do_interpolation': True,
-                  'debug': False,
-                  'hb': True,
-                  'prefix': None,
-                  'prefixs': None,
-                  'tracks_dir': os.getcwd(),
-                  'ptcrifile_loc': None,
-                  'ptcri_file': None,
-                  'plot_dir': None,
-                  'outfile_dir': None,
-                  'diag_plot': False,
-                  'match': False,
-                  'agb': False,
-                  'overwrite_ptcri': True,
-                  'overwrite_match': True,
-                  'prepare_makemod': False,
-                  'track_diag_plot': False,
-                  'hb_age_offset_fraction': 0.,
-                  'log_dir': os.getcwd(),
-                  'both': False}
-    return input_dict
-
-
 def call_prepare_makemod(inputs):
-    prefixs = set_prefixs(inputs, harsh=False)
+    prefixs = get_track_subdirectories(inputs, harsh=False)
     prepare_makemod(prefixs, inputs.tracks_dir)
 
+
+def main(argv):
+    parser = argparse.ArgumentParser(description="parsec2match")
+
+    parser.add_argument('-v', '--loud', action='store_true',
+                        help='verbose')
+
+    parser.add_argument('infile', type=str,
+                        help='input file')
+
+    args = parser.parse_args(argv)
+
+    indict = parsec2match(args.infile, loud=args.loud)
+
+    if indict['prepare_makemod']:
+        call_prepare_makemod(indict)
+
+    fname = add_version_info(args.infile)
+    os.system('mv {} {}'.format(fname,
+                                os.path.join(indict['tracks_dir'], 'logs')))
+
+
 if __name__ == '__main__':
-    inp_obj = fileio.InputFile(sys.argv[1], default_dict=initialize_inputs())
-    fname = add_version_info(sys.argv[1])
-    loud = False
-    if len(sys.argv) > 2:
-        loud = True
-
-    if inp_obj.debug:
-        import pdb
-        pdb.set_trace()
-
-    prefixs = inp_obj.prefixs
-
-    if inp_obj.hb:
-        parsec2match(inp_obj, loud=loud)
-        inp_obj.hb = False
-        inp_obj.prefixs = prefixs
-
-    parsec2match(inp_obj, loud=loud)
-
-    if inp_obj.prepare_makemod:
-        inp_obj.prefixs = prefixs
-        call_prepare_makemod(inp_obj)
-
-    os.system('mv {} {}'.format(fname, os.path.join(inp_obj.tracks_dir,
-                                'logs')))
+    main(sys.argv[1:])

@@ -4,10 +4,27 @@ import numpy as np
 import sys
 
 from ..config import *
-from ..utils import sort_dict
+from ..utils import sort_dict, get_zy
+from ..fileio import get_files
 import logging
 
 logger = logging.getLogger()
+
+
+def find_ptcri(prefix, from_p2m=False, ptcrifile_loc=os.getcwd()):
+    search_term = 'pt*'
+    if from_p2m:
+        search_term = 'p2m*'
+
+    search_term += '{0:s}Y*dat'.format(prefix.split('Y')[0])
+    ptcris = get_files(ptcrifile_loc, search_term)
+    try:
+        ptcri_file, = [p for p in ptcris if 'hb' not in p]
+        hbptcri_file, = [p for p in ptcris if 'hb' in p]
+        retv = [ptcri_file, hbptcri_file]
+    except:
+        retv = []
+    return retv
 
 
 class Eep(object):
@@ -47,56 +64,35 @@ class Eep(object):
         self.trans = eep_lengths[trans]
 
 
-class critical_point(object):
+class CriticalPoint(object):
     '''
     class to hold ptcri data from Sandro's ptcri file and input eep_obj
     which tells which critical points of Sandro's to ignore and which new
     ones to define. Definitions of new eeps are in the Track class.
     '''
-    def __init__(self, filename=None, sandro=True, debug=False, hb=False):
+    def __init__(self, filename=None, debug=False):
         self.debug = debug
-
+        self.hb = False
         if filename is not None:
             if 'hb' in filename:
-                hb = True
+                self.hb = True
             self.base, self.name = os.path.split(filename)
-            self.load_ptcri(filename, sandro=sandro, hb=hb)
-            self.get_args_from_name(filename)
+            self.load_ptcri(filename)
+            self.Z, self.Y = get_zy(filename)
         else:
-            load_eep(hb=hb)
+            self.load_eep()
 
-    def load_eep(self, hb=False):
+    def load_eep(self):
         self.eep = Eep()
-        if hb:
+        if self.hb:
             self.eep_list = self.eep.eep_list_hb
         else:
             self.eep_list = self.eep.eep_list
 
-        self.key_dict = dict(zip(self.eep_list, range(len(self.eep_list))))
+        self.pdict = dict(zip(self.eep_list, range(len(self.eep_list))))
         self.please_define = self.eep_list
 
-    def get_args_from_name(self, filename):
-        '''
-        strip Z and Y and add to self must have format of
-        ..._Z0.01_Y0.25...
-        '''
-        zstr = filename.split('_Z')[-1]
-        try:
-            self.Z = float(zstr.split('_')[0])
-        except:
-            self.Z = float(zstr.split('Y')[0])
-        ystr = filename.replace('.dat', '').split('_Y')[-1].split('_')[0]
-        if ystr.endswith('.'):
-            ystr = ystr[:-1]
-        try:
-            self.Y = float(ystr)
-        except:
-            ystr = filename.replace('.dat', '').split('Y')[-1].split('_')[0]
-            if ystr.endswith('.'):
-                ystr = ystr[:-1]
-            self.Y = float(ystr)
-
-    def inds_between_ptcris(self, track, name1, name2, sandro=True):
+    def xinds_between_ptcris(self, track, name1, name2, sandro=True):
         '''
         returns the indices from [name1, name2)
         this is iptcri, not mptcri (which start at 1 not 0)
@@ -120,11 +116,11 @@ class critical_point(object):
 
         return np.arange(first, second)
 
-    def get_ptcri_name(self, val, sandro=True, hb=False):
+    def xget_ptcri_name(self, val):
         '''
         given the eep number or the eep name return the eep name or eep number.
         '''
-        if sandro:
+        if self.sandro:
             pdict = self.sandros_dict
         else:
             pdict = self.key_dict
@@ -134,25 +130,27 @@ class critical_point(object):
         elif type(val) == str:
             return [pval for name, pval in pdict.items() if name == val][0]
 
-    def load_ptcri(self, filename, sandro=True, hb=False):
+    def load_ptcri(self, filename):
         '''
         Read the ptcri*dat file.
         Initialize Eep
         Flag the missing eeps in the ptcri file.
         '''
+        self.sandro = True
         with open(filename, 'r') as f:
             lines = f.readlines()
 
         # the lines have the path name, and the path has F7.
-        if not hb:
+        if not self.hb:
             begin, = [i for i in range(len(lines))
                       if lines[i].startswith('#') and 'F7' in lines[i]]
         else:
             begin = -1
             if 'p2m' in filename:
                 begin = 0
+                self.sandro = False
 
-        if sandro and not hb:
+        if self.sandro and not self.hb:
             try:
                 self.fnames = [l.strip().split('../F7/')[1]
                                for l in lines[(begin+2):]]
@@ -166,7 +164,7 @@ class critical_point(object):
         col_keys = all_keys[3:-1]
         # ptcri file has filename as col #19 so skip the last column
         usecols = range(0, len(all_keys) - 1)
-        if hb and 'p2m' not in filename:
+        if self.hb and 'p2m' not in filename:
             col_keys = all_keys[3:]
             usecols = range(0, len(all_keys))
         try:
@@ -191,41 +189,28 @@ class critical_point(object):
 
         self.data_dict = data_dict
 
-        self.load_eep(hb=hb)
+        self.load_eep()
 
-        if sandro:
+        if self.sandro:
             # loading sandro's eeps means they will be used for match
             self.sandro_eeps = col_keys
-            self.sandros_dict = dict(zip(col_keys, range(len(col_keys))))
+            self.sdict = dict(zip(col_keys, range(len(col_keys))))
             self.please_define = [c for c in self.eep_list
                                   if c not in col_keys]
 
             [self.check_ptcri(self.masses[i], data[i][3:].astype(int))
              for i in range(len(data))]
 
-    def load_eeps(self, track, sandro=True):
-        '''load the eeps from the ptcri file'''
-        try:
-            ptcri = self.data_dict['M%.3f' % track.mass]
-        except KeyError:
-            track.flag = 'No M%.3f in ptcri.data_dict.' % track.mass
-            return track
+        self.low_mass = np.max(np.array([k.replace('M', '') for
+                               k, v in self.data_dict.items()
+                               if len(v[v > 0]) <= 6], dtype=float))
 
-        if sandro:
-            track.sptcri = \
-                np.concatenate([np.nonzero(track.data[MODE] == m)[0]
-                                for m in ptcri])
-        else:
-            track.iptcri = ptcri
-        track.ptcri_file = os.path.join(self.base, self.name)
-        return track
-
-    def save_ptcri(self, tracks, filename=None, hb=False):
+    def save_ptcri(self, tracks, filename=None):
         '''save parsec2match ptcris in same format as sandro's'''
 
         if filename is None:
             filename = os.path.join(self.base, 'p2m_%s' % self.name)
-            if hb:
+            if self.hb:
                 filename = filename.replace('p2m', 'p2m_hb')
 
         sorted_keys = sort_dict(self.key_dict).keys()
@@ -244,6 +229,7 @@ class critical_point(object):
                 f.write(linefmt % (i+1, track.mass, ptcri_str,
                                    os.path.join(track.base, track.name)))
         # print('wrote %s' % filename)
+        return filename
 
     def check_ptcri(self, mass_, arr):
         ndefined = len(np.nonzero(arr > 0)[0])
@@ -266,7 +252,7 @@ class critical_point(object):
                 for ind in inds:
                     self.fix_ptcri(np.array(self.fnames)[ind])
 
-    def fix_ptcri(self, fname, iptcri=None):
+    def fix_ptcri(self, fname=None, iptcri=None, track=None):
         """
         print better values of sandro's EEPs (the basis for Phil's EEPs)
         (It is expected you will hand code the proper values in the ptcri file
@@ -295,8 +281,8 @@ class critical_point(object):
         import matplotlib.pylab as plt
         plt.ion()
         from ..fileio import get_dirs, get_files
-        from ..tracks import TrackDiag, Track
-        td = TrackDiag()
+        from ..tracks import TrackPlots, Track
+        td = TrackPlots()
 
         def guessandcheck(ptname, pt=None):
             """
@@ -347,45 +333,47 @@ class critical_point(object):
                 pt = go_on
             return go_on, pt
 
-        # track_dir = self.base.replace('data', 'tracks')
-        track_dir, tname = os.path.split(fname)
-        estr = 'PMS'
-        hb = 'hb' in fname.lower()
-        if hb:
-            estr = 'HB'
-        z = tname.split('Z')[1].split('Y')[0].replace('_', '')
-        mass_ = tname.split('M')[1].replace('.DAT', '') \
-                     .replace('.P', '').split('.HB')[0]
-        # track_dir, = get_dirs(track_dir, '{:g}'.format(z))
-
-        # track_file = os.path.join(track_dir, '/'.join(fname.split('/')[1:]))
-        try:
-            track_file, = get_files(track_dir, '*M{}*{}'.format(mass_, estr))
-        except ValueError:
-            # the above search will not distiguish, e.g, M030.000 and M130.000
-            track_files = get_files(track_dir, '*{}*'.format(mass_))
-            # cull mass values
+        if track is None:
+            # track_dir = self.base.replace('data', 'tracks')
+            track_dir, tname = os.path.split(fname)
+            estr = 'PMS'
+            hb = 'hb' in fname.lower()
+            if hb:
+                estr = 'HB'
+            z = tname.split('Z')[1].split('Y')[0].replace('_', '')
+            mass_ = tname.split('M')[1].replace('.DAT', '') \
+                         .replace('.P', '').split('.HB')[0]
             try:
-                tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1]
-                                         .split('.')[:-1])
-                                for t in track_files], dtype=float)
-            except:
-                tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1]
-                                         .split('.')[:-3])
-                                for t in track_files], dtype=float)
+                track_file, = get_files(track_dir,
+                                        '*M{}*{}'.format(mass_, estr))
+            except ValueError:
+                # the above search will not distiguish M030.000 and M130.000
+                track_files = get_files(track_dir, '*{}*'.format(mass_))
+                # cull mass values
+                try:
+                    tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1]
+                                             .split('.')[:-1])
+                                    for t in track_files], dtype=float)
+                except:
+                    tms = np.array(['.'.join(os.path.split(t)[1].split('M')[1]
+                                             .split('.')[:-3])
+                                    for t in track_files], dtype=float)
 
-            # select by mass
-            track_file, = \
-                np.array(track_files)[np.nonzero(float(mass_) == tms)]
+                # select by mass
+                track_file, = \
+                    np.array(track_files)[np.nonzero(float(mass_) == tms)]
 
-        track = self.load_eeps(Track(track_file))
+            track = Track(track_file)
+        else:
+            tname = track.name
 
         if iptcri is not None:
             track.iptcri = iptcri
-            fig, ax = plt.subplots()
-            ax.plot(track.data[logT], track.data[logL])
-            ax.plot(track.data[logT][iptcri], track.data[logL][iptcri], 'o')
-            td.annotate_plot(track, ax, logT, logL)
+
+        if hasattr(track, 'iptcri'):
+            ax = td.hrd(track)
+            ax = td.hrd(track, ax=ax, inds=iptcri)
+            # td.annotate_plot(track, ax, logT, logL)
         else:
             ax = td.plot_sandro_ptcri(track, ptcri=self)
 

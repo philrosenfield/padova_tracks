@@ -23,7 +23,7 @@ def duration_masslost(agbs, justprint=False, norm=False):
             for agb in agbs:
                 if agb.Z not in [0.001, 0.008]:
                     continue
-                #plt.plot(agbs[i].data[age], agbs[i].data['L_star'])
+                #  plt.plot(agbs[i].data[age], agbs[i].data['L_star'])
                 ind1, ind2 = agb.ml_regimes()
                 if not None in [ind1, ind2] or ind1 != ind2:
                     if agb.mass != a:

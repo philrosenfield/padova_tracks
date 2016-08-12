@@ -5,7 +5,7 @@ from matplotlib.transforms import Bbox
 try:
     from cStringIO import StringIO
 except ImportError:
-    #py3k
+    # py3k
     from io import StringIO
 
 

@@ -13,24 +13,34 @@ from .config import mass, logT, age, logL
 from .eep import critical_point
 from .eep.define_eep import DefineEeps
 from .interpolate.interpolate import Interpolator
-from .tracks import TrackSet, Track, TrackDiag
+from .tracks import TrackSet, Track, TrackPlots
 
 logger = logging.getLogger()
 
 
-class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
+class TracksForMatch(TrackSet, DefineEeps, TrackPlots, Interpolator):
     """
     This class is for interpolating tracks for use in MATCH. DefineEeps is made
     for one track at a time, TracksForMatch takes a track set as input.
     """
-    def __init__(self, inputs):
-        TrackDiag.__init__(self)
-        TrackSet.__init__(self, inputs=inputs)
-        DefineEeps.__init__(self)
-        Interpolator.__init__(self)
-        self.debug = inputs.debug
+    def __init__(self, *args, **kwargs):
+        TrackPlots.__init__(self)
+        TrackSet.__init__(self, **kwargs)
+        DefineEeps.__init__(self, self.ptcri_file)
+        self.debug = kwargs.get('debug', False)
+        [self.load_critical_points(track) for track in self.tracks]
+        if hasattr(self, 'hbtracks'):
+            [self.load_critical_points(track) for track in self.hbtracks]
 
-    def match_interpolation(self, inputs):
+        default_outdir = \
+            os.path.join(self.tracks_dir, 'match', self.prefix)
+        default_plotdir = \
+            os.path.join(self.tracks_dir, 'diag_plots', self.prefix)
+        self.outfile_dir = self.outfile_dir or default_outdir
+        self.plot_dir = self.plot_dir or default_plotdir
+        self.log_dir = self.log_dir or os.path.join(self.tracks_dir, 'logs')
+
+    def match_interpolation(self, hb=False):
         """
         Call the MATCH interpolator, make diagnostic plots
 
@@ -55,17 +65,13 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         flag_dict = {}
         info_dict = {}
 
-        if not inputs.hb:
+        if not hb:
             tracks = self.tracks
             filename = 'match_interp_%s.log'
         else:
             tracks = self.hbtracks
             filename = 'match_interp_hb_%s.log'
 
-        if inputs.outfile_dir is None or inputs.outfile_dir == 'default':
-            inputs.outfile_dir = inputs.tracks_base
-
-        self.mtracks = []
         for track in tracks:
             flag_dict['M%.3f' % track.mass] = track.flag
 
@@ -77,39 +83,38 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
             # interpolate tracks for match
             outfile = \
-                os.path.join(inputs.outfile_dir,
-                             'match_%s.dat' % track.name.replace('.PMS', ''))
+                os.path.join(self.outfile_dir,
+                             'match_%s.dat' % os.path.splitext(track.name)[0])
 
-            if not inputs.overwrite_match and os.path.isfile(outfile):
+            if not self.overwrite_match and os.path.isfile(outfile):
                 print('not overwriting %s' % outfile)
                 continue
-            match_track = \
-                self.prepare_track(track, inputs.ptcri, outfile, hb=inputs.hb)
+            match_track = self.prepare_track(track, outfile, hb=hb)
 
             info_dict['M%.3f' % track.mass] = track.info
 
-            if inputs.track_diag_plot:
+            if self.track_diag_plot:
                 # make diagnostic plots
                 for xcol in [logT, age]:
-                    plot_dir = os.path.join(inputs.plot_dir, xcol.lower())
+                    plot_dir = os.path.join(self.plot_dir, xcol.lower())
                     if not os.path.isdir(plot_dir):
                         os.makedirs(plot_dir)
-                    self.check_ptcris(track, inputs.ptcri, plot_dir=plot_dir,
-                                      xcol=xcol, hb=inputs.hb,
+                    self.check_ptcris(track, plot_dir=plot_dir, xcol=xcol,
                                       match_track=match_track)
 
             self.mtracks.append(match_track)
 
-        if inputs.diag_plot:
-            dp_kw = {'hb': inputs.hb, 'plot_dir': inputs.plot_dir,
-                     'pat_kw': {'ptcri': inputs.ptcri}, 'match_tracks': True}
-            if inputs.hb:
+        if self.diag_plot:
+            dp_kw = {'hb': hb, 'plot_dir': self.plot_dir,
+                     'pat_kw': {'ptcri': self},
+                     'match_tracks': self.mtracks}
+            if hb:
                 self.diag_plots([t for t in self.mtracks if t.hb], **dp_kw)
             else:
                 self.diag_plots([t for t in self.mtracks if not t.hb], **dp_kw)
-        logfile = os.path.join(inputs.log_dir, filename % self.prefix.lower())
+        logfile = os.path.join(self.log_dir, filename % self.prefix.lower())
         self.write_log(logfile, info_dict)
-        return flag_dict
+        return self.check_tracks(tracks, flag_dict)
 
     def write_log(self, logfile, info_dict):
         """write interpolation dictionary to file"""
@@ -135,7 +140,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             svals = np.array(vals)[inds]
             return skeys, svals
 
-        eep = critical_point.Eep()
+        eep = self.eep
         with open(logfile, 'w') as out:
             # sort by mass
             mass_, info = sortbyval(info_dict)
@@ -151,7 +156,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
                     out.write('%s: %s\n' % (k, v))
         return
 
-    def prepare_track(self, track, ptcri, outfile, hb=False,
+    def prepare_track(self, track, outfile, hb=False,
                       hb_age_offset_fraction=0.):
         """
         Do MATCH interpolation, save files
@@ -177,9 +182,9 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         header = 'logAge Mass logTe Mbol logg C/O'
 
         if hb:
-            nticks = ptcri.eep.nticks_hb
+            nticks = self.eep.nticks_hb
         else:
-            nticks = ptcri.eep.nticks
+            nticks = self.eep.nticks
 
         logTe = np.array([])
         logL = np.array([])
@@ -187,8 +192,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         Mass = np.array([])
         co = np.array([])
 
-        ptcri_kw = {'sandro': False, 'hb': hb}
-        track = ptcri.load_eeps(track, sandro=False)
+        # track = ptcri.load_eeps(track)
         if track.flag is not None:
             return
         nptcri = len(track.iptcri)
@@ -197,8 +201,8 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
             if track.iptcri[i+1] == 0:
                 # The end of the track
                 break
-            this_eep = ptcri.get_ptcri_name(i, **ptcri_kw)
-            next_eep = ptcri.get_ptcri_name(i+1, **ptcri_kw)
+            this_eep = self.get_ptcri_name(i)
+            next_eep = self.get_ptcri_name(i+1)
 
             ithis_eep = track.iptcri[i]
             inext_eep = track.iptcri[i+1]
@@ -222,7 +226,7 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
 
             conew = np.zeros(len(massnew))
             if track.agb:
-                cocheck = track.data['CO'][inds]
+                cocheck = track.data['C/O'][inds]
                 cocheck[np.isnan(cocheck)] = 0.
                 if np.sum(cocheck) > 0:
                     ntps = len(np.nonzero(cocheck)[0])
@@ -270,156 +274,59 @@ class TracksForMatch(TrackSet, DefineEeps, TrackDiag, Interpolator):
         np.savetxt(outfile, to_write, header=header, fmt='%.8f')
         return Track(outfile, track_data=to_write, match=True)
 
-    def interpolate_along_track(self, track, inds, nticks, zcol=None,
-                                mess=None, zmsg=''):
+    def check_tracks(self, tracks, flag_dict):
         """
-        interpolate along a segment of a track in one of three ways:
+        Check the tracks for identical and non-monotontically increasing ages
 
-        1) using DefineEeps._interpolate using log Age and no smoothing
-            check for age increasing and no increase in log L or Log Te.
-            The interpolation will be spline with level 3 unless the length
-            of the tracks slice is less than 3, in which case it will be
-            linear (see DefineEeps._interpolate doc)
+        Results go into self.match_info dictionary whose keys are set by
+        M%.3f % track.mass and values filled with a list of strings with the
+        information.
 
-        2) If the track segment is made of only duplicate values in either
-            Log L or Log Te, interpolate with interp1d using the
-            non-duplicate values and Log Age.
-
-        3) If 1 produced non-monotonic increase in Age, interpolate with
-            interp1d as a function of age independently for both Log Te and
-            Log L.
+        If the track has already been flagged (track.flag), no test occurs.
 
         Parameters
         ----------
-        track: padova_tracks.Track object
-
-        inds: np.array
-            slice of track
-
-        nticks: int
-            the number of points interpolated arrays will have
-
-        mess: string
-            error message key from track.info
-
-        Returns
-        -------
-        arrays of interpolated values for Log Age, Log L, Log Te
-
-        Note: a little rewrite could merge a bit of this into _interpolate
+        tracks: list of padova_tracks.Track objects
         """
-        def call_interp1d(track, inds, nticks, mess=None):
-            """
-            Call interp1d for each dimension  individually. If LOG_L or
-            LOG_TE doesn't change, will return a constant array.
+        self.match_info = {}
+        for t in tracks:
+            key = 'M%.3f' % t.mass
 
-            Probably could/should go in ._interpolate
-            Parameters
-            ----------
-            track: padova_tracks.Track object
+            if key not in flag_dict.keys():
+                print('check_tracks: No %s in flag dict, skipping.' % key)
+                continue
 
-            inds: np.array
-                slice of track
+            if flag_dict[key] is not None:
+                print('check_tracks: skipping %s: %s' % (t.mass, t.flag))
+                continue
 
-            nticks: int
-                the number of points interpolated arrays will have
-
-            mess: string
-                error message key from track.info
-
-            Returns
-            -------
-            arrays of interpolated values for Log Age, Log L, Log Te
-            """
-            msg = ' Match interpolation by interp1d'
-            logl = track.data[logL][inds]
-            logte = track.data[logT][inds]
-            lage = np.log10(track.data[age][inds])
-            mass_ = track.data[mass][inds]
-            try:
-                lagenew = np.linspace(lage[0], lage[-1], nticks)
-            except:
-                lagenew = np.linspace(lage.iloc[0], lage.iloc[-1], nticks)
-            if np.sum(np.abs(np.diff(mass_))) > 0.01:
-                msg += ' with mass'
-            else:
-                try:
-                    massnew = np.repeat(mass_.iloc[0], len(lagenew))
-                except:
-                    massnew = np.repeat(mass_[0], len(lagenew))
-            if len(np.nonzero(np.diff(logl))[0]) == 0:
-                # all LOG_Ls are the same
-                lnew = np.zeros(len(lagenew)) + logl[0]
-                fage_te = interp1d(lage, logte, bounds_error=0)
-                tenew = fage_te(lagenew)
-                msg += ', with a single value for LOG_L'
-            elif len(np.nonzero(np.diff(logte))[0]) == 0:
-                # all LOG_TEs are the same
-                tenew = np.zeros(len(lagenew)) + logte[0]
-                fage_l = interp1d(lage, logl, bounds_error=0)
-                lnew = fage_l(lagenew)
-                msg += ', with a single value for LOG_TE'
-            else:
-                fage_l = interp1d(lage, track.data[logL][inds],
-                                  bounds_error=0)
-                lnew = fage_l(lagenew)
-                fage_te = interp1d(lage, track.data[logT][inds],
-                                   bounds_error=0)
-                tenew = fage_te(lagenew)
-                fage_m = interp1d(lage, track.data[mass][inds],
-                                  bounds_error=0)
-                massnew = fage_m(lagenew)
-            track.info[mess] += msg
-
-            return lagenew, lnew, tenew, massnew
-
-        if len(inds) < 1:
-            track.info[mess] = 'not enough points for interpolation'
-            return -1, -1, -1, -1
-
-        # need to check if mass loss is important enough to include
-        # in interopolation
-        mass_ = track.data[mass][inds]
-        if np.sum(np.abs(np.diff(mass_))) > 0.01:
-            frac_mloss = len(np.unique(mass))/float(len(mass))
-            if frac_mloss >= 0.25:
-                zcol = mass
-            else:
-                print('interpolate_along_track: {} frac mloss, mi, mf: ',
-                      '{} {} {}'.format(mess, frac_mloss, mass_[0], mass_[-1]))
-
-        # parafunc = np.log10 means np.log10(AGE)
-        tckp, _, non_dupes = self._interpolate(track, inds, s=0,
-                                               parafunc='np.log10',
-                                               zcol=zcol)
-        arb_arr = np.linspace(0, 1, nticks)
-
-        if type(non_dupes) is int:
-            # if one variable doesn't change, call interp1d
-            lagenew, tenew, lnew, massnew = \
-                call_interp1d(track, inds, nticks, mess=mess)
-        else:
-            if len(non_dupes) <= 3:
-                # linear interpolation is automatic in self._interpolate
-                track.info[mess] += ' linear interpolation'
-            # normal intepolation
-            if zcol is None:
-                lagenew, tenew, lnew = splev(arb_arr, tckp)
-            else:
-                track.info[mess] += ' interpolation with {}'.format(zcol)
-                lagenew, tenew, lnew, massnew = splev(arb_arr, tckp)
-
-            # if non-monotonic increase in age, call interp1d
-            all_positive = np.diff(lagenew) > 0
-            if False in all_positive:
-                # probably too many nticks
-                track.info[mess] += \
-                    ' non-monotonic increase in age. Linear interpolation'
-                lagenew, lnew, tenew, massnew = \
-                    call_interp1d(track, inds, nticks, mess=mess)
-        if zcol is None:
-            try:
-                massnew = np.repeat(mass_[0], len(lagenew))
-            except:
-                massnew = np.repeat(mass_.iloc[0], len(lagenew))
-        return lagenew, lnew, tenew, massnew
+            test = np.diff(t.data[age]) > 0
+            if False in test:
+                # age where does age decrease
+                bads, = np.nonzero(np.diff(t.data[age]) < 0)
+                edges = np.cumsum(self.nticks)
+                if len(bads) != 0:
+                    if key not in self.match_info:
+                        self.match_info[key] = []
+                        match_info = self.match_info[key]
+                    match_info.append('Age not monotonicly increasing near')
+                    nears = np.concatenate([np.nonzero(j - edges < 0)[0]
+                                            for j in bads])
+                    bad_inds = np.unique(nears)
+                    match_info.append([np.array(self.eep_list)[bad_inds],
+                                       t.data[age][bads]])
+                    flag_dict['M%.3f' % t.mass] = 'age decreases on track'
+                # identical values of age
+                bads1, = np.nonzero(np.diff(t.data[age]) == 0)
+                if len(bads1) != 0:
+                    if key not in self.match_info:
+                        self.match_info[key] = []
+                        match_info = self.match_info[key]
+                    match_info.append(['%i identical age values' % len(bads1)])
+                    nears = np.concatenate([np.nonzero(j - edges < 0)[0]
+                                            for j in bads1])
+                    bad_inds = np.unique(nears)
+                    match_info.append(['near',
+                                       np.array(self.eep_list)[bad_inds]])
+                    match_info.append(['log ages:', t.data[age][bads1]])
+                    match_info.append(['inds:', bads1])

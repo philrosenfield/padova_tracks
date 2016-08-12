@@ -23,6 +23,7 @@ def reformat_filename(fname, fmt='Z{:.4f}_Y{:.3f}_M{:.3f}{}'):
     m = float(mstr)
     return fmt.format(z, y, m, ext)
 
+
 def plot_MheF(isotracks=None, labels=None, colors=None):
     """ plot the minimum initial mass for He Fusion """
     if isotracks is None:
@@ -30,16 +31,16 @@ def plot_MheF(isotracks=None, labels=None, colors=None):
                      'isotrack/parsec/CAF09_MC_S13v3_OV0.4.dat',
                      'isotrack/parsec/CAF09_MC_S13v3_OV0.5.dat',
                      'isotrack/parsec/CAF09_MC_S13v3_OV0.6.dat',
-                    'isotrack/parsec/CAF09_S12D_NS_1TP.dat']
+                     'isotrack/parsec/CAF09_S12D_NS_1TP.dat']
         isotracks = [os.path.join(os.environ['TRILEGAL_ROOT'], i)
                      for i in isotracks]
 
     if labels is None:
         labels = ['$\Lambda_c=0.3$',
-               '$\Lambda_c=0.4$',
-               '$\Lambda_c=0.5$',
-               '$\Lambda_c=0.6$',
-               '$S12D\_NS\_1TP$']
+                  '$\Lambda_c=0.4$',
+                  '$\Lambda_c=0.5$',
+                  '$\Lambda_c=0.6$',
+                  '$S12D\_NS\_1TP$']
     if colors is None:
         colors = ['darkred', 'orange', 'navy', 'purple', 'k']
 
@@ -375,7 +376,7 @@ def main(argv):
         create ov0.45.
         Lots of structure on HB phase looks pretty strange. It might be better
         NOT to interpolate and run with MATCH but use a KDE later.
-    
+
     """
     parser = argparse.ArgumentParser(description=" ")
 

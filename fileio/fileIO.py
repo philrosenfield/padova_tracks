@@ -1,102 +1,49 @@
 from __future__ import print_function, division
 import os
 import glob
+import json
 from pprint import pprint
 from ..utils import is_numeric
 from ast import literal_eval
 
 import logging
 
-__all__ = ['InputFile', 'InputParameters', 'ensure_dir', 'ensure_file',
-           'get_files', 'load_input', 'replace_ext', 'get_dirs']
+__all__ = ['ensure_dir', 'ensure_file', 'get_files', 'load_input',
+           'replace_ext', 'tfm_indict', 'ts_indict', 'get_dirs']
 
 
-class InputParameters(object):
+def tfm_indict():
     '''
-    need to make a dictionary of all the possible parameters
-        (in the ex: rsp.TrilegalUtils.galaxy_input_dict())
-    need to make a formatted string with dictionary printing
-        (in the ex: rsp.TrilegalUtils.galaxy_input_fmt())
-
-    example
-    import ResolvedStellarPops as rsp
-    inp = rsp.fileIO.input_parameters(default_dict=galaxy_input_dict())
-    send any replacement params as kwargs.
-    inp.write_params('test', rsp.TrilegalUtils.galaxy_input_fmt())
-    $ cat test
-
-    use print inp to see what current values are in cmd line.
+    Load default inputs, the eep lists, and number of equally spaced points
+    between eeps. Input file will overwrite these. These should be all possible
+    input options.
     '''
-    def __init__(self, default_dict=None):
-        self.possible_params(default_dict)
+    base = os.path.split(os.path.split(__file__)[0])[0]
+    inp_par = os.path.join(base, 'inputs/tracks4match.json')
+    with open(inp_par, 'r') as inp:
+        indict = json.load(inp)
 
-    def possible_params(self, default_dict=None):
-        '''
-        assign key as attribute name and value as attribute value from
-        dictionary
-        '''
-        default_dict = default_dict or {}
-        [self.__setattr__(k, v) for k, v in default_dict.items()]
-
-    def update_params(self, new_dict, loud=False):
-        '''only overwrite attributes that already exist from dictionary'''
-        if loud:
-            self.check_keys('not updated', new_dict)
-        [self.__setattr__(k, v)
-         for k, v in new_dict.items() if hasattr(self, k)]
-
-    def add_params(self, new_dict, loud=False):
-        '''add or overwrite attributes from dictionary'''
-        if loud:
-            self.check_keys('added', new_dict)
-        [self.__setattr__(k, v) for k, v in new_dict.items()]
-
-    def write_params(self, new_file, formatter=None, loud=False):
-        '''write self.__dict__ to new_file with format from formatter'''
-        with open(new_file, 'w') as f:
-            if formatter is not None:
-                f.write(formatter % self.__dict__)
-            else:
-                for k in sorted(self.__dict__):
-                    f.write('{0: <16} {1}\n'.format(k, str(self.__dict__[k])))
-        if loud:
-            logging.info('wrote {}'.format(new_file))
-
-    def check_keys(self, msg, new_dict):
-        """ check if new_dict.keys() are already attributes """
-        new_keys = [k for k, v in new_dict.items() if not hasattr(self, k)]
-        logging.info('{}: {}'.format(msg, new_keys))
-
-    def __str__(self):
-        '''pprint self.__dict__'''
-        pprint(self.__dict__)
-        return ""
+    # Set default locations to here
+    for k, v in indict.items():
+        if k.endswith('dir'):
+            indict[k] = os.getcwd()
+    return indict
 
 
-class InputFile(object):
+def ts_indict():
     '''
-    a class to replace too many kwargs from the input file.
-    does two things:
-    1. sets a default dictionary (see input_defaults) as attributes
-    2. unpacks the dictionary from load_input as attributes
-        (overwrites defaults).
+    Load default inputs, the eep lists, and number of equally spaced points
+    between eeps. Input file will overwrite these. These should be all possible
+    input options.
     '''
-    def __init__(self, filename, default_dict=None):
-        if default_dict is not None:
-            self.set_defaults(default_dict)
-        self.in_dict = load_input(filename)
-        self.unpack_dict()
-
-    def set_defaults(self, in_def):
-        self.unpack_dict(udict=in_def)
-
-    def unpack_dict(self, udict=None):
-        if udict is None:
-            udict = self.in_dict
-        [self.__setattr__(k, v) for k, v in udict.items()]
+    base = os.path.split(os.path.split(__file__)[0])[0]
+    inp_par = os.path.join(base, 'inputs/trackset.json')
+    with open(inp_par, 'r') as inp:
+        indict = json.load(inp)
+    return indict
 
 
-def load_input(filename, comment_char='#', list_sep=','):
+def load_input(filename, comment_char='#', list_sep=',', default_dict=None):
     '''
     read an input file into a dictionary
 
@@ -121,7 +68,8 @@ def load_input(filename, comment_char='#', list_sep=','):
     d : dict
         parsed information from filename
     '''
-    d = {}
+    default_dict = default_dict or None
+    d = default_dict.copy()
     with open(filename) as f:
         # skip comment_char, empty lines, strip out []
         lines = [l.strip().replace('[', '').replace(']', '')
@@ -136,7 +84,8 @@ def load_input(filename, comment_char='#', list_sep=','):
     # check the values
     for key in d.keys():
         # is_numeric already got the floats and ints
-        if type(d[key]) == float or type(d[key]) == int:
+        if isinstance(d[key], float) or isinstance(d[key], int) or \
+           isinstance(d[key], bool) or d[key] is None:
             continue
         # check for a comma separated list
         temp = d[key].split(list_sep)

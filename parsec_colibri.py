@@ -111,6 +111,7 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
                            first_tp_loc=None, ptcri_loc=None, outputloc=None,
                            overwrite=False):
     """Combine PARSEC and COLIRBI (call attach)"""
+    line = ''
     firsttps = get_files(first_tp_loc, '*.INP')
     for firsttp in firsttps:
         onetp = FirstTP(firsttp)
@@ -163,30 +164,47 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
                 continue
             if 'hb' in parsec_track.lower():
                 ptcri_file = ptcri_filehb
+
             # load PARSEC Track
             try:
                 parsec = Track(parsec_track, ptcri_file=ptcri_file,
                                ptcri_kw={'sandro': False})
-            except:
+            except ValueError as e:
+                print('Problem with {}'.format(parsec_track))
+                print(e)
                 continue
             # Load COLIBRI Track
             colibri = AGBTrack(colibri_track)
             # First two lines are 0 age
             colibri.data[age].iloc[1] = colibri.data[age].iloc[2]/2
             # fname = fmt.format(parsec.Z, parsec.Y, mass_)
-            attach(parsec, colibri, onetpm, output, diag=diag)
+            line += attach(parsec, colibri, onetpm, output, diag=diag)
+        if diag:
+            with open('colibri_attach.log', 'w') as outp:
+                outp.write(line)
+
+
+def radius(x1, y1, x2, y2):
+    dist = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+    return np.argmin(dist), np.min(dist)
 
 
 def attach(parsec, colibri, onetpm, output, diag=True):
+    """
+    Adopt PARSEC until a point in the TP-AGB with the same luminosity as 1TP
+    and a Teff differing by less than 100 K.
+    """
+    line = ''
     assert parsec.Z == colibri.Z == onetpm['z0'], 'Metallicity mismatch'
     assert parsec.mass == colibri.mass, 'Mass mismatch'
     try:
         ifin = np.max(parsec.iptcri)  # final track eep
+        ifin = -1
     except AttributeError as e:
         return
 
-    ipmatch = np.argmin(abs(parsec.data[:ifin][logL] - onetpm[logL]))
-
+    ipmatch, _ = radius(parsec.data[:ifin][logT], parsec.data[:ifin][logL],
+                        onetpm[logT], onetpm[logL])
     # Add the track age to tp-agb age (which starts at 0.0)
     # print(''.join(['{} {} {} {}\n'.format(col,
     #                                       colibri.data[col].iloc[0],
@@ -195,38 +213,66 @@ def attach(parsec, colibri, onetpm, output, diag=True):
     #                for col in colibri.data.columns]))
     colibri.data[age] += parsec.data[ipmatch][age]
 
-    icmatch = np.argmin(abs(colibri.data[logL] - onetpm[logL]))
-    if icmatch != 0:
-        print('Warning: might be missing some TP-AGB: ',
-              'Colibri matched index={}'.format(icmatch))
+    inds, = np.nonzero(colibri.data['NTP'] < 2)
 
+    im, _ = radius(colibri.data[logT].iloc[inds],
+                   colibri.data[logL].iloc[inds],
+                   onetpm[logT], onetpm[logL])
+    icmatch = inds[im]
+
+    if icmatch != 0:
+        ntp = colibri.data['NTP'][icmatch]
+        print('Warning: might be missing some TP-AGB: ',
+              'Colibri matched index={}, NTP={}'.format(icmatch, ntp))
+
+    lmatch = parsec.data[logL][ipmatch] - colibri.data[logL].iloc[icmatch]
+    tmatch = 10 ** parsec.data[logT][ipmatch] - \
+        10 ** colibri.data[logT].iloc[icmatch]
+    if np.abs(tmatch) > 100 or np.abs(lmatch) > 0.1:
+        err = 'bad 1TP? {} {} {} {}'.format(parsec.Z, parsec.mass, lmatch,
+                                            tmatch)
+        print(err)
+        return err
     ptrack = pd.DataFrame(parsec.data[:ipmatch - 1])
-    ctrack = pd.DataFrame(colibri.data[1:icmatch:])
+    ctrack = pd.DataFrame(colibri.data.iloc[icmatch:])
 
     all_data = pd.DataFrame()
     all_data = all_data.append(ptrack, ignore_index=True)
     all_data = all_data.append(ctrack, ignore_index=True)
 
     all_data.to_csv(output, sep=' ', na_rep='nan', index=False)
-    print('wrote to {}'.format(output))
+    # print('wrote to {}'.format(output))
     if diag:
-        print('PARSEC idx: {} COLIBRI idx: {}'.format(ipmatch, icmatch))
-        print_diffs(colibri.data.iloc[icmatch], parsec.data[:ifin][ipmatch])
-        plot_hrd(colibri, parsec, icmatch, ipmatch, output)
-    return
+        # print('PARSEC idx: {} COLIBRI idx: {}'.format(ipmatch, icmatch))
+        line += print_diffs(colibri.data.iloc[icmatch],
+                            parsec.data[:ifin][ipmatch])
+        plot_hrd(all_data, colibri, parsec, icmatch, ipmatch, onetpm, output,
+                 lmatch=lmatch, tmatch=tmatch)
+    return line
 
 
-def plot_hrd(colibri, parsec, icmatch, ipmatch, output):
+def plot_hrd(all_data, colibri, parsec, icmatch, ipmatch, onetpm, output,
+             outdir=None, lmatch=None, tmatch=None):
+    if outdir is None:
+        outdir = 'colibi_parsec'
+    if not os.path.isdir(outdir):
+        os.mkdir(outdir)
+    output = os.path.join(outdir, *os.path.split(output)[1:])
+
     fig, ax = plt.subplots()
     xcol, ycol = logT, logL
-    for track, idx in zip([colibri, parsec], [icmatch, ipmatch]):
+    lab = ['colibri', 'parsec']
+    ax.plot(onetpm[xcol], onetpm[ycol], 'o', ms=10, alpha=0.4, label='1TP')
+    ax.plot(all_data[xcol], all_data[ycol], lw=3, alpha=0.4)
+    for i, (track, idx) in enumerate(zip([colibri, parsec],
+                                         [icmatch, ipmatch])):
         xdata = track.data[xcol]
         ydata = track.data[ycol]
-        ax.plot(xdata, ydata)
+        l, = ax.plot(xdata, ydata, label=lab[i])
         try:
-            ax.plot(xdata[idx], ydata[idx], 'o')
+            ax.plot(xdata[idx], ydata[idx], 'o', color=l.get_color())
         except:
-            ax.plot(xdata.iloc[idx], ydata.iloc[idx], 'o')
+            ax.plot(xdata.iloc[idx], ydata.iloc[idx], 'o', color=l.get_color())
 
     # xoff = 0.05
     # yoff = 0.1
@@ -234,16 +280,25 @@ def plot_hrd(colibri, parsec, icmatch, ipmatch, output):
     # ax.set_ylim(ydata[idx] - yoff, ydata[idx] + yoff)
     ax.set_xlim(np.max(colibri.data[xcol]), np.min(colibri.data[xcol]))
     ax.set_ylim(np.min(colibri.data[ycol]), np.max(colibri.data[ycol]))
-    ax.set_title('{:.4f} {:.3f}'.format(track.Z, track.mass))
-    plt.savefig(output + '.png')
-    print('wrote {}.png'.format(output))
+    title = '{:.4f} {:.3f}'.format(track.Z, track.mass)
+    if lmatch is not None:
+        title += ' logL(P-C)={:.3f}'.format(lmatch)
+    if tmatch is not None:
+        title += ' T(P-C)={:.3f}'.format(tmatch)
+    ax.set_title(title)
+    ax.set_xlabel(xcol)
+    ax.set_ylabel(ycol)
+    plt.legend(loc='best')
+    plt.savefig(output + '.pdf')
+    print('wrote {}.pdf'.format(output))
+    plt.close()
 
 
 def print_diffs(cval, pval):
-    fmt = '{:.4f} {:.4f} {:.5f} {:.5f}'
+    fmt = '{:.4f} {:.4f} {:.5f} {:.5f}\n'
     dlogL = cval[logL] - pval[logL]
     dlogT = cval[logT] - pval[logT]
-    print(fmt.format(cval['Z'], pval[mass], dlogL, dlogT))
+    return fmt.format(cval['Z'], pval[mass], dlogL, dlogT)
 
 
 def main(argv):

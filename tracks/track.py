@@ -11,7 +11,7 @@ import logging
 from astropy.table import Table
 
 from ..utils import get_zy, replace_
-from ..eep.critical_point import critical_point, Eep
+from ..eep.critical_point import CriticalPoint, Eep
 from ..config import *
 
 logger = logging.getLogger()
@@ -25,8 +25,9 @@ class AGBTrack(object):
         """
         Read in track, set mass and period.
         """
-        if 'match' not in self.__dict__.keys():
-            self.match = False
+        self.match = False
+        if 'match' in self.__dict__.keys() or 'match' in filename:
+            self.match = True
         self.base, self.name = os.path.split(filename)
 
         if 'hb' in self.name.lower():
@@ -238,9 +239,6 @@ class Track(AGBTrack):
             self.agb = True
             AGBTrack.__init__(self, filename)
 
-        # add self.Z etc.
-        self.filename_info()
-
         self.match = match
         if self.match:
             self.load_match_track(filename, track_data=track_data)
@@ -249,20 +247,31 @@ class Track(AGBTrack):
 
         # No errors so far
         if self.flag is None:
+            # add self.Z etc.
+            self.filename_info()
             self.track_mass()
             self.check_track()
             if ptcri_file is not None:
-                self._load_iptcri(ptcri_file, ptcri_kw)
+                self.load_iptcri(ptcri_file)
 
-    def _load_iptcri(self, ptcri_file, ptcri_kw=None):
-        ptcri_kw = ptcri_kw or {}
-        default = {'sandro': False}
-        default.update(ptcri_kw)
-        ptcri = critical_point(ptcri_file, **default)
+    def load_iptcri(self, ptcri_file):
+        if isinstance(ptcri_file, str):
+            ptcri = CriticalPoint(ptcri_file)
+        else:
+            ptcri = ptcri_file
+
         try:
-            self.iptcri = ptcri.data_dict['M{:.3f}'.format(self.mass)]
-        except:
-            print(sys.exc_info())
+            iptcri = ptcri.data_dict['M{:.3f}'.format(self.mass)]
+        except KeyError:
+            print('M=%.4f not found in %s' %
+                  (self.mass, os.path.join(ptcri.base, ptcri.name)))
+            self.flag = 'no ptcri mass'
+            return
+        if ptcri.sandro:
+            self.sptcri = iptcri
+        else:
+            self.iptcri = iptcri
+        return
 
     def check_track(self):
         '''check if age decreases'''
@@ -281,7 +290,6 @@ class Track(AGBTrack):
                 self.flag = 'track has age decreasing near MODEs {}' \
                             .format(self.data[MODE][bads])
             except AttributeError:
-                from ..eep.critical_point import Eep
                 eep = Eep()
                 if self.hb:
                     nticks = eep.nticks_hb
@@ -388,13 +396,11 @@ class Track(AGBTrack):
         # get Z, Y into attrs: 'Z0.0002Y0.4OUTA1.74M2.30'
         '''
         self.Z, self.Y = get_zy(self.name)
-        if hasattr(self, 'header'):
-            try:
-                self.ALFOV, = \
-                    np.unique([float(l.replace('ALFOV', '').strip())
-                               for l in self.header if ' ALFOV ' in l])
-            except:
-                pass
+
+        if hasattr(self, 'header') and len(self.header) > 1:
+            self.ALFOV, = \
+                np.unique([float(l.replace('ALFOV', '').strip())
+                           for l in self.header if ' ALFOV ' in l])
 
         if hasattr(self, 'data') and hasattr(self.data, 'QHEL'):
             if self.hb:
@@ -461,10 +467,11 @@ class Track(AGBTrack):
         rdict = {'LOG_L': logL, 'LOG_TE': logT, 'AGE': age, 'MASS': mass}
         # find the header
         begin_track = -1
-        for i, l in enumerate(lines):
-            if 'BEGIN TRACK' in l:
-                begin_track = i
-                break
+        if 'BEGIN TRACK' in ''.join(lines):
+            for i, l in enumerate(lines):
+                if 'BEGIN TRACK' in l:
+                    begin_track = i
+                    break
 
         header = ['']
         if begin_track > -1:
@@ -569,17 +576,17 @@ class Track(AGBTrack):
             or a comment: self.Z self.name self.flag
         """
         if self.flag is None:
-            fmt = '%i %.3f %5.3f %.2f %.3f %.4g %.4g'
+            fmt = '%i %g %5.3f %.2f %.3f %.4g %.4g'
             self.calc_lifetimes()
             if self.hb:
-                line += fmt % (0, self.Z, self.mass, self.ALFOV,
+                line += fmt % (1, self.Z, self.mass, self.ALFOV,
                                self.zahb_mcore, self.tau_he, 0.)
             else:
-                line += fmt % (1, self.Z, self.mass, self.ALFOV,
+                line += fmt % (0, self.Z, self.mass, self.ALFOV,
                                self.final_mcore, self.tau_he, self.tau_h)
         else:
             efmt = '# %.3f %s: %s \n'
-            line += efmt % (self.Z, self.name, self.flag)
+            print(efmt % (self.Z, self.name, self.flag))
         return line
 
     def add_to_col_keys(self, col_keys, additional_col_line):
@@ -669,7 +676,13 @@ def translate_colkey(col, agescale=1.):
 
 
 if __name__ == "__main__":
-    print('# HB Z M OV QHEL tau_He tau_H')
+    line = 'HB Z M OV QHEL tau_He tau_H\n'
     for tn in sys.argv[1:]:
         t = Track(tn)
-        print(t.summary())
+        if t.flag is None:
+            line += '{0:s}\n'.format(t.summary())
+        else:
+            print(t.mass, t.flag)
+
+    with open('track_summary.dat', 'w') as outp:
+        outp.write(line)

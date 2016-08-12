@@ -1,6 +1,3 @@
-# from low mass and below XCEN = 0.3 for MS_TMIN
-low_mass = 1.25
-
 # inte_mass is where SG_MAXL becomes truly meaningless
 inte_mass = 12.
 

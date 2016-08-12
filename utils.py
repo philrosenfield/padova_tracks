@@ -1,10 +1,71 @@
 """ General untilities used throughout the package """
 from __future__ import print_function, division
+from scipy.interpolate import splev, splprep
 import numpy as np
 
 __all__ = ['closest_match', 'closest_match2d', 'extrap1d', 'find_peaks',
            'is_numeric', 'min_dist2d', 'second_derivative', 'sort_dict',
            'minmax', 'extrema', 'replace_']
+
+
+def add_ptcris(track, between_ptcris, sandro=False):
+    '''return track.[s or i ]ptcri indices between between_ptcris'''
+    if sandro:
+        iptcri = track.sptcri
+    else:
+        iptcri = track.iptcri
+    pinds = iptcri[between_ptcris[0]: between_ptcris[1] + 1]
+    return pinds
+
+
+def column_to_data(track, xcol, ycol, xdata=None, ydata=None, cmd=False,
+                   convert_mag_kw={}, norm=''):
+    '''
+    convert a string column name to data
+
+    returns xdata, ydata
+
+    norm: 'xy', 'x', 'y' for which or both axis to normalize
+    can also pass xdata, ydata to normalize or if its a cmd (Mag2mag only)
+    '''
+    if ydata is None:
+        ydata = track.data[ycol]
+
+    if xdata is None:
+        if cmd:
+            if len(convert_mag_kw) != 0:
+                from ResolvedStellarPops import astronomy_utils
+                photsys = convert_mag_kw['photsys']
+                dmod = convert_mag_kw.get('dmod', 0.)
+                Av = convert_mag_kw.get('Av', 0.)
+                Mag1 = track.data[xcol]
+                Mag2 = track.data[ycol]
+                avdmod = {'Av': Av, 'dmod': dmod}
+                mag1 = astronomy_utils.Mag2mag(Mag1, xcol, photsys, **avdmod)
+                mag2 = astronomy_utils.Mag2mag(Mag2, ycol, photsys, **avdmod)
+                xdata = mag1 - mag2
+                ydata = mag2
+            else:
+                xdata = track.data[xcol] - track.data[ycol]
+        else:
+            xdata = track.data[xcol]
+
+    if 'x' in norm:
+        xdata /= np.max(xdata)
+
+    if 'y' in norm:
+        ydata /= np.max(ydata)
+
+    return xdata, ydata
+
+
+def maxmin(arr, inds=None):
+    '''
+    return the max and min of a column in self.data, inds to slice.
+    '''
+    if inds is not None:
+        arr = arr[inds]
+    return (np.max(arr), np.min(arr))
 
 
 def second_derivative(xdata, inds, gt=False, s=0):
@@ -32,7 +93,7 @@ def second_derivative(xdata, inds, gt=False, s=0):
             aind = [a for a in np.argsort(ddyddx) if ddyddx[a-1] > 0][0]
     except IndexError:
         return -1
-    tmin_ind, _ = utils.closest_match2d(aind, inds, xdata, xnew, ynew)
+    tmin_ind, _ = closest_match2d(aind, inds, xdata, xnew, ynew)
     return inds[tmin_ind]
 
 
@@ -40,7 +101,7 @@ def add_version_info(input_file):
     """Copy the input file and add the git hash and time the run started."""
     import os
     from time import localtime, strftime
-    from .fileio.fileIO import replace_ext
+    from .fileio import replace_ext
 
     # create info file with time of run
     now = strftime("%Y-%m-%d %H:%M:%S", localtime())
@@ -111,6 +172,7 @@ def filename_data(fname, ext='.dat', skip=2, delimiter='_', exclude='imf'):
 
 def get_zy(string):
     Z, Ymore = string.replace('_', '').split('Z')[1].split('Y')
+    Ymore = '.'.join(Ymore.split('.')[:-1])
     Y = ''
     for y in Ymore:
         if y == '.' or y.isdigit():
@@ -126,12 +188,12 @@ def replace_(s, rdict):
     return s
 
 
-def extrema(func, arr1, arr2):
+def compfunc(func, arr1, arr2):
     return func([func(arr1), func(arr2)])
 
 
-def minmax(arr1, arr2):
-    return extrema(np.min, arr1, arr2), extrema(np.max, arr1, arr2)
+def extrema(arr1, arr2):
+    return compfunc(np.min, arr1, arr2), compfunc(np.max, arr1, arr2)
 
 
 def sort_dict(dic):
@@ -257,11 +319,18 @@ def closest_match2d(ind, x1, y1, x2, y2, normed=False):
     find closest point between of arrays x2[ind], y2[ind] and x1, y1.
     by minimizing the radius of a circle.
     '''
+    x1n = 1.
+    x2n = 1.
+    y1n = 1.
+    y2n = 1.
     if normed is True:
-        dist = np.sqrt((x1 / np.max(x1) - x2[ind] / np.max(x2)) ** 2 +
-                       (y1 / np.max(y1) - y2[ind] / np.max(y2)) ** 2)
-    else:
-        dist = np.sqrt((x1 - x2[ind]) ** 2 + (y1 - y2[ind]) ** 2)
+        x1n = x1 / np.max(x1)
+        x2n = x2 / np.max(x2)
+        y1n = y1 / np.max(y1)
+        y2n = y2 / np.max(y2)
+
+    dist = np.sqrt((x1 / x1n - x2[ind] / x2n) ** 2 +
+                   (y1 / y1n - y2[ind] / y2n) ** 2)
     return np.argmin(dist), np.min(dist)
 
 
