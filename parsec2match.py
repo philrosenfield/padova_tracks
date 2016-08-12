@@ -55,11 +55,6 @@ def parsec2match(infile, loud=False):
             if indict['both']:
                 indict['flag_dict_hb'] = tfm.match_interpolation(hb=True)
 
-            # check the match interpolation
-            # if loud:
-            #    print('checking interpolation')
-            # CheckMatchTracks(indict)
-
     print('DONE')
     return prefixs
 
@@ -116,11 +111,11 @@ def define_eeps(tfm, hb=False, save_p2m=True, diag_plot=False):
     p2m_file = tfm.save_ptcri(tracks)
 
     if diag_plot:
-        tfm.diag_plots(tracks, hb=inps.hb, pat_kw={'ptcri': p2m_file},
+        tfm.diag_plots(tracks, hb=hb, pat_kw={'ptcri': p2m_file},
                        extra='p2m', plot_dir=tfm.plot_dir)
 
     # write log file
-    info_file = os.path.join(inputs.log_dir, filename % tfm.prefix.lower())
+    info_file = os.path.join(tfm.log_dir, filename % tfm.prefix.lower())
     with open(info_file, 'w') as out:
         for t in tracks:
             if t.flag is not None:

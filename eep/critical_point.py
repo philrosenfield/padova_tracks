@@ -131,18 +131,19 @@ class CriticalPoint(object):
         Flag the missing eeps in the ptcri file.
         '''
         self.sandro = True
+        if 'p2m' in filename:
+            begin = 0
+            self.sandro = False
+
         with open(filename, 'r') as f:
             lines = f.readlines()
 
         # the lines have the path name, and the path has F7.
-        if not self.hb:
+        if self.sandro and not self.hb:
             begin, = [i for i in range(len(lines))
                       if lines[i].startswith('#') and 'F7' in lines[i]]
         else:
             begin = -1
-            if 'p2m' in filename:
-                begin = 0
-                self.sandro = False
 
         if self.sandro and not self.hb:
             try:
@@ -201,16 +202,18 @@ class CriticalPoint(object):
 
     def save_ptcri(self, tracks, filename=None):
         '''save parsec2match ptcris in same format as sandro's'''
+        import operator
 
         if filename is None:
             filename = os.path.join(self.base, 'p2m_%s' % self.name)
             if self.hb:
                 filename = filename.replace('p2m', 'p2m_hb')
 
-        sorted_keys = sort_dict(self.pdict).keys()
-
-        header = '# critical points defined by sandro, basti, and phil \n'
-        header += '# i mass kind_track %s fname \n' % (' '.join(sorted_keys))
+        sorted_keys, _ = zip(*sorted(self.pdict.items(),
+                                     key=operator.itemgetter(1)))
+        sorted_keys = list(sorted_keys)
+        header = '# EEPs defined by sandro, basti, mist, and phil \n'
+        header += '# i mass kind_track %s F7name \n' % (' '.join(sorted_keys))
         with open(filename, 'w') as f:
             f.write(header)
             linefmt = '%2i %.3f 0.0 %s %s \n'

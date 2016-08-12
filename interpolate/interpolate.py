@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.interpolate import splev, splprep
+from scipy.interpolate import splev, splprep, interp1d
 
 from .. import utils
 from ..config import *
@@ -177,7 +177,6 @@ class Interpolator(object):
             # sometimes there are not enough inds to interpolate
             print('Peak finder M%.3f: less than %i points=%i. Skipping.'
                   % (track.mass, ind_tol, len(inds)))
-            import pdb; pdb.set_trace()
             return 0
 
         # use age, so logl(age), logte(age) for parametric interpolation
@@ -256,7 +255,6 @@ class Interpolator(object):
                 btnextrema = np.arange(*np.sort([np.argmax(d2ynew/d2xnew),
                                                  np.argmin(d2ynew/d2xnew)]))
                 almost_ind = btnextrema[np.argmin(intp_col[btnextrema])]
-
 
         if parametric_interp:
             # closest point in interpolation to data

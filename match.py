@@ -5,7 +5,6 @@ import numpy as np
 import os
 import pdb
 
-from scipy.interpolate import splev
 from scipy.interpolate import interp1d
 
 from . import fileio
@@ -64,34 +63,35 @@ class TracksForMatch(TrackSet, DefineEeps, TrackPlots, Interpolator):
         # to pass the flags to another class
         flag_dict = {}
         info_dict = {}
+        self.mtracks = []
 
         if not hb:
             tracks = self.tracks
-            filename = 'match_interp_%s.log'
+            filename = 'match_interp_{0:s}.log'
         else:
             tracks = self.hbtracks
-            filename = 'match_interp_hb_%s.log'
+            filename = 'match_interp_hb_{0:s}.log'
 
         for track in tracks:
-            flag_dict['M%.3f' % track.mass] = track.flag
+            mkey = 'M{0:.3f}'.format(track.mass)
+            flag_dict[mkey] = track.flag
 
             if track.flag is not None:
-                print('skipping track M=%.3f because of flag: %s' %
-                      (track.mass, track.flag))
-                info_dict['M%.3f' % track.mass] = track.flag
+                print('skipping track M={0:.3f} because of flag: {1:s}'
+                      .format(track.mass, track.flag))
+                info_dict[mkey] = track.flag
                 continue
 
             # interpolate tracks for match
-            outfile = \
-                os.path.join(self.outfile_dir,
-                             'match_%s.dat' % os.path.splitext(track.name)[0])
+            mfn = 'match_{0:s}.dat'.format(os.path.splitext(track.name)[0])
+            outfile = os.path.join(self.outfile_dir, mfn)
 
             if not self.overwrite_match and os.path.isfile(outfile):
-                print('not overwriting %s' % outfile)
+                print('not overwriting {0:s}'.format(outfile))
                 continue
             match_track = self.prepare_track(track, outfile, hb=hb)
 
-            info_dict['M%.3f' % track.mass] = track.info
+            info_dict[mkey] = track.info
 
             if self.track_diag_plot:
                 # make diagnostic plots
@@ -112,7 +112,8 @@ class TracksForMatch(TrackSet, DefineEeps, TrackPlots, Interpolator):
                 self.diag_plots([t for t in self.mtracks if t.hb], **dp_kw)
             else:
                 self.diag_plots([t for t in self.mtracks if not t.hb], **dp_kw)
-        logfile = os.path.join(self.log_dir, filename % self.prefix.lower())
+        logfile = os.path.join(self.log_dir,
+                               filename.format(self.prefix.lower()))
         self.write_log(logfile, info_dict)
         return self.check_tracks(tracks, flag_dict)
 
@@ -145,15 +146,15 @@ class TracksForMatch(TrackSet, DefineEeps, TrackPlots, Interpolator):
             # sort by mass
             mass_, info = sortbyval(info_dict)
             for m, d in zip(mass_, info):
-                out.write('# %s\n' % m)
+                out.write('# {0:s}\n'.format(m))
                 try:
                     # sort by EEP
                     keys, vals = sortbyeep(d, eep)
                 except AttributeError:
-                    out.write('%s\n' % d)
+                    out.write('{0:s}\n'.format(d))
                     continue
                 for k, v in zip(keys, vals):
-                    out.write('%s: %s\n' % (k, v))
+                    out.write('{0:s}: {1:s}\n'.format(k, v))
         return
 
     def prepare_track(self, track, outfile, hb=False,
@@ -201,8 +202,8 @@ class TracksForMatch(TrackSet, DefineEeps, TrackPlots, Interpolator):
             if track.iptcri[i+1] == 0:
                 # The end of the track
                 break
-            this_eep = self.get_ptcri_name(i)
-            next_eep = self.get_ptcri_name(i+1)
+            this_eep = list(self.pdict.keys())[list(self.pdict.values()).index(i)]
+            next_eep = list(self.pdict.keys())[list(self.pdict.values()).index(i+1)]
 
             ithis_eep = track.iptcri[i]
             inext_eep = track.iptcri[i+1]
@@ -330,3 +331,4 @@ class TracksForMatch(TrackSet, DefineEeps, TrackPlots, Interpolator):
                                        np.array(self.eep_list)[bad_inds]])
                     match_info.append(['log ages:', t.data[age][bads1]])
                     match_info.append(['inds:', bads1])
+        return
