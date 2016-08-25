@@ -12,20 +12,16 @@ import scipy
 from ..fileio import get_files, get_dirs, ts_indict
 from ..utils import sort_dict, filename_data
 
-from .track import Track, AGBTrack
-from .track_plots import TrackPlots
+from .track import Track
 from ..eep.critical_point import CriticalPoint, Eep, find_ptcri
 
-import logging
-logger = logging.getLogger()
 
 max_mass = 1000.
-td = TrackPlots()
 eep = Eep()
 
 
 class TrackSet(object):
-    """A class to load multiple Track instances"""
+    """A class to load multiple Track class instances"""
     def __init__(self, **kwargs):
         default_dict = ts_indict()
         default_dict.update(kwargs)
@@ -141,20 +137,22 @@ class TrackSet(object):
         track_str = 'track'
         mass_str = 'masses'
         ptcri_file = self.ptcri_file
-
+        maxmass_str = 'maxmass'
         if hb:
             track_str = hbf.format(track_str)
             mass_str = hbf.format(mass_str)
             ptcri_file = self.hbptcri_file
+            maxmass_str = hbf.format(maxmass_str)
 
         tattr = '{0:s}s'.format(track_str)
         self.__setattr__('{0:s}_names'.format(track_str), track_names[inds])
-        trks = [Track(t, match=self.match, ptcri_file=ptcri_file)
-                for t in track_names[inds]]
+        trks = [Track(t, match=self.match) for t in track_names[inds]]
         self.__setattr__(tattr, trks)
         self.__setattr__('%s' % mass_str,
                          np.array([t.mass for t in self.__getattribute__(tattr)
                                   if t.flag is None], dtype=np.float))
+        self.__setattr__('%s' % maxmass_str,
+                         np.max(self.__getattribute__(mass_str)))
         return
 
     def eep_file(self, outfile=None):
@@ -314,8 +312,9 @@ class TrackSet(object):
                 eep_name, _ = sort_dict(ptcri.key_dict)
                 fmt = ' & '.join(eep_name) + ' \\\\ \n'
                 for t in self.tracks:
+                    inds = [t.iptcri[t.iptcri > 0]]
                     fmt += ' & '.join('{:.3g}'.format(i)
-                                      for i in t.data[age][t.iptcri[t.iptcri > 0]])
+                                      for i in t.data[age][inds])
                     fmt += ' \\\\ \n'
             return fmt
         else:

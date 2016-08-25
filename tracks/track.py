@@ -6,15 +6,13 @@ import os
 import sys
 
 import numpy as np
-import logging
 
 from astropy.table import Table
 
 from ..utils import get_zy, replace_
 from ..eep.critical_point import CriticalPoint, Eep
-from ..config import *
-
-logger = logging.getLogger()
+from ..config import logL, logT, mass, age
+from ..config import xcen, ycen, xc_cen, xo_cen, MODE, EXT
 
 
 class AGBTrack(object):
@@ -260,18 +258,7 @@ class Track(AGBTrack):
         else:
             ptcri = ptcri_file
 
-        try:
-            iptcri = ptcri.data_dict['M{:.3f}'.format(self.mass)]
-        except KeyError:
-            print('M=%.4f not found in %s' %
-                  (self.mass, os.path.join(ptcri.base, ptcri.name)))
-            self.flag = 'no ptcri mass'
-            return
-        if ptcri.sandro:
-            self.sptcri = iptcri
-        else:
-            self.iptcri = iptcri
-        return
+        ptcri.load_iptcri(self)
 
     def check_track(self):
         '''check if age decreases'''
@@ -281,15 +268,20 @@ class Track(AGBTrack):
             age_ = np.round(self.data.logAge, 6)
         test = np.diff(age_) >= 0
         if False in test:
-            import pdb
-            pdb.set_trace()
-            print('track has age decreasing!!', self.mass)
+            # import pdb
+            # pdb.set_trace()
+            morp = 'parsec'
+            if self.match:
+                morp = 'match'
+
+            print('decreasing age in {0:s} M={1:.3f} track'.format(morp,
+                                                                   self.mass))
             bads, = np.nonzero(np.diff(age_) < 0)
-            try:
-                print('Parsec track: offensive MODEs:', self.data[MODE][bads])
+            if not self.match:
+                print('offensive {0:s}:'.format(MODE), self.data[MODE][bads])
                 self.flag = 'track has age decreasing near MODEs {}' \
                             .format(self.data[MODE][bads])
-            except AttributeError:
+            else:
                 eep = Eep()
                 if self.hb:
                     nticks = eep.nticks_hb
@@ -298,17 +290,17 @@ class Track(AGBTrack):
                     nticks = eep.nticks
                     names = eep.eep_list
                 inds = [np.argmin(np.abs(np.cumsum(nticks)-b)) for b in bads]
-                print('Match track: offensive inds:', bads)
+                print('offensive inds:', bads)
                 print('Near:', np.array(names)[inds])
-                import pdb
-                pdb.set_trace()
+                # import pdb
+                # pdb.set_trace()
 
         if not self.match:
             self.check_header_arg(loud=True)
             ycen_end = self.data[ycen][-1]
             if ycen_end != 0:
                 self.info['Warning'] = \
-                    'YCEN at final MODE {:.4f}'.format(ycen_end)
+                    'YCEN at final {0:s} {1:.4f}'.format(MODE, ycen_end)
 
         return
 

@@ -8,7 +8,7 @@ from ..eep.critical_point import Eep
 from ..utils import column_to_data
 
 
-def quick_hrd(track, ax=None, inds=None, reverse=None, plt_kw={}):
+def hrd(track, ax=None, inds=None, reverse=None, plt_kw={}):
     '''
     make an hrd.
     written for interactive use (usually in pdb)
@@ -120,7 +120,7 @@ def plot_all_tracks(tracks, xcol=logT, ycol=logL, ax=None,
                 except:
                     ax.plot(x, y, **point_pltkw)
 
-                if i == 5:
+                if i == 3:
                     ax.annotate('%g' % t.mass, (x, y), fontsize=8)
 
         xlims = np.append(xlims, (np.min(xdata), np.max(xdata)))
@@ -166,8 +166,7 @@ def plot_track(track, xcol, ycol, reverse='', ax=None, inds=None, plt_kw=None,
         # non-physical inds go away.
         inds, = np.nonzero(track.data[age] > 0.2)
 
-    xdata, ydata = column_to_data(track, xcol, ycol, cmd=cmd, norm=norm,
-                                  convert_mag_kw=convert_mag_kw)
+    xdata, ydata = column_to_data(track, xcol, ycol, norm=norm)
 
     if inds is not None:
         ax.plot(xdata[inds], ydata[inds], **plt_kw)
@@ -197,7 +196,7 @@ def plot_track(track, xcol, ycol, reverse='', ax=None, inds=None, plt_kw=None,
             [ax.annotate('%i' % i, (xdata[i], ydata[i])) for i in pinds]
 
     if add_mass:
-        ax.annotate(r'$%g$' % track.mass, (xdata[iptcri[5]], ydata[iptcri[5]]),
+        ax.annotate(r'$%g$' % track.mass, (xdata[iptcri[3]], ydata[iptcri[3]]),
                     fontsize=10)
 
     if arrows:
@@ -239,8 +238,6 @@ def annotate_plot(track, ax, xcol, ycol, ptcri_names=[],
         fc = 'navy'
         iptcri = track.iptcri
     else:
-        ptcri = kwargs.get('ptcri')
-        assert ptcri is not None, 'Must pass Sandro\'s eeps via ptcri obj'
         fc = 'darkred'
         iptcri = track.sptcri
         eep_list = ptcri.sandro_eeps

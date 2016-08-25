@@ -28,7 +28,7 @@ def redefine_phase(tab):
     # 8 TPAGB -- 5
     # 9 POSTAGB -- 6
     # 10 WD -- 0
-    
+
     tab['stage'][tab['stage'] == 1] = 0.
     tab['stage'][tab['stage'] == 2] = 1.
     tab['stage'][tab['stage'] == 3] = 2.
@@ -42,25 +42,28 @@ def redefine_phase(tab):
     tab['stage'][tab['stage'] == 10] = 0.
     itp, = np.nonzero(tab['slope'])
     tab['stage'][itp] = 5.
-    
+
     # you never know...
     tab['stage'][tab['stage'] > 10] = 0.
     return tab
-    
+
+
 def isoch_for_fsps():
     # these are the grid point Zs so cmd2.8 does not have to interpolate
     # (Z=0.05 might have been added)
-    zs = [0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.004, 0.006, 0.008, 0.01, 0.014,
-          0.017,  0.02, 0.03, 0.04, 0.06]
+    zs = [0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.004, 0.006, 0.008, 0.01,
+          0.014, 0.017,  0.02, 0.03, 0.04, 0.06]
     header = '# log(age) Mini Mact logl logt logg Composition Phase\n'
     fmt = '%.2f %.8f %.4f %.4f %.4f %.4f %.4f %.4f'
-    
-    keys = ['logageyr', 'M_ini', 'M_act', 'logL', 'logT', 'logg', 'CO', 'stage']
+
+    keys = ['logageyr', 'M_ini', 'M_act', 'logL', 'logT', 'logg', 'CO',
+            'stage']
     agemin = 5.5
     agemax = 10.13  # cmd2.8 will not take lage >= 10.13
     for z in zs:
         outfile = 'isoc_z{:.4f}.dat'.format(z)
-        tab = cmd.get_t_isochrones(agemin, agemax, 0.05, z, model='parsec12s_r14')
+        tab = cmd.get_t_isochrones(agemin, agemax, 0.05, z,
+                                   model='parsec12s_r14')
         tab = redefine_phase(tab)
         _, aidx = np.unique(tab['logageyr'], return_index=True)
         aidx = np.append(aidx, len(tab))

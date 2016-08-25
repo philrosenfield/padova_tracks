@@ -8,10 +8,10 @@ import seaborn
 import numpy as np
 import pandas as pd
 
-from .config import logL, logT, mass, age
-from .fileio import get_files, get_dirs, ensure_dir
-from .utils import replace_, get_zy
-from .tracks.track import Track, AGBTrack
+from ..config import logL, logT, mass, age
+from ..fileio import get_files, get_dirs, ensure_dir
+from ..utils import replace_, get_zy
+from ..tracks.track import Track, AGBTrack
 
 seaborn.set()
 
@@ -167,8 +167,7 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
 
             # load PARSEC Track
             try:
-                parsec = Track(parsec_track, ptcri_file=ptcri_file,
-                               ptcri_kw={'sandro': False})
+                parsec = Track(parsec_track)
             except ValueError as e:
                 print('Problem with {}'.format(parsec_track))
                 print(e)
@@ -199,18 +198,12 @@ def attach(parsec, colibri, onetpm, output, diag=True):
     assert parsec.mass == colibri.mass, 'Mass mismatch'
     try:
         ifin = np.max(parsec.iptcri)  # final track eep
-        ifin = -1
     except AttributeError as e:
-        return
+        ifin = -1
 
     ipmatch, _ = radius(parsec.data[:ifin][logT], parsec.data[:ifin][logL],
                         onetpm[logT], onetpm[logL])
-    # Add the track age to tp-agb age (which starts at 0.0)
-    # print(''.join(['{} {} {} {}\n'.format(col,
-    #                                       colibri.data[col].iloc[0],
-    #                                       colibri.data[col].iloc[1],
-    #                                       colibri.data[col].iloc[2])
-    #                for col in colibri.data.columns]))
+
     colibri.data[age] += parsec.data[ipmatch][age]
 
     inds, = np.nonzero(colibri.data['NTP'] < 2)
@@ -220,8 +213,8 @@ def attach(parsec, colibri, onetpm, output, diag=True):
                    onetpm[logT], onetpm[logL])
     icmatch = inds[im]
 
-    if icmatch != 0:
-        ntp = colibri.data['NTP'][icmatch]
+    ntp = colibri.data['NTP'][icmatch]
+    if icmatch != 0 and ntp > 1.:
         print('Warning: might be missing some TP-AGB: ',
               'Colibri matched index={}, NTP={}'.format(icmatch, ntp))
 
@@ -229,8 +222,8 @@ def attach(parsec, colibri, onetpm, output, diag=True):
     tmatch = 10 ** parsec.data[logT][ipmatch] - \
         10 ** colibri.data[logT].iloc[icmatch]
     if np.abs(tmatch) > 100 or np.abs(lmatch) > 0.1:
-        err = 'bad 1TP? {0} {1} {2} {3}'.format(parsec.Z, parsec.mass, lmatch,
-                                                tmatch)
+        err = 'bad 1TP? {0} {1} {2} {3}\n'.format(parsec.Z, parsec.mass,
+                                                  lmatch, tmatch)
         print(err)
         return err
     ptrack = pd.DataFrame(parsec.data[:ipmatch - 1])
@@ -263,21 +256,17 @@ def plot_hrd(all_data, colibri, parsec, icmatch, ipmatch, onetpm, output,
     xcol, ycol = logT, logL
     lab = ['colibri', 'parsec']
     ax.plot(onetpm[xcol], onetpm[ycol], 'o', ms=10, alpha=0.4, label='1TP')
-    ax.plot(all_data[xcol], all_data[ycol], lw=3, alpha=0.4)
+    ax.plot(all_data[xcol], all_data[ycol], lw=4, alpha=0.1, color='k')
     for i, (track, idx) in enumerate(zip([colibri, parsec],
                                          [icmatch, ipmatch])):
         xdata = track.data[xcol]
         ydata = track.data[ycol]
-        l, = ax.plot(xdata, ydata, label=lab[i])
+        l, = ax.plot(xdata, ydata, label=lab[i], alpha=0.6, lw=2)
         try:
             ax.plot(xdata[idx], ydata[idx], 'o', color=l.get_color())
         except:
             ax.plot(xdata.iloc[idx], ydata.iloc[idx], 'o', color=l.get_color())
 
-    # xoff = 0.05
-    # yoff = 0.1
-    # ax.set_xlim(xdata[idx] - xoff, xdata[idx] + xoff)
-    # ax.set_ylim(ydata[idx] - yoff, ydata[idx] + yoff)
     ax.set_xlim(np.max(colibri.data[xcol]), np.min(colibri.data[xcol]))
     ax.set_ylim(np.min(colibri.data[ycol]), np.max(colibri.data[ycol]))
     title = '{:.4f} {:.3f}'.format(track.Z, track.mass)
@@ -289,8 +278,8 @@ def plot_hrd(all_data, colibri, parsec, icmatch, ipmatch, onetpm, output,
     ax.set_xlabel(xcol)
     ax.set_ylabel(ycol)
     plt.legend(loc='best')
-    plt.savefig(output + '.pdf')
-    print('wrote {}.pdf'.format(output))
+    plt.savefig(output + '.png')
+    print('wrote {}.png'.format(output))
     plt.close()
 
 

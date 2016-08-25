@@ -21,6 +21,8 @@ files = np.concatenate([glob.glob1(d, '*') for d in dirs])
 masses = [float(f.replace('.dat', '').split('M')[1]) for f in files]
 massstr = ','.join(['%.2f' % m for m in np.unique(masses)])
 """
+
+
 def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
     ext = '.PMS'
     ext = '.DAT'
@@ -28,11 +30,12 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
         prefixs = os.listdir(sub)
         h = os.getcwd()
         tracks_dir = os.path.join(h, sub)
-        prefixs = [p for p in prefixs if os.path.isdir(os.path.join(tracks_dir, p))]
+        prefixs = [p for p in prefixs
+                   if os.path.isdir(os.path.join(tracks_dir, p))]
         ext = '.dat'
 
     zsun = 0.02
-    #allzs = [p.split('Z')[1].split('_')[0] for p in prefixs]
+    # allzs = [p.split('Z')[1].split('_')[0] for p in prefixs]
     allzs = [p.split('Z')[1].split('Y')[0].replace('_', '') for p in prefixs]
     zs = np.unique(np.array(allzs, dtype=float))
     prefixs = np.array(prefixs)[np.argsort(allzs)]
@@ -59,11 +62,13 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
     for p in prefixs:
         this_dir = os.path.join(tracks_dir, p)
         track_names = fileio.get_files(this_dir, '*{}'.format(ext))
-        masses = np.array(['.'.join(os.path.split(t)[1].split('M')[1].split('.')[:2])
-                           for t in track_names if not 'hb' in t.lower() and not 'add' in t.lower()], dtype=float)
+        masses = np.array(['.'.join(os.path.split(t)[1].split('M')[1]
+                                    .split('.')[:2])
+                           for t in track_names if 'hb' not in t.lower() and
+                           'add' not in t.lower()], dtype=float)
         all_masses = np.append(all_masses, masses)
         for t in track_names:
-            data = np.genfromtxt(t, names=['logte', 'mbol'], usecols=(2,3))
+            data = np.genfromtxt(t, names=['logte', 'mbol'], usecols=(2, 3))
             mod_t0 = np.min([mod_t0, np.min(data['logte'])])
             mod_t1 = np.max([mod_t1, np.min(data['logte'])])
             mod_l0 = np.min([mod_l0, np.min(data['mbol'])])
@@ -86,7 +91,7 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
         masses = umasses
     elif imax == -1:
         masses = umasses[imin - 1::]
-    elif imin ==0:
+    elif imin == 0:
         masses = umasses[imin: imax + 1]
     else:
         masses = umasses[imin - 1: imax + 1]
@@ -111,7 +116,8 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
              'mod_t1': mod_t1}
 
     if sub is None:
-        fname = 'makemod_%s_%s.txt' % (tracks_dir.split('/')[-2], p.split('_Z')[0])
+        fname = 'makemod_%s_%s.txt' % (tracks_dir.split('/')[-2],
+                                       p.split('_Z')[0])
     else:
         fname = 'makemod_%s.txt' % (sub)
     with open(fname, 'w') as out:
@@ -121,6 +127,7 @@ def prepare_makemod(prefixs=None, tracks_dir=None, sub=None):
                            'mod_l1: %.4f \n' % mod_l1,
                            'mod_t0: %.4f \n' % mod_t0,
                            'mod_t1: %.4f \n' % mod_t1)))
+
 
 def makemod_fmt():
     return """
@@ -162,8 +169,10 @@ Remember there are two instances of filename formats hard coded, after
 that the value for mass is found by a character offset.
 """
 
+
 def main(argv):
-    parser = argparse.ArgumentParser(description="Prepare header for makemod.cpp")
+    parser = \
+        argparse.ArgumentParser(description="Prepare header for makemod.cpp")
 
     parser.add_argument('sub', type=str,
                         help='subdirectory with match track dirs (not mods)')
@@ -174,7 +183,9 @@ def main(argv):
     args = parser.parse_args(argv)
 
     if args.v:
-        import pdb; pdb.set_trace()
+        import pdb
+        pdb.set_trace()
+
     prepare_makemod(sub=args.sub)
 
 

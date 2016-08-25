@@ -1,10 +1,17 @@
 import argparse
+import os
+import pdb
+import sys
+try:
+    import trilegal
+except ImportError:
+    print('May need IsoTrack reader')
+    pass
+
 import matplotlib.pylab as plt
 import numpy as np
-import os
-import trilegal
-from ResolvedStellarPops import fileio
-import sys
+
+from .. import fileio
 from ..eep.critical_point import Eep
 
 __all__ = ['interp_match_grid', 'interp_mhefs']
@@ -76,7 +83,8 @@ def interp_mhefs(isodirs, outfile=None):
     """
     def pretty(ov, marr):
         """ make a %.2f string combining a float and an array """
-        return ' '.join(['%.2f' % i for i in np.concatenate(([ov], marr))]) + '\n'
+        return ' '.join(['%.2f' % i
+                         for i in np.concatenate(([ov], marr))]) + '\n'
 
     outfile = outfile or 'MHeF_interp.dat'
 
@@ -105,7 +113,7 @@ def interp_mhefs(isodirs, outfile=None):
             mhefs = np.append(mhefs, float(lines[iline].split()[0]))
 
         ov = float(os.path.split(int_file)[1].split('_OV')[1].split('_')[0])
-        ovs  = np.append(ovs, ov)
+        ovs = np.append(ovs, ov)
 
     zs = np.unique(zs)
     # one mass for one Z one row for each OV.
@@ -131,7 +139,7 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
                              overwrite=False, plot=False,
                              truth_track_loc='', frac=2.):
     def strip_m(s):
-        return float(s.split('_M')[-1].replace('.dat', '').replace('.HB',''))
+        return float(s.split('_M')[-1].replace('.dat', '').replace('.HB', ''))
 
     def strip_z(s):
         return float(s.split('Z')[-1].split('Y')[0].replace('_', ''))
@@ -160,17 +168,18 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
     tname2s = get_names(t2files)
     ntracks = len(t1files)
 
-    #assert tname1s == tname2s, 'Track mismatches'
+    # assert tname1s == tname2s, 'Track mismatches'
     if tname1s != tname2s:
         print('Track mismatches')
-        import pdb; pdb.set_trace()
+        pdb.set_trace()
 
     t1s = [np.loadtxt(t) for t in t1files]
     t2s = [np.loadtxt(t) for t in t2files]
     for i in range(ntracks):
         if plot:
             if os.path.isdir(truth_track_loc):
-                gs1, gs2, [lax, lbax, lrax], [rax, rbax, rrax] = setup_diagplot()
+                gs1, gs2, [lax, lbax, lrax], [rax, rbax, rrax] = \
+                    setup_diagplot()
             else:
                 lax, rax = plt.subplots(nrows=2)
 
@@ -228,7 +237,7 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
                         elif len(truet0[:nt1s]) == len(track):
                             truet = truet0[:nt1s]
                         else:
-                            import pdb; pdb.set_trace()
+                            pdb.set_trace()
                     else:
                         truet = np.loadtxt(truth_tracks[0])
                         if len(truet) != len(track):
@@ -245,13 +254,12 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
             [ax.set_xscale('log') for ax in [rax, rbax]]
 
             plt.savefig(figname)
-            #print('wrote {}'.format(figname))
+            # print('wrote {}'.format(figname))
             plt.close()
         outfile = os.path.join(outdir, tname1s[i])
         fileio.savetxt(outfile, track, header=header, fmt='%.8f',
                        overwrite=overwrite)
-        #print('wrote {}'.format(outfile))
-
+        # print('wrote {}'.format(outfile))
 
 
 def rg_tip_heb_transition(hb_track, track):
@@ -259,11 +267,11 @@ def rg_tip_heb_transition(hb_track, track):
     Attach a HB model to a PMS model.
     Done in a consistent way as in TRILEGAL. Basically, zero time goes by,
     linear connection. The idea is that no stars should fall in this region
-    because there are simply no tracks calculated. If you want a track following
-    a hiashi line, well, calculate one. If you're interpolating, you're gonna
-    have a slight error on a time scale of 1e5 years, counting a star that could
-    have been in a transition phase from RG_TIP to HE_BEG as a RGB star.
-    At this point in time, a negligable error.
+    because there are simply no tracks calculated. If you want a track
+    following a hiashi line, well, calculate one. If you're interpolating,
+    you're gonna have a slight error on a time scale of 1e5 years, counting a
+    star that could have been in a transition phase from RG_TIP to HE_BEG as a
+    RGB star. At this point in time, a negligable error.
     """
     eep = Eep()
     ntrans = eep.trans
@@ -283,16 +291,17 @@ def rg_tip_heb_transition(hb_track, track):
     logg = -10.616 + np.log10(mass) + 4.0 * logte - (4.77 - Mbol) / 2.5
     CO = np.zeros(ntrans)
     logage = np.log10(10 ** track.T[0][rg_tip] + age)
-    trans_track =  np.column_stack([logage, mass, logte, Mbol, logg, CO])
+    trans_track = np.column_stack([logage, mass, logte, Mbol, logg, CO])
 
     hb_track.T[0] = np.log10(10 ** hb_track.T[0] + 10 ** logage[-1])
     new_track = np.concatenate((track, trans_track, hb_track))
     return new_track
 
+
 def setup_diagplot():
     import matplotlib.gridspec as gridspec
     fig = plt.figure(figsize=(12, 8))
-    gs1 = gridspec.GridSpec(3,3)
+    gs1 = gridspec.GridSpec(3, 3)
     gs1.update(left=0.1, right=0.48, wspace=0.05)
     lax = plt.subplot(gs1[:-1, :2])
     lbax = plt.subplot(gs1[-1, :2])
@@ -306,6 +315,7 @@ def setup_diagplot():
     rrax = plt.subplot(gs2[:-1, -1])
     rbax.set_xlabel(r'$\rm{Age}$')
     return gs1, gs2, [lax, lbax, lrax], [rax, rbax, rrax]
+
 
 def diff_plot(track1, track2, lbax, rbax, lrax, rrax):
     from matplotlib.ticker import MaxNLocator
@@ -322,18 +332,19 @@ def diff_plot(track1, track2, lbax, rbax, lrax, rrax):
 
 
 def _plot(track, mass, lax, rax, label=''):
-    alpha=0.3
+    alpha = 0.3
     if len(label) > 0:
         alpha = 1.
     lax.plot(track.T[2], track.T[3], alpha=alpha)
     if mass != '':
         rax.plot(10 ** track.T[0], track.T[3], alpha=alpha,
-                   label='${}\ {:.2f}$'.format(label, mass))
+                 label='${}\ {:.2f}$'.format(label, mass))
     else:
         rax.plot(10 ** track.T[0], track.T[3], label=label,
-                alpha=alpha)
+                 alpha=alpha)
 
     return
+
 
 def read_mhef(mhef_file):
     with open(mhef_file, 'r') as inp:
@@ -343,14 +354,16 @@ def read_mhef(mhef_file):
     data = np.genfromtxt(mhef_file)
     return data, zs
 
+
 def interp_match_grid(dir1, dir2, mhef_file, overwrite=False,
                       plot=False, truth_track_loc=''):
     data, zs = read_mhef(mhef_file)
     subs = [dir1, dir2]
     pts = np.array([s.translate(None, 'ov/') for s in subs], dtype=float)
-    interps = [p for p in data.T[0] if not p in pts]
-    newsubs=['ov{:.2f}'.format(s) for s in interps]
-    sets = [[os.path.join(s, l) for l in os.listdir(s) if not l.startswith('.')] for s in subs]
+    interps = [p for p in data.T[0] if p not in pts]
+    newsubs = ['ov{:.2f}'.format(s) for s in interps]
+    sets = [[os.path.join(s, l)
+             for l in os.listdir(s) if not l.startswith('.')] for s in subs]
     # frac=2 default: mean would assume we're finding the point inbetween.
     frac = 2
     for i in range(len(sets)-1):
@@ -368,7 +381,7 @@ def interp_match_grid(dir1, dir2, mhef_file, overwrite=False,
 def main(argv):
     """
     Report ... quick test between OV0.4  OV0.6 to compare to parsec:
-        Even the low mass where nothing should change was off. NEED TO CALC OV0.5
+    Even the low mass where nothing should change was off. NEED TO CALC OV0.5
 
     quick test between ov0.30 and 0.60:
         Some offsets likely due to the end of the track differences.
@@ -401,7 +414,7 @@ def main(argv):
     args = parser.parse_args(argv)
 
     if args.pdb:
-        import pdb; pdb.set_trace()
+        pdb.set_trace()
 
     # Where are the INT files
     if not args.mhef_file:

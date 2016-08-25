@@ -5,7 +5,45 @@ import numpy as np
 
 __all__ = ['closest_match', 'closest_match2d', 'extrap1d', 'find_peaks',
            'is_numeric', 'min_dist2d', 'second_derivative', 'sort_dict',
-           'minmax', 'extrema', 'replace_']
+           'minmax', 'extrema', 'replace_', 'remove_dupes']
+
+
+def remove_dupes(inds1, inds2, inds3=None, inds4=None, tol=1e-6):
+    """
+    Remove duplicates so as to not brake the interpolator.
+
+    Parameters
+    ----------
+    inds1, inds2, inds3 : list or np.array()
+        to find unique values, must be same length
+    just_two : Bool [False]
+        do not include inds3
+
+    Returns
+    -------
+    non_dupes : list
+        indices of input arrays that are not duplicates
+    """
+    def unique_seq(seq, tol=1e-6):
+        '''
+        Not exactly unique, but only points that are farther
+        apart than some tol
+        '''
+        return np.nonzero(np.abs(np.diff(seq)) >= tol)[0]
+
+    un_ind1 = unique_seq(inds1, tol=tol)
+    un_ind2 = unique_seq(inds2, tol=tol)
+    non_dupes = list(set(un_ind1) & set(un_ind2))
+
+    if inds3 is not None:
+        un_ind3 = unique_seq(inds3, tol=tol)
+        non_dupes = list(set(un_ind1) & set(un_ind2) & set(un_ind3))
+
+    if inds4 is not None:
+        un_ind4 = unique_seq(inds4, tol=tol)
+        non_dupes = list(set(un_ind1) & set(un_ind2) &
+                         set(un_ind3) & set(un_ind4))
+    return non_dupes
 
 
 def add_ptcris(track, between_ptcris, sandro=False):

@@ -8,8 +8,8 @@ from ast import literal_eval
 
 import logging
 
-__all__ = ['ensure_dir', 'ensure_file', 'get_files', 'load_input', 'load_eepdefs',
-           'replace_ext', 'tfm_indict', 'ts_indict', 'get_dirs']
+__all__ = ['ensure_dir', 'ensure_file', 'get_files', 'load_input', 'get_dirs',
+           'load_eepdefs', 'replace_ext', 'tfm_indict', 'ts_indict']
 
 
 def tfm_indict():
@@ -24,9 +24,9 @@ def tfm_indict():
         indict = json.load(inp)
 
     # Set default locations to here
-    for k, v in indict.items():
-        if k.endswith('dir'):
-            indict[k] = os.getcwd()
+    # for k, v in indict.items():
+    #    if k.endswith('dir'):
+    #        indict[k] = os.getcwd()
     return indict
 
 

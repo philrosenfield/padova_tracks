@@ -4,7 +4,7 @@ from ..utils import maxmin
 
 
 def points_inside_poly(points, all_verts):
-    """ Proxy to the correct way with mpl """
+    """nxutils depreciated call modified to the approved call in mpl"""
     from matplotlib.path import Path
     return Path(all_verts, close=True).contains_points(points)
 
@@ -50,46 +50,51 @@ def stitch_cmap(cmap1, cmap2, stitch_frac=0.5, dfrac=0.001):
 
 
 def arrow_on_line(ax, xarr, yarr, index, plt_kw={}):
+    """put (a) FancyArrow(s) at xarr[index], yarr[index]"""
     from matplotlib.patches import FancyArrow
     arrs = []
-    plt_kw = dict({'head_width': 0.6, 'linewidth': 1,
-                   'length_includes_head': True,
-                   'ec': "none"}.items() + plt_kw.items())
+    default = {'head_width': 0.6, 'linewidth': 1, 'length_includes_head': True,
+               'ec': "none"}
+    default.update(plt_kw)
     index = np.atleast_1d(index)
     x = xarr[index]
     dx = xarr[index + 1] - x
     y = yarr[index]
     dy = yarr[index + 1] - y
     for i in range(len(x)):
-        arr = FancyArrow(x[i], y[i], dx[i], dy[i], **plt_kw)
+        arr = FancyArrow(x[i], y[i], dx[i], dy[i], **default)
         ax.add_patch(arr)
         arrs.append(arr)
     return arrs
 
 
-def offset_axlims(xdata, ydata,  ax, inds=None):
+def offset_axlims(xdata, ydata,  ax, inds=None, offx=0.002, offy=0.015):
+    """set ax limits (offx, offy) fraction of the (xdata max, ydata max)"""
+    if inds is not None:
+        xdata = xdata[inds]
+        ydata = ydata[inds]
+
     xmax, xmin = maxmin(xdata)
     ymax, ymin = maxmin(ydata)
 
+    offx = 0.002 * xmax
+    offy = 0.015 * ymax
+
     if np.diff((xmin, xmax)) == 0:
-        xmin -= 0.1
-        xmax += 0.1
+        xmin -= offx
+        xmax += offx
 
     if np.diff((ymin, ymax)) == 0:
-        ymin -= 0.5
-        ymax += 0.5
+        ymin -= offy
+        ymax += offy
 
-    offx = 0.05
-    offy = 0.1
     ax.set_xlim(xmax + offx, xmin - offx)
     ax.set_ylim(ymin - offy, ymax + offy)
     return ax
 
 
 def forceAspect(ax, aspect=1):
-    '''
-    forces the aspect ratio of a given axis
-    '''
+    """force the aspect ratio of a given axis"""
     im = ax.get_images()
     extent = im[0].get_extent()
     asp = abs((extent[1] - extent[0]) / (extent[3] - extent[2])) / aspect
@@ -97,6 +102,7 @@ def forceAspect(ax, aspect=1):
 
 
 def get_plot_dims(nplots):
+    """calculate the number of rows and columns needed for a plot"""
     nrows = np.round(np.sqrt(nplots))
     nextra = nplots - nrows ** 2
     ncols = nrows
@@ -107,11 +113,10 @@ def get_plot_dims(nplots):
 
 def setup_multiplot(nplots, xlabel=None, ylabel=None, title=None,
                     subplots_kws={}):
-    '''
+    """
     Create a plt.subplots instance with nrows and ncols caclulated by total
     number of needed plots
-    '''
-
+    """
     nrows, ncols = get_plot_dims(nplots)
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, **subplots_kws)
     ann_kw = {'fontsize': 45, 'xycoords': 'figure fraction', 'va': 'center'}
@@ -129,22 +134,13 @@ def setup_multiplot(nplots, xlabel=None, ylabel=None, title=None,
 
 
 def discrete_colors(ncolors, colormap='gist_rainbow'):
-    '''
-    returns list of RGBA tuples length Ncolors
-    '''
+    """equally spaced list of RGBA tuples length Ncolors"""
     cmap = plt.cm.get_cmap(colormap)
     return [cmap(1. * i / ncolors) for i in range(ncolors)]
 
 
-def reverse_yaxis(ax):
-    ax.set_ylim(ax.get_ylim()[::-1])
-
-
-def reverse_xaxis(ax):
-    ax.set_xlim(ax.get_xlim()[::-1])
-
-
 def load_ann_kwargs():
+    """emboss text"""
     from matplotlib.patheffects import withStroke
     myeffect = withStroke(foreground="w", linewidth=3)
     ann_kwargs = dict(path_effects=[myeffect])

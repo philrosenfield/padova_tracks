@@ -4,7 +4,7 @@
 "hb": true,
 "prefixs": null,
 "plot_dir": null,
-"outfile_dir": "default",
+"outfile_dir": null,
 "diag_plot": false,
 "overwrite_ptcri": true,
 "overwrite_match": true,

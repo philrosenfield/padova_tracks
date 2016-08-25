@@ -15,9 +15,7 @@ from .fileio import load_input, tfm_indict
 from .match import TracksForMatch
 from .prepare_makemod import prepare_makemod
 from .utils import add_version_info
-
-import logging
-logger = logging.getLogger()
+from .graphics import diagnostics as diag
 
 
 def parsec2match(infile, loud=False):
@@ -29,6 +27,7 @@ def parsec2match(infile, loud=False):
     if indict['debug']:
         import pdb
         pdb.set_trace()
+        loud = True
 
     prefixs = indict['prefixs']
 
@@ -55,7 +54,6 @@ def parsec2match(infile, loud=False):
             if indict['both']:
                 indict['flag_dict_hb'] = tfm.match_interpolation(hb=True)
 
-    print('DONE')
     return prefixs
 
 
@@ -68,9 +66,7 @@ def load_parsec2match_inp(infile):
     indict = load_input(infile, default_dict=tfm_indict())
     prefs = indict['prefixs']
 
-    if prefs is None:
-        print('prefix or prefixs not set')
-        sys.exit(2)
+    assert prefs is not None, 'prefixs (track subdirectories) not set'
 
     # tracks location
     tracks_dir = indict['tracks_dir']
@@ -111,8 +107,8 @@ def define_eeps(tfm, hb=False, save_p2m=True, diag_plot=False):
     p2m_file = tfm.save_ptcri(tracks)
 
     if diag_plot:
-        tfm.diag_plots(tracks, hb=hb, pat_kw={'ptcri': p2m_file},
-                       extra='p2m', plot_dir=tfm.plot_dir)
+        diag.diag_plots(tracks, hb=hb, pat_kw={'ptcri': p2m_file},
+                        extra='p2m', plot_dir=tfm.plot_dir)
 
     # write log file
     info_file = os.path.join(tfm.log_dir, filename % tfm.prefix.lower())
