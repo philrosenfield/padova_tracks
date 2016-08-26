@@ -11,7 +11,7 @@ from .eep.define_eep import DefineEeps
 from .interpolate.interpolate import interpolate_along_track
 from .tracks.track_set import TrackSet
 from .tracks.track import Track
-from .graphics import diagnostics as diag
+from .graphics.graphics import match_parsec, plot_tracks
 
 
 class TracksForMatch(TrackSet, DefineEeps):
@@ -29,6 +29,7 @@ class TracksForMatch(TrackSet, DefineEeps):
         self.set_directories()
 
     def set_directories(self):
+        """define output directory structure"""
         default_outdir = \
             os.path.join(self.tracks_dir, 'match', self.prefix)
         default_plotdir = \
@@ -93,16 +94,16 @@ class TracksForMatch(TrackSet, DefineEeps):
                 for xcol in [logT, age]:
                     plot_dir = os.path.join(self.plot_dir, xcol.lower())
                     fileio.ensure_dir(plot_dir)
-                    diag.check_ptcris(track, plot_dir=plot_dir, xcol=xcol,
-                                      match_track=match_track)
+                    match_parsec(track, plot_dir=plot_dir, xcol=xcol,
+                                 match_track=match_track, save=True,
+                                 title=True)
 
             self.mtracks.append(match_track)
 
         if self.diag_plot:
             dp_kw = {'hb': hb, 'plot_dir': self.plot_dir,
-                     'pat_kw': {'ptcri': self},
                      'match_tracks': self.mtracks}
-            diag.diag_plots(tracks, **dp_kw)
+            plot_tracks(tracks, **dp_kw)
 
         logfile = os.path.join(self.log_dir,
                                filename.format(self.prefix.lower()))
@@ -178,10 +179,10 @@ class TracksForMatch(TrackSet, DefineEeps):
 
         pdict = self.pdict
 
-        logTe = np.array([])
+        logte = np.array([])
         logl = np.array([])
-        logAge = np.array([])
-        Mass = np.array([])
+        logage = np.array([])
+        mass_ = np.array([])
         co = np.array([])
 
         if track.flag is not None:
@@ -241,17 +242,17 @@ class TracksForMatch(TrackSet, DefineEeps):
                 import pdb
                 pdb.set_trace()
 
-            logTe = np.append(logTe, tenew)
+            logte = np.append(logte, tenew)
             logl = np.append(logl, lnew)
-            logAge = np.append(logAge, lagenew)
-            Mass = np.append(Mass, massnew)
+            logage = np.append(logage, lagenew)
+            mass_ = np.append(mass_, massnew)
             co = np.append(co, conew)
 
             if self.debug:
                 print(mess, track.info[mess])
 
-        Mbol = 4.77 - 2.5 * logl
-        logg = -10.616 + np.log10(Mass) + 4.0 * logTe - logl
+        mbol = 4.77 - 2.5 * logl
+        logg = -10.616 + np.log10(mass_) + 4.0 * logte - logl
 
         eep = self.load_eep()
         if len(logl) not in [self.eep.nms, self.eep.nhb, self.eep.nlow,
@@ -262,7 +263,7 @@ class TracksForMatch(TrackSet, DefineEeps):
                 import pdb
                 pdb.set_trace()
 
-        to_write = np.column_stack([logAge, Mass, logTe, Mbol, logg, co])
+        to_write = np.column_stack([logage, mass_, logte, mbol, logg, co])
         np.savetxt(outfile, to_write, header=header, fmt='%.8f')
         return Track(outfile, track_data=to_write, match=True)
 

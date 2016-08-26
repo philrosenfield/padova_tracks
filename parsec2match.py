@@ -15,7 +15,6 @@ from .fileio import load_input, tfm_indict
 from .match import TracksForMatch
 from .prepare_makemod import prepare_makemod
 from .utils import add_version_info
-from .graphics import diagnostics as diag
 
 
 def parsec2match(infile, loud=False):
@@ -42,9 +41,9 @@ def parsec2match(infile, loud=False):
 
         if loud:
             print('defining eeps')
-        define_eeps(tfm, hb=False, diag_plot=indict['diag_plot'])
+        define_eeps(tfm, hb=False)
         if indict['both']:
-            define_eeps(tfm, hb=True, diag_plot=indict['diag_plot'])
+            define_eeps(tfm, hb=True)
 
         # do the match interpolation (produce match output files)
         if indict['do_interpolation']:
@@ -87,28 +86,23 @@ def load_parsec2match_inp(infile):
     return indict
 
 
-def define_eeps(tfm, hb=False, save_p2m=True, diag_plot=False):
+def define_eeps(tfm, hb=False, save_p2m=True):
     '''add the ptcris to the tracks'''
     # assign eeps track.iptcri and track.sptcri
 
     if hb:
-        track_str = 'hbtracks'
         defined = tfm.eep.eep_list_hb
         filename = 'define_eeps_hb_%s.log'
+        tracks = tfm.hbtracks
     else:
-        track_str = 'tracks'
+        tracks = tfm.tracks
         defined = tfm.eep.eep_list
         filename = 'define_eeps_%s.log'
 
     # define the eeps
-    tracks = [tfm.define_eep_stages(track)
-              for track in tfm.__getattribute__(track_str)]
+    tracks = [tfm.define_eep_stages(track) for track in tracks]
 
     p2m_file = tfm.save_ptcri(tracks)
-
-    if diag_plot:
-        diag.diag_plots(tracks, hb=hb, pat_kw={'ptcri': p2m_file},
-                        extra='p2m', plot_dir=tfm.plot_dir)
 
     # write log file
     info_file = os.path.join(tfm.log_dir, filename % tfm.prefix.lower())

@@ -11,7 +11,7 @@ from ..config import logT, logL, mass, age, MODE, EXT
 
 def interpolate_(track, inds, xcol=logT, ycol=logL, paracol=age,
                  parametric=True, zcol=None, k=3, s=0., tol=1e-6,
-                 xfunc=None, yfunc=None, parafunc=None):
+                 linear=False):
     """
     Call scipy.optimize.splprep. Will also rid the array
     of duplicate values.
@@ -33,10 +33,6 @@ def interpolate_(track, inds, xcol=logT, ycol=logL, paracol=age,
     parametric : bool [True]
         do parametric interpolation
 
-    xfunc, yfunc, parafunc : string
-        wih eval, function to operate on the xdata,ydata
-        eval('{0:s}(data)'.format(func)
-
     xcol, ycol, paracol, zcol : str, str, str, str
         xaxis column name, xaxis column name, column for parametric
         (probably logT, logL, age, MASS)
@@ -55,9 +51,6 @@ def interpolate_(track, inds, xcol=logT, ycol=logL, paracol=age,
     NOTE : The dimensionality of tckp will change if
            using parametric_interp
     """
-    xfunc = xfunc or '1.*'
-    yfunc = yfunc or '1.*'
-    parafunc = parafunc or '1.*'
     zdata = None
     if zcol is not None:
         zdata = track.data[zcol][inds]
@@ -83,12 +76,11 @@ def interpolate_(track, inds, xcol=logT, ycol=logL, paracol=age,
     if zcol is not None:
         zdata = zdata[non_dupes]
 
-    xdata = eval('{0:s}(xdata)'.format(xfunc))
-    ydata = eval('{0:s}(ydata)'.format(yfunc))
     arr = [xdata, ydata]
     if parametric:
         paradata = track.data[paracol][inds][non_dupes]
-        paradata = eval('{0:s}(paradata)'.format(parafunc))
+        if not linear:
+            paradata = np.log10(paradata)
         arr = [paradata, xdata, ydata]
 
     if zcol is not None:
@@ -167,13 +159,9 @@ def interpolate_along_track(track, inds, nticks, zcol=None, mess=None,
         linear = True
 
     if linear:
-        parafunc = None
         track.info[mess] += ' linear interp in age'
-    else:
-        parafunc = 'np.log10'
 
-    tckp, non_dupes = interpolate_(track, inds, parafunc=parafunc,
-                                   zcol=zcol)
+    tckp, non_dupes = interpolate_(track, inds, linear=linear, zcol=zcol)
     arb_arr = np.linspace(0, 1, nticks)
 
     if isinstance(non_dupes, int):

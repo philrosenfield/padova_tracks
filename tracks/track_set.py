@@ -148,10 +148,10 @@ class TrackSet(object):
         self.__setattr__('{0:s}_names'.format(track_str), track_names[inds])
         trks = [Track(t, match=self.match) for t in track_names[inds]]
         self.__setattr__(tattr, trks)
-        self.__setattr__('%s' % mass_str,
+        self.__setattr__('{0:s}'.format(mass_str),
                          np.array([t.mass for t in self.__getattribute__(tattr)
                                   if t.flag is None], dtype=np.float))
-        self.__setattr__('%s' % maxmass_str,
+        self.__setattr__('{0:s}'.format(maxmass_str),
                          np.max(self.__getattribute__(mass_str)))
         return
 
