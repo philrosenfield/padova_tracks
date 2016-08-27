@@ -9,7 +9,52 @@ from ast import literal_eval
 import logging
 
 __all__ = ['ensure_dir', 'ensure_file', 'get_files', 'load_input', 'get_dirs',
-           'load_eepdefs', 'replace_ext', 'tfm_indict', 'ts_indict']
+           'load_eepdefs', 'replace_ext', 'tfm_indict', 'ts_indict',
+           'find_ptcri', 'save_ptcri']
+
+
+def find_ptcri(prefix, ptcrifile_loc=os.getcwd()):
+    search_term = 'p2m*{0:s}*Y*dat'.format(prefix.split('Y')[0])
+    ptcris = get_files(ptcrifile_loc, search_term)
+    print(search_term, ptcris)
+    try:
+        ptcri_file, = [p for p in ptcris if 'hb' not in p]
+        hbptcri_file, = [p for p in ptcris if 'hb' in p]
+        retv = [ptcri_file, hbptcri_file]
+    except:
+        retv = []
+    return retv
+
+
+def save_ptcri(line, filename=None, loc=None, prefix=None,
+               hb=False):
+    '''save parsec2match EEPs in similar format as sandro's'''
+    import operator
+    from ..eep.critical_point import Eep
+    loc == loc or os.getcwd()
+    prefix = prefix or ''
+    if len(prefix) > 0:
+        prefix = '_{0:s}'.format(prefix)
+    if filename is None:
+        filename = os.path.join(loc, 'p2m_{0:s}'.format(prefix))
+        if hb:
+            filename = filename.replace('p2m', 'p2m_hb')
+
+    pdict = Eep().pdict
+    if hb:
+        pdict = Eep().pdict_hb
+
+    # sort the dictionary by values (which are ints)
+    sorted_keys, _ = zip(*sorted(pdict.items(), key=operator.itemgetter(1)))
+
+    cols = ' '.join(list(sorted_keys))
+    header = '# EEPs defined by sandro, basti, mist, and phil \n'
+    header += '# M Z {0:s}\n'.format(cols)
+    linefmt = '{0:s} \n'
+    with open(filename, 'w') as f:
+        f.write(header)
+        f.write(linefmt.format(line))
+    return filename
 
 
 def tfm_indict():

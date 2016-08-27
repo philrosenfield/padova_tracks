@@ -22,11 +22,13 @@ class TracksForMatch(TrackSet, DefineEeps):
     """
     def __init__(self, *args, **kwargs):
         TrackSet.__init__(self, **kwargs)
-        DefineEeps.__init__(self, self.ptcri_file)
+        DefineEeps.__init__(self)
         self.debug = kwargs.get('debug', False)
-        self.load_critical_points(self.tracks)
+        for track in self.tracks:
+            track.iptcri = np.zeros(len(self.eep_list), dtype=int)
         if hasattr(self, 'hbtracks'):
-            self.load_critical_points(self.hbtracks)
+            for track in self.hbtracks:
+                track.iptcri = np.zeros(len(self.eep_list), dtype=int)
         self.set_directories()
 
     def set_directories(self):
@@ -136,9 +138,9 @@ class TracksForMatch(TrackSet, DefineEeps):
         tpagb_kw = tpagb_kw or {}
         header = 'logAge Mass logTe Mbol logg C/O'
         msg = '{:.3f} {:s}={:d} {:s}={:d}'
-        nticks = self.eep.nticks
+        nticks = self.nticks
         if hb:
-            nticks = self.eep.nticks_hb
+            nticks = self.nticks_hb
 
         pdict = self.pdict
 
@@ -217,10 +219,8 @@ class TracksForMatch(TrackSet, DefineEeps):
         mbol = 4.77 - 2.5 * logl
         logg = -10.616 + np.log10(mass_) + 4.0 * logte - logl
 
-        eep = self.load_eep()
-        if len(logl) not in [self.eep.nms, self.eep.nhb, self.eep.nlow,
-                             self.eep.ntot, self.eep.nhb + self.eep.nok,
-                             self.eep.ntot - self.eep.nok]:
+        if len(logl) not in [self.nms, self.nhb, self.nlow, self.ntot,
+                             self.nhb + self.nok, self.ntot - self.nok]:
             print("Wrong match interp'ed track size: {2:d} M={0:.3f} Z={1:g}"
                   .format(track.mass, track.Z, len(logl)))
             # if self.debug:

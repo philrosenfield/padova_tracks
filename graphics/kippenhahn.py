@@ -13,7 +13,7 @@ def kippenhahn(track, col_keys=None, heb_only=True, ptcri=None,
                four_tops=False, xscale='linear', between_ptcris=[0, -2],
                khd_dict=None, ax=None, norm=None, annotate=False,
                legend=False, fusion=True, convection=True):
-    pinds = add_ptcris(track, between_ptcris, sandro=False)
+    pinds = add_ptcris(track, between_ptcris)
     norm = norm or ''
     if heb_only:
         # Core HeB:
@@ -21,7 +21,7 @@ def kippenhahn(track, col_keys=None, heb_only=True, ptcri=None,
     else:
         inds = np.arange(pinds[pinds > 0][0], pinds[pinds > 0][-1])
 
-    pinds = add_ptcris(track, between_ptcris, sandro=False)
+    pinds = add_ptcris(track, between_ptcris)
     xdata = track.data[age][inds]
 
     if xscale == 'linear':

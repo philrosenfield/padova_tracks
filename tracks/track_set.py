@@ -9,11 +9,11 @@ import numpy as np
 import pandas as pd
 import scipy
 
-from ..fileio import get_files, get_dirs, ts_indict
+from ..fileio import get_files, get_dirs, ts_indict, find_ptcri
 from ..utils import sort_dict, filename_data
 
 from .track import Track
-from ..eep.critical_point import CriticalPoint, Eep, find_ptcri
+from ..eep.critical_point import CriticalPoint, Eep
 
 
 max_mass = 1000.
@@ -42,16 +42,6 @@ class TrackSet(object):
                     self.prefix = ''
                     return
 
-                ptcris = find_ptcri(self.prefix, from_p2m=self.from_p2m,
-                                    ptcrifile_loc=self.ptcrifile_loc)
-                if len(ptcris) == 0:
-                    print('no ptcris found')
-                    # parsec2match not run?
-                    self.prefix = None
-                    return
-                else:
-                    self.ptcri_file, self.hbptcri_file = ptcris
-
                 self.track_search_term = self.track_search_term or '*F7_*PMS'
                 self.hbtrack_search_term = self.hbtrack_search_term or \
                     track_search_term + '.HB'
@@ -59,8 +49,6 @@ class TrackSet(object):
             else:
                 self.track_search_term = '*dat'
                 self.hbtrack_search_term = '*HB.dat'
-                self.ptcri_file = None
-                self.hbptcri_file = None
 
             self.find_tracks(ignore='HB')
             self.find_tracks(hb=True)
@@ -147,6 +135,8 @@ class TrackSet(object):
         tattr = '{0:s}s'.format(track_str)
         self.__setattr__('{0:s}_names'.format(track_str), track_names[inds])
         trks = [Track(t, match=self.match) for t in track_names[inds]]
+        if len(trks) == 0:
+            print('No tracks found.')
         self.__setattr__(tattr, trks)
         self.__setattr__('{0:s}'.format(mass_str),
                          np.array([t.mass for t in self.__getattribute__(tattr)
@@ -191,23 +181,17 @@ class TrackSet(object):
         data.to_csv(outfile, mode=wstr, index=False, sep=' ', header=header)
         print('{} {}'.format(wrote, outfile))
 
-    def all_inds_of_eep(self, eep_name, sandro=True, hb=False):
+    def all_inds_of_eep(self, eep_name, hb=False):
         '''
         get all the ind for all tracks of some eep name, for example
-        want ms_to of the track set? set eep_name = point_c if sandro==True.
+        want ms_to of the track set? set eep_name = MS_TO
         '''
         inds = []
         for track in self.tracks:
             ptcri_attr = self.select_ptcri(('z%g' % track.Z).replace('0.', ''))
             ptcri = self.__getattribute__(ptcri_attr)
-            eep_ind = ptcri.get_ptcri_name(eep_name, sandro=sandro, hb=hb)
-            if sandro:
-                if len(track.sptcri) <= eep_ind:
-                    data_ind = -1
-                else:
-                    data_ind = track.sptcri[eep_ind]
-            else:
-                data_ind = track.iptcri[eep_ind]
+            eep_ind = ptcri.get_ptcri_name(eep_name, hb=hb)
+            data_ind = track.iptcri[eep_ind]
             inds.append(data_ind)
         return inds
 
@@ -221,29 +205,26 @@ class TrackSet(object):
         ptcri_attr = self.ptcris[pind]
         return ptcri_attr
 
-    def _load_ptcri(self, ptcri_loc, sandro=True, hb=False, search_extra=''):
+    def _load_ptcri(self, ptcri_loc, hb=False, search_extra=''):
         '''load ptcri file for each track in trackset'''
+        print('this is probably broken...')
 
         def keyfmt(p):
             kf = os.path.split(p)[1].replace('0.', '').replace('.dat', '')
             return kf.lower()
 
-        if sandro:
-            search_term = 'pt'
-        else:
-            search_term = 'p2m'
+        search_term = 'p2m'
         if hb:
             search_term += '_hb'
 
         new_keys = []
         mets = np.unique([t.Z for t in self.tracks])
-        pt_search = '%s*%s*' % (search_term, search_extra)
+        pt_search = '{0:s}*{1:s}*'.format(search_term, search_extra)
         ptcri_files = get_files(ptcri_loc, pt_search)
         if not hb:
             ptcri_files = [p for p in ptcri_files if 'hb' not in p]
 
         for p in ptcri_files:
-            ptcri = CriticalPoint(p, sandro=sandro, hb=False)
             new_key = keyfmt(p)
             self.__setattr__(new_key, ptcri)
             new_keys.append(new_key)
@@ -253,23 +234,23 @@ class TrackSet(object):
             ptcri_name, = [p for p in ptcri_files
                            if os.path.split(track.base)[1] in p]
             ptcri = self.__getattribute__(keyfmt(ptcri_name))
-            self.tracks[i] = ptcri.load_eeps(track, sandro=sandro)
+            self.tracks[i] = ptcri.load_critical_points(track)
         return self.tracks
 
-    def relationships(self, eep_name, xattr, yattr, sandro=True, xfunc=None,
+    def relationships(self, eep_name, xattr, yattr, xfunc=None,
                       yfunc=None, ptcri_loc=None, ptcri_search_extra='',
                       hb=False):
         """
         eg get the MSTO as a function of age for all the tracks
-        eep_name = 'POINT_C' or 'MSTO' (Sandro True/False)
+        eep_name = 'MS_TO'
         ptcri_search_extra: OV0.5
         xattr = 'MASS'
         yattr = 'AGE'
         """
         if not hasattr(self, 'ptcri') and not hasattr(self, 'ptcris'):
-            self._load_ptcri(ptcri_loc, sandro=sandro, hb=hb,
+            self._load_ptcri(ptcri_loc, hb=hb,
                              search_extra=ptcri_search_extra)
-        ieeps = self.all_inds_of_eep(eep_name, sandro=sandro, hb=hb)
+        ieeps = self.all_inds_of_eep(eep_name, hb=hb)
         xdata, ydata = zip(*[(self.tracks[i].data[xattr][ieeps[i]],
                               self.tracks[i].data[yattr][ieeps[i]])
                              for i in range(len(self.tracks))

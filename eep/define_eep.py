@@ -1,6 +1,5 @@
 from __future__ import print_function, division
 import os
-import pdb
 from scipy.signal import argrelextrema
 
 import matplotlib.pylab as plt
@@ -27,8 +26,13 @@ def check_for_monotonic_increase(de, track):
             if de.debug:
                 ax = debug_eep(track)
                 annotate_plot(track, ax, logT, logL)
+                import pdb
                 pdb.set_trace()
-    return track
+
+        retv = '{0:.3f} {1:g} '.format(track.mass, track.Z)
+        retv += ('{:d} ' * len(track.iptcri)).format(*track.iptcri)
+        retv += '\n'
+    return retv
 
 
 def debug_eep(track, inds=None, ax=None):
@@ -37,7 +41,6 @@ def debug_eep(track, inds=None, ax=None):
     if ax is None:
         plt.ion()
     ax = hrd(track, ax=ax)
-    ax = hrd(track, inds=track.sptcri, ax=ax, plt_kw={'label': 'sandro'})
     ax = hrd(track, inds=inds, ax=ax)
     annotate_plot(track, ax, logT, logL)
 
@@ -45,7 +48,7 @@ def debug_eep(track, inds=None, ax=None):
     return ax
 
 
-class DefineEeps(CriticalPoint):
+class DefineEeps(Eep):
     '''
     Define the stages if not simply using Sandro's defaults.
 
@@ -72,8 +75,8 @@ class DefineEeps(CriticalPoint):
     6 END_CHEB     Dotter 2016
     7 TPAGB_BEG    Marigo 2015
     '''
-    def __init__(self, filename):
-        CriticalPoint.__init__(self, filename)
+    def __init__(self):
+        Eep.__init__(self)
 
     def check_for_monotonic_increase(self, *args, **kwargs):
         return check_for_monotonic_increase(self, *args, **kwargs)
@@ -93,6 +96,8 @@ class DefineEeps(CriticalPoint):
             make diagnostic plots
         """
         self.debug = self.debug or debug
+        if track.hb:
+            self.pdict = self.pdict_hb
 
         # TP-AGB tracks
         fin = len(track.data[logL]) - 1
@@ -114,29 +119,28 @@ class DefineEeps(CriticalPoint):
         self.physical_age(track, 'PMS_BEG')
         self.add_ms_beg(track)
 
-        # Low mass tracks MS set by age
-        if len(track.sptcri[track.sptcri > 0]) <= 6:
-            return self.low_mass_eeps(track)
-
         ms_tmin, ms_to = self.add_ms_eeps(track)
+        # Low mass tracks MS set by age
+        if ms_tmin == -1:
+            # reset FIN and TPAGB
+            track.iptcri[-2:] = 0
+            return self.check_for_monotonic_increase(track)
+
         end_cheb = self.add_end_cheb(track)
         rg_tip = self.add_rg_tip(track)
         he_beg = self.add_he_beg(track)
 
         if he_beg == 0:
             ihe_beg = self.pdict['HE_BEG']
-            irest = [self.eep.eep_list[i] for i in
-                     np.arange(ihe_beg, len(self.eep.eep_list))]
+            irest = [self.eep_list[i] for i in
+                     np.arange(ihe_beg, len(self.eep_list))]
             [self.add_eep(track, i, 0, message=track.info['HE_BEG'],
                           loud=False)
              for i in irest]
         return self.check_for_monotonic_increase(track)
 
     def low_mass_eeps(self, track):
-        """low mass eeps, no MSTO according to Sandro"""
-        # print('{} is low mass.'.format(track.mass))
-        [self.add_eep(track, cp, 0, message='No MS_TO', loud=False)
-         for cp in self.please_define]
+        """low mass eeps = nothing past MSTO"""
         ims_beg = track.iptcri[self.pdict['MS_BEG']]
         ims_to = self.add_eep_by_age(track, 'MS_TO', max_age)
         age_ = track.data[age][ims_to]
@@ -146,12 +150,11 @@ class DefineEeps(CriticalPoint):
         if ims_tmin <= ims_beg:
             age_ = (track.data[age][ims_to] + track.data[age][ims_beg]) / 2
             ims_tmin = self.add_eep_by_age(track, 'MS_TMIN', age_)
-
-        return self.check_for_monotonic_increase(track)
+        return -1, -1
 
     def add_ms_beg(self, track):
         """Add MS_BEG following as closely as possible to Dotter 2016"""
-        msg = 'MIST definition'
+        msg = ''
         lx = track.data['LX']
         # LX is fraction of Ltot L_gravity is part of Ltot, so if contracting,
         # LX can be > 1. I'm ok with a contracting star starting the MS.
@@ -162,18 +165,23 @@ class DefineEeps(CriticalPoint):
 
         if len(inds) == 0:
             pms_beg = track.iptcri[self.pdict['PMS_BEG']]
-            if track.mass <= self.low_mass:
-                # Tc \propto (mu mH / k) (G M / R)
-                tc = (10 ** track.data.LOG_R) / track.data[mass]
-                ms_beg = pms_beg + np.argmin(tc[pms_beg:])
-                msg += ' with min Tc'
+            # Tc \propto (mu mH / k) (G M / R)
+            tc = (10 ** track.data.LOG_R) / track.data[mass]
+            ams_beg = pms_beg + np.argmin(tc[pms_beg:])
+            amsg = 'min Tc'
+
+            # LX > 0.999 may be too high.
+            inds, = np.nonzero(track.data[xcen][pms_beg:] > xcen_evo)
+            inds += pms_beg
+            bms_beg = inds[np.argmax(track.data['LX'][inds])]
+            bmsg = 'max LX criterion LX={}' \
+                .format(track.data['LX'][bms_beg])
+            if ams_beg != bms_beg:
+                ms_beg = np.min([ams_beg, bms_beg])
+                msg += '{0:s} or {1:s}'.format(amsg, bmsg)
             else:
-                # LX > 0.999 may be too high.
-                inds, = np.nonzero(track.data[xcen][pms_beg:] > xcen_evo)
-                inds += pms_beg
-                ms_beg = inds[np.argmax(track.data['LX'][inds])]
-                msg += ' with max LX criterion LX={}' \
-                    .format(track.data['LX'][ms_beg])
+                ms_beg = ams_beg
+                msg += '{0:s}/{1:s}'.format(amsg, bmsg)
         else:
             ms_beg = inds[0]
 
@@ -185,23 +193,22 @@ class DefineEeps(CriticalPoint):
         xcen_mstmin = 0.3
         xcen_msto = 1e-8
 
-        ms_to = np.nonzero(track.data[xcen] < xcen_msto)[0][0]
-        msg = 'XCEN=={0:g}'.format(xcen_msto)
-        self.add_eep(track, 'MS_TO', ms_to, message=msg)
+        try:
+            ms_to = np.nonzero(track.data[xcen] < xcen_msto)[0][0]
+        except IndexError:
+            return self.low_mass_eeps(track)
+        self.add_eep(track, 'MS_TO', ms_to)
 
         ms_tmin = np.argmin(np.abs(track.data[xcen][:ms_to] - xcen_mstmin))
-        msg = 'XCEN=={0:.1f}'.format(xcen_mstmin)
-        self.add_eep(track, 'MS_TMIN', ms_tmin, message=msg)
+        self.add_eep(track, 'MS_TMIN', ms_tmin)
 
         return ms_tmin, ms_to
 
     def physical_age(self, track, eep_name):
         '''First line of the track with age > 0.2 yr.'''
-        sidx = track.sptcri[0]
         pidx = track.iptcri[0]
-        msg = "Sandro's"
-
-        if track.data[age][sidx] <= 0.2 or track.data[age][pidx] <= 0.2:
+        msg = ''
+        if track.data[age][pidx] <= 0.2:
             pidx = np.nonzero(np.round(track.data[age], 1) > 0.2)[0][0]
             msg = 'overwritten with age > 0.2'
 
@@ -209,25 +216,19 @@ class DefineEeps(CriticalPoint):
         return pidx
 
     def add_rg_tip(self, track):
+        """Add trgb"""
         ms_to = track.iptcri[self.pdict['MS_TO']]
         ycen_ = track.data[ycen][ms_to] - 0.01
         inds = ms_to + np.nonzero(track.data[ycen][ms_to:] >= ycen_)[0]
-        # Almost Dottor 2016, I give a 3 step offset because PARSEC does
-        # not have MIST resolution.
-        # inds = np.arange(ms_to + 3, ms_to + ind + 1)
         ilmax = np.argmax(track.data[logL][inds])
         itmin = np.argmin(track.data[logT][inds])
         if itmin == 0:
             rg_tip = inds[ilmax]
-            msg = 'Max L'
+            msg = 'Max L before YCEN = YCEN_MSTO - 0.01'
         else:
             rg_tip = inds[np.min([ilmax, itmin])]
-            msg = 'Max L or Min T'
-        msg += ' before YCEN = YCEN_MSTO - 0.01 (Dotter 2016)'
+            msg = ''
         self.add_eep(track, 'RG_TIP', rg_tip, message=msg)
-        srg_tip = track.iptcri[self.pdict['RG_TIP']]
-        if srg_tip != rg_tip:
-            print(srg_tip, rg_tip, track.mass, track.Z)
 
     def add_he_beg(self, track):
         """
@@ -243,14 +244,11 @@ class DefineEeps(CriticalPoint):
         he_beg : int
             track.data index of HE_BEG
         """
-        #if track.mass == 1.65:
-        #    import pdb; pdb.set_trace()
-
         if not track.hb and (track.mass <= self.hbmaxmass):
             msg = 'No HE_BEG M={0:.4f} Z={1:.4f}'.format(track.mass, track.Z)
             hebeg = 0
         else:
-            msg = 'Tmin while YCEN > YCEN at RGB_TIP - 0.03'
+            msg = ''
             itrgb = track.iptcri[self.pdict['RG_TIP']]
             ycen_ = track.data[ycen][itrgb] - 0.03
             inds, = np.nonzero(track.data[ycen][itrgb:] > ycen_) + itrgb
@@ -258,7 +256,7 @@ class DefineEeps(CriticalPoint):
             hebeg = inds[np.argmin(tc[inds])]
             if hebeg == itrgb:
                 hebeg += 3
-                msg += ' +3 step offset'
+                msg = 'Tmin while YCEN > YCEN at RGB_TIP - 0.03 +3 step offset'
 
         self.add_eep(track, 'HE_BEG', hebeg, message=msg)
         return hebeg

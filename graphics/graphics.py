@@ -43,26 +43,6 @@ def hrd(track, ax=None, inds=None, reverse=None, plt_kw=None):
     return ax
 
 
-def plot_sandro_ptcri(track, plot_dir=None, ptcri=None):
-    x = logT
-    y = logL
-    ax = plot_track(track, x, y, reverse='x',
-                    inds=np.nonzero(track.data[age] > 0.2)[0])
-
-    ax = annotate_plot(track, ax, x, y, sandro=True, ptcri=ptcri)
-    title = 'M = %.3f Z = %.4f Y = %.4f' % (track.mass, track.Z, track.Y)
-    ax.set_title(title, fontsize=20)
-    ax.set_xlabel((r'$%s$' % x).replace('_', r'\_'), fontsize=20)
-    ax.set_ylabel((r'$%s$' % y).replace('_', r'\_'), fontsize=20)
-    figname = 'sandro_ptcri_Z%g_Y%g_M%.3f.png' % (track.Z, track.Y,
-                                                  track.mass)
-    if plot_dir is not None:
-        figname = os.path.join(plot_dir, figname)
-        plt.savefig(figname)
-        plt.close()
-    return ax
-
-
 def plot_tracks(tracks, xcols=[logT, age], extra=None, hb=False, mextras=None,
                 split=True, plot_dir=None, match_tracks=None):
     '''
@@ -183,7 +163,6 @@ def plot_track(track, xcol, ycol, reverse=None, ax=None, inds=None,
     '''
     ainds is passed to annotate plot, and is to only plot a subset of crit
     points.
-    sandro = True will plot sandro's ptcris.
 
     plot helpers:
     reverse 'xy', 'x', or 'y' will flip that axis
@@ -240,27 +219,18 @@ def plot_track(track, xcol, ycol, reverse=None, ax=None, inds=None,
     return ax
 
 
-def annotate_plot(track, ax, xcol, ycol, ptcri_names=[],
-                  sandro=False, box=True, khd=False,
+def annotate_plot(track, ax, xcol, ycol, ptcri_names=None, box=True, khd=False,
                   xdata=None, ydata=None, inds=None, **kwargs):
-    '''
-    if a subset of ptcri inds are used, set them in inds. If you want
-    sandro's ptcri's sandro=True, will also change the face color of the
-    label bounding box so you can have both on the same plot.
-    '''
+    '''annotate plot with EEPs'''
+    ptcri_names = ptcri_names or []
     eep = Eep()
     eep_list = eep.eep_list
 
     if track.hb:
         eep_list = eep.eep_list_hb
 
-    if not sandro:
-        fc = 'navy'
-        iptcri = track.iptcri
-    else:
-        fc = 'darkred'
-        iptcri = track.sptcri
-        eep_list = ptcri.sandro_eeps
+    fc = 'navy'
+    iptcri = track.iptcri
 
     if len(ptcri_names) == 0:
         # assume all

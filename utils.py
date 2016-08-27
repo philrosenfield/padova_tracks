@@ -46,13 +46,9 @@ def remove_dupes(inds1, inds2, inds3=None, inds4=None, tol=1e-6):
     return non_dupes
 
 
-def add_ptcris(track, between_ptcris, sandro=False):
+def add_ptcris(track, between_ptcris):
     '''return track.[s or i ]ptcri indices between between_ptcris'''
-    if sandro:
-        iptcri = track.sptcri
-    else:
-        iptcri = track.iptcri
-    pinds = iptcri[between_ptcris[0]: between_ptcris[1] + 1]
+    pinds = track.iptcri[between_ptcris[0]: between_ptcris[1] + 1]
     return pinds
 
 

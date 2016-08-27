@@ -11,7 +11,7 @@ import numpy as np
 import os
 import sys
 
-from .fileio import load_input, tfm_indict
+from .fileio import load_input, tfm_indict, save_ptcri
 from .match import TracksForMatch
 from .prepare_makemod import prepare_makemod
 from .utils import add_version_info
@@ -84,40 +84,18 @@ def load_parsec2match_inp(infile):
     return indict
 
 
-def define_eeps(tfm, hb=False, save_p2m=True):
+def define_eeps(tfm, hb=False):
     '''add the ptcris to the tracks'''
-    # assign eeps track.iptcri and track.sptcri
-
+    line = ''
+    tracks = tfm.tracks
     if hb:
-        defined = tfm.eep.eep_list_hb
-        filename = 'define_eeps_hb_%s.log'
         tracks = tfm.hbtracks
-    else:
-        tracks = tfm.tracks
-        defined = tfm.eep.eep_list
-        filename = 'define_eeps_%s.log'
 
     # define the eeps
-    tracks = [tfm.define_eep_stages(track) for track in tracks]
+    line = ' '.join([tfm.define_eep_stages(track) for track in tracks])
 
-    p2m_file = tfm.save_ptcri(tracks)
-
-    # write log file
-    info_file = os.path.join(tfm.log_dir, filename % tfm.prefix.lower())
-    with open(info_file, 'w') as out:
-        for t in tracks:
-            if t.flag is not None:
-                out.write('# %s: %s\n' % (t.name, t.flag))
-                continue
-            out.write('# %.3f\n' % t.mass)
-            if t.flag is not None:
-                out.write(t.flag)
-            else:
-                for ptc in defined:
-                    try:
-                        out.write('%s: %s\n' % (ptc, t.info[ptc]))
-                    except:
-                        out.write('%s: %s\n' % (ptc, 'Copied from Sandro'))
+    save_ptcri(line, loc=tfm.tracks_dir.replace('tracks', 'data'),
+               prefix=tfm.prefix, hb=hb)
     return tfm
 
 
