@@ -45,14 +45,6 @@ def debug_eep(track, inds=None, ax=None):
     return ax
 
 
-def ibetween_ptcri(iptcri, pdict, ptcri1, ptcri2):
-    try:
-        inds = np.arange(iptcri[pdict[ptcri1]], iptcri[pdict[ptcri2]])
-    except ValueError:
-        inds = []
-    return inds
-
-
 class DefineEeps(CriticalPoint):
     '''
     Define the stages if not simply using Sandro's defaults.
@@ -77,14 +69,8 @@ class DefineEeps(CriticalPoint):
     5 HE_BEG       Dotter 2016 or:
                      LY Min after the TRGB, a dips as the star contracts,
                      and then ramps up.
-    6 YCEN_0.550   Central abundance of He equal to 0.550
-    7 YCEN_0.500   Central abundance of He equal to 0.500
-    8 YCEN_0.400   Central abundance of He equal to 0.400
-    9 YCEN_0.200   Central abundance of He equal to 0.200
-    10 YCEN_0.100  Central abundance of He equal to 0.100
-    11 YCEN_0.005  Central abundance of He equal to 0.005
-    12 END_CHEB    Dotter 2016
-    13 TPAGB_BEG   Marigo 2015
+    6 END_CHEB     Dotter 2016
+    7 TPAGB_BEG    Marigo 2015
     '''
     def __init__(self, filename):
         CriticalPoint.__init__(self, filename)
@@ -134,23 +120,9 @@ class DefineEeps(CriticalPoint):
 
         ms_tmin, ms_to = self.add_ms_eeps(track)
         end_cheb = self.add_end_cheb(track)
+        rg_tip = self.add_rg_tip(track)
+        he_beg = self.add_he_beg(track)
 
-        # high mass
-        if track.mass >= high_mass:
-            ind = np.argmin(np.abs(track.data[ycen][ms_to:] -
-                                   (track.data[ycen][ms_to] - 0.01)))
-            # Almost Dottor 2016, I give a 3 step offset because PARSEC does
-            # not have MIST resolution.
-            inds = np.arange(ms_to + 3, ms_to + ind + 1)
-            rg_tip = inds[np.min([np.argmax(track.data[logL][inds]),
-                                  np.argmin(track.data[logT][inds])])]
-            msg = 'Max L or Min T before YCEN = YCEN_MSTO - 0.01 (Dotter2016)'
-            self.add_eep(track, 'RG_TIP', rg_tip, message=msg)
-        else:
-            # Still Sandro rg_tip...
-            rg_tip = track.iptcri[self.pdict['RG_TIP']]
-
-        he_beg = self.add_quiesscent_he_eep(track, end_cheb, start=rg_tip)
         if he_beg == 0:
             ihe_beg = self.pdict['HE_BEG']
             irest = [self.eep.eep_list[i] for i in
@@ -236,99 +208,67 @@ class DefineEeps(CriticalPoint):
         self.add_eep(track, eep_name, pidx, message=msg)
         return pidx
 
-    def add_quiesscent_he_eep(self, track, ycen1, start='RG_TIP',
-                              mist=True):
+    def add_rg_tip(self, track):
+        ms_to = track.iptcri[self.pdict['MS_TO']]
+        ycen_ = track.data[ycen][ms_to] - 0.01
+        inds = ms_to + np.nonzero(track.data[ycen][ms_to:] >= ycen_)[0]
+        # Almost Dottor 2016, I give a 3 step offset because PARSEC does
+        # not have MIST resolution.
+        # inds = np.arange(ms_to + 3, ms_to + ind + 1)
+        ilmax = np.argmax(track.data[logL][inds])
+        itmin = np.argmin(track.data[logT][inds])
+        if itmin == 0:
+            rg_tip = inds[ilmax]
+            msg = 'Max L'
+        else:
+            rg_tip = inds[np.min([ilmax, itmin])]
+            msg = 'Max L or Min T'
+        msg += ' before YCEN = YCEN_MSTO - 0.01 (Dotter 2016)'
+        self.add_eep(track, 'RG_TIP', rg_tip, message=msg)
+        srg_tip = track.iptcri[self.pdict['RG_TIP']]
+        if srg_tip != rg_tip:
+            print(srg_tip, rg_tip, track.mass, track.Z)
+
+    def add_he_beg(self, track):
         """
         Add HEB_BEG eep at a point on the track where He is fusing at a
-        consistent rate. Defined by Dotter 2016, or if that isn't possible,
-        it is defined by a min after the RG_TIP in LY.
-
+        consistent rate. Defined by Dotter 2016
         Parameters
         ----------
         track : object
-            rsp.padova_tracks.Track object
-
-        ycen1 : str
-            end EEP to look for beginning of He burning
-
-        start : str ['RG_TIP']
-            start EEP to look for beginning of He burning
+            padova_tracks.Track object
 
         Returns
         -------
         he_beg : int
             track.data index of HE_BEG
         """
-        def noheb():
+        #if track.mass == 1.65:
+        #    import pdb; pdb.set_trace()
+
+        if not track.hb and (track.mass <= self.hbmaxmass):
             msg = 'No HE_BEG M={0:.4f} Z={1:.4f}'.format(track.mass, track.Z)
-            return 0, msg
-
-        def ala_mist(track):
-            """T min while Ycen > Ycen_TRGB - 0.03"""
-            if not track.hb and (track.mass <= self.hbmaxmass):
-                retv = noheb()
-            else:
-                msg = 'Tmin while YCEN > YCEN at RGB_TIP - 0.03'
-                itrgb = track.iptcri[self.pdict['RG_TIP']]
-                ycen_ = track.data[ycen][itrgb] - 0.03
-                inds, = np.nonzero(track.data[ycen][itrgb:] > ycen_) + itrgb
-                tc = (10 ** track.data.LOG_R) / track.data[mass]
-                ihebeg = inds[np.argmin(tc[inds])]
-                if ihebeg == itrgb:
-                    ihebeg += 3
-                    msg += ' +3 step offset'
-                retv = (ihebeg, msg)
-            return retv
-
-        def ala_phil(track):
-            """Min LY after RG_TIP"""
-            msg = 'Min LY after RG_TIP'
-            if type(ycen1) != str:
-                inds = np.arange(start, ycen1)
-            else:
-                inds = ibetween_ptcri(track.iptcri, self.pdict, start, ycen1)
-
-            if len(inds) == 0:
-                return noheb()
-
-            he_min = np.argmin(track.data['LY'][inds])
-
-            # Sometimes there is a huge peak in LY before the min, find it...
-            npts = inds[-1] - inds[0] + 1
-            subset = npts // 3
-            he_max = np.argmax(track.data['LY'][inds[:subset]])
-
-            # Peak isn't as important as the ratio between the start and end
-            rat = track.data['LY'][inds[he_max]] / track.data['LY'][inds[0]]
-
-            # If the min is at the point next to the RG_TIP, or
-            # the ratio is huge, get the min after the peak.
-            amin = 0
-            if he_min == 0 or rat > 10:
-                amin = np.argmin(track.data['LY'][inds[he_max + 1:]])
-
-            he_min = he_max + 1 + amin
-
-            return inds[he_min], msg
-
-        eep_name = 'HE_BEG'
-
-        if mist:
-            he_beg, msg = ala_mist(track)
+            hebeg = 0
         else:
-            he_beg, msg = ala_phil(track)
+            msg = 'Tmin while YCEN > YCEN at RGB_TIP - 0.03'
+            itrgb = track.iptcri[self.pdict['RG_TIP']]
+            ycen_ = track.data[ycen][itrgb] - 0.03
+            inds, = np.nonzero(track.data[ycen][itrgb:] > ycen_) + itrgb
+            tc = (10 ** track.data.LOG_R) / track.data[mass]
+            hebeg = inds[np.argmin(tc[inds])]
+            if hebeg == itrgb:
+                hebeg += 3
+                msg += ' +3 step offset'
 
-        self.add_eep(track, eep_name, he_beg, message=msg)
-        return he_beg
+        self.add_eep(track, 'HE_BEG', hebeg, message=msg)
+        return hebeg
 
     def add_end_cheb(self, track):
         """Add end core He burning defined as YCEN = 1e-4 by Dotter 2016"""
+        tpagb_start = -1
+
         if track.agb:
             tpagb_start = track.iptcri[self.pdict['TPAGB_BEG']]
-        else:
-            tpagb_start = track.sptcri[-1]
-            if tpagb_start == 0:
-                tpagb_start = -1
 
         end_cheb = np.argmin(np.abs(track.data[ycen][:tpagb_start] - 1e-4))
         self.add_eep(track, 'END_CHEB', end_cheb, message='YCEN=1e-4')
@@ -351,13 +291,16 @@ class DefineEeps(CriticalPoint):
         self.add_eep(track, eep_name, iage, message=msg)
         return iage
 
-    def add_eep(self, track, eep_name, ind, message='no info', loud=None):
+    def add_eep(self, track, eep_name, ind, message=None, loud=False):
         '''Add or replace track.iptcri value based on self.pdict[eep_name]'''
-        loud = loud or self.debug
+        message = message or ''
+
         track.iptcri[self.pdict[eep_name]] = ind
-        track.__setattr__('i{:s}'.format(eep_name.lower()
-                          .replace('.', '')), ind)
-        track.info['{0:s}'.format(eep_name)] = message
+        track.__setattr__('i{:s}'.format(eep_name.lower()), ind)
+
+        if len(message) > 0:
+            track.info['{0:s}'.format(eep_name)] = message
+
         if loud:
             print(track.mass, eep_name, ind, message)
         return

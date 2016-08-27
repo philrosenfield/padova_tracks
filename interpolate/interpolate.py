@@ -276,8 +276,6 @@ def call_interp1d(track, inds, nticks, mess=None, linear=False):
         tenew = fage_te(lagenew)
 
     track.info[mess] += msg
-    if linear:
-        lagenew = np.log10(lagenew)
     return lagenew, lnew, tenew, massnew
 
 

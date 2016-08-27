@@ -8,6 +8,7 @@ from scipy.interpolate import interp1d
 from . import fileio
 from .config import mass, logT, age, logL
 from .eep.define_eep import DefineEeps
+from .eep.critical_point import Eep
 from .interpolate.interpolate import interpolate_along_track
 from .tracks.track_set import TrackSet
 from .tracks.track import Track
@@ -29,20 +30,25 @@ class TracksForMatch(TrackSet, DefineEeps):
         self.set_directories()
 
     def set_directories(self):
-        """define output directory structure"""
-        default_outdir = \
+        """define output directory structure and filename formats"""
+
+        self.outfile_dir = self.outfile_dir or \
             os.path.join(self.tracks_dir, 'match', self.prefix)
-        default_plotdir = \
+
+        self.plot_dir = self.plot_dir or \
             os.path.join(self.tracks_dir, 'diag_plots', self.prefix)
-        self.outfile_dir = self.outfile_dir or default_outdir
-        self.plot_dir = self.plot_dir or default_plotdir
-        self.log_dir = self.log_dir or os.path.join(self.tracks_dir, 'logs')
-        self.logfmt = 'match_interp_{0:s}.log'
+
+        self.log_dir = self.log_dir or \
+            os.path.join(self.tracks_dir, 'logs')
+
+        [fileio.ensure_dir(d) for d in
+         [self.outfile_dir, self.plot_dir, self.log_dir]]
+
         self.intpfmt = 'match_{0:s}.dat'  # track.name here
+        self.logfmt = 'match_interp_{0:s}.log'
+
         if hasattr(self, 'hbtracks'):
             self.hblogfmt = 'match_interp_hb_{0:s}.log'
-        for d in [self.outfile_dir, self.plot_dir, self.log_dir]:
-            fileio.ensure_dir(d)
 
     def match_interpolation(self, hb=False):
         """
@@ -50,7 +56,6 @@ class TracksForMatch(TrackSet, DefineEeps):
 
         This function writes two file types:
         match_interp logfile: Any error collections from define_eep or here.
-        lines_check file: Summary of the interpolated files lengths.
         """
         # to pass the flags to another class
         flag_dict = {}
@@ -65,7 +70,7 @@ class TracksForMatch(TrackSet, DefineEeps):
 
         tpagb_plotdir = os.path.join(self.plot_dir, 'tpagb')
         fileio.ensure_dir(tpagb_plotdir)
-        tpagb_kw = {'diag': True, 'outdir': tpagb_plotdir}
+        tpagb_kw = {'diag': self.track_diag_plot, 'outdir': tpagb_plotdir}
 
         for track in tracks:
             mkey = 'M{0:.3f}'.format(track.mass)
@@ -107,50 +112,8 @@ class TracksForMatch(TrackSet, DefineEeps):
 
         logfile = os.path.join(self.log_dir,
                                filename.format(self.prefix.lower()))
-        self.write_log(logfile, info_dict)
+        write_log(logfile, info_dict)
         return self.check_tracks(tracks, flag_dict)
-
-    def write_log(self, logfile, info_dict):
-        """write interpolation dictionary to file"""
-        def sortbyval(d):
-            """sortes keys and values of dict by mass values"""
-            keys, vals = zip(*d.items())
-            mkeys = np.array([k.replace('M', '') for k in d.keys()],
-                             dtype=float)
-            ikeys = np.argsort(mkeys)
-            skeys = np.array(keys)[ikeys]
-            svals = np.array(vals)[ikeys]
-            return skeys, svals
-
-        def sortbyeep(d, eep):
-            """sorts the eep names by eep.eep_list index order"""
-            keys, vals = zip(*d.items())
-            all_inds = np.arange(len(keys))
-            # eep.eep_list has hb eeps as well as non-hb eeps.
-            inds = np.argsort([eep.eep_list.index(k) for k in keys
-                               if k in eep.eep_list])
-            not_eep = [i for i in all_inds if i not in inds]
-            if len(not_eep) > 0:
-                inds = np.concatenate([inds, not_eep])
-            skeys = np.array(keys)[inds]
-            svals = np.array(vals)[inds]
-            return skeys, svals
-
-        eep = self.eep
-        with open(logfile, 'w') as out:
-            # sort by mass
-            mass_, info = sortbyval(info_dict)
-            for m, d in zip(mass_, info):
-                out.write('# {0:s}\n'.format(m))
-                try:
-                    # sort by EEP
-                    keys, vals = sortbyeep(d, eep)
-                except AttributeError:
-                    out.write('{0:s}\n'.format(d))
-                    continue
-                for k, v in zip(keys, vals):
-                    out.write('{0:s}: {1:s}\n'.format(k, v))
-        return
 
     def process_track(self, track, outfile, hb=False, tpagb_kw=None):
         """
@@ -258,14 +221,16 @@ class TracksForMatch(TrackSet, DefineEeps):
         if len(logl) not in [self.eep.nms, self.eep.nhb, self.eep.nlow,
                              self.eep.ntot, self.eep.nhb + self.eep.nok,
                              self.eep.ntot - self.eep.nok]:
-            print('array size is wrong')
-            if self.debug:
-                import pdb
-                pdb.set_trace()
+            print("Wrong match interp'ed track size: {2:d} M={0:.3f} Z={1:g}"
+                  .format(track.mass, track.Z, len(logl)))
+            # if self.debug:
+            import pdb
+            pdb.set_trace()
 
         to_write = np.column_stack([logage, mass_, logte, mbol, logg, co])
         np.savetxt(outfile, to_write, header=header, fmt='%.8f')
-        return Track(outfile, track_data=to_write, match=True)
+        return Track(outfile, track_data=to_write, match=True,
+                     debug=self.debug)
 
     def check_tracks(self, tracks, flag_dict):
         """
@@ -327,3 +292,46 @@ class TracksForMatch(TrackSet, DefineEeps):
                     match_info.append(['log ages:', t.data[age][bads1]])
                     match_info.append(['inds:', bads1])
         return
+
+
+def write_log(logfile, info_dict):
+    """write interpolation dictionary to file"""
+    def sortbyval(d):
+        """sortes keys and values of dict by mass values"""
+        keys, vals = zip(*d.items())
+        mkeys = np.array([k.replace('M', '') for k in d.keys()],
+                         dtype=float)
+        ikeys = np.argsort(mkeys)
+        skeys = np.array(keys)[ikeys]
+        svals = np.array(vals)[ikeys]
+        return skeys, svals
+
+    def sortbyeep(d, eep):
+        """sorts the eep names by eep.eep_list index order"""
+        keys, vals = zip(*d.items())
+        all_inds = np.arange(len(keys))
+        # eep.eep_list has hb eeps as well as non-hb eeps.
+        inds = np.argsort([eep.eep_list.index(k) for k in keys
+                           if k in eep.eep_list])
+        not_eep = [i for i in all_inds if i not in inds]
+        if len(not_eep) > 0:
+            inds = np.concatenate([inds, not_eep])
+        skeys = np.array(keys)[inds]
+        svals = np.array(vals)[inds]
+        return skeys, svals
+
+    eep = Eep()
+    with open(logfile, 'w') as out:
+        # sort by mass
+        mass_, info = sortbyval(info_dict)
+        for m, d in zip(mass_, info):
+            out.write('# {0:s}\n'.format(m))
+            try:
+                # sort by EEP
+                keys, vals = sortbyeep(d, eep)
+            except AttributeError:
+                out.write('{0:s}\n'.format(d))
+                continue
+            for k, v in zip(keys, vals):
+                out.write('{0:s}: {1:s}\n'.format(k, v))
+    return

@@ -218,7 +218,8 @@ class AGBTrack(object):
 class Track(AGBTrack):
     '''Padova stellar track class.'''
     def __init__(self, filename, match=False, track_data=None,
-                 ptcri_file=None, ptcri_kw=None, agb=False):
+                 ptcri_file=None, ptcri_kw=None, agb=False,
+                 debug=False):
         '''
         filename [str] the path to the PMS or PMS.HB file
         '''
@@ -248,7 +249,7 @@ class Track(AGBTrack):
             # add self.Z etc.
             self.filename_info()
             self.track_mass()
-            self.check_track()
+            self.check_track(debug=debug)
             if ptcri_file is not None:
                 self.load_iptcri(ptcri_file)
 
@@ -260,7 +261,7 @@ class Track(AGBTrack):
 
         ptcri.load_iptcri(self)
 
-    def check_track(self):
+    def check_track(self, debug=False):
         '''check if age decreases'''
         try:
             age_ = np.round(self.data[age], 6)
@@ -274,8 +275,8 @@ class Track(AGBTrack):
             if self.match:
                 morp = 'match'
 
-            print('decreasing age in {0:s} M={1:.3f} track'.format(morp,
-                                                                   self.mass))
+            print('decreasing age in {0:s} M={1:.3f} Z={2:g} track'
+                  .format(morp, self.mass, self.Z))
             bads, = np.nonzero(np.diff(age_) < 0)
             if not self.match:
                 print('offensive {0:s}:'.format(MODE), self.data[MODE][bads])
@@ -292,8 +293,10 @@ class Track(AGBTrack):
                 inds = [np.argmin(np.abs(np.cumsum(nticks)-b)) for b in bads]
                 print('offensive inds:', bads)
                 print('Near:', np.array(names)[inds])
-                # import pdb
-                # pdb.set_trace()
+
+            if debug:
+                import pdb
+                pdb.set_trace()
 
         if not self.match:
             self.check_header_arg(loud=True)

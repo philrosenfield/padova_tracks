@@ -24,8 +24,6 @@ def parsec2match(infile, loud=False):
     indict = load_parsec2match_inp(infile)
 
     if indict['debug']:
-        import pdb
-        pdb.set_trace()
         loud = True
 
     prefixs = indict['prefixs']
