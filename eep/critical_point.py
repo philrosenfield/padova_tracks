@@ -38,9 +38,16 @@ class Eep(object):
         self.nms = np.sum(eep_lengths[:trans])
         self.trans = eep_lengths[trans]
 
-        self.pdict = dict(zip(self.eep_list, range(len(self.eep_list))))
-        self.pdict_hb = dict(zip(self.eep_list_hb,
-                                 range(len(self.eep_list_hb))))
+    def attach_eeps(self, track):
+        """set pdict attribute to track instance of dictionary eep, index"""
+        def eepdict(elist):
+            return dict(zip(elist, range(len(elist))))
+
+        elist = self.eep_list
+        if track.hb:
+            elist = self.eep_list_hb
+
+        track.pdict = eepdict(elist)
 
 
 class CriticalPoint(object):

@@ -39,17 +39,13 @@ def parsec2match(infile, loud=False):
 
         if loud:
             print('defining eeps')
-        define_eeps(tfm, hb=False)
-        if indict['both']:
-            define_eeps(tfm, hb=True)
+        define_eeps(tfm)
 
         # do the match interpolation (produce match output files)
         if indict['do_interpolation']:
             if loud:
                 print('doing match interpolation')
-            indict['flag_dict'] = tfm.match_interpolation(hb=False)
-            if indict['both']:
-                indict['flag_dict_hb'] = tfm.match_interpolation(hb=True)
+            indict['flag_dict'] = tfm.match_interpolation()
 
     return prefixs
 
@@ -87,15 +83,12 @@ def load_parsec2match_inp(infile):
 def define_eeps(tfm, hb=False):
     '''add the ptcris to the tracks'''
     line = ''
-    tracks = tfm.tracks
-    if hb:
-        tracks = tfm.hbtracks
 
     # define the eeps
-    line = ' '.join([tfm.define_eep_stages(track) for track in tracks])
+    line = ' '.join([tfm.define_eep_stages(track) for track in tfm.tracks])
 
-    save_ptcri(line, loc=tfm.tracks_dir.replace('tracks', 'data'),
-               prefix=tfm.prefix, hb=hb)
+    # save_ptcri(line, loc=tfm.tracks_dir.replace('tracks', 'data'),
+    #            prefix=tfm.prefix)
     return tfm
 
 

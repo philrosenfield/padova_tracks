@@ -196,8 +196,12 @@ def plot_track(track, xcol, ycol, reverse=None, ax=None, inds=None,
             ax.plot(xdata[pinds], ydata[pinds], **plt_point_kw)
 
             if add_mass:
+                try:
+                    ind = pinds[3]
+                except:
+                    ind = pinds[1]
                 ax.annotate(r'${0:g}$'.format(track.mass),
-                            (xdata[pinds[3]], ydata[pinds[3]]), fontsize=10)
+                            (xdata[ind], ydata[ind]), fontsize=10)
         elif track.match:
             if xcol == age:
                 xdata = 10 ** t.data[xcol]

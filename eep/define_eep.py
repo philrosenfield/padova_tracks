@@ -81,8 +81,7 @@ class DefineEeps(Eep):
     def check_for_monotonic_increase(self, *args, **kwargs):
         return check_for_monotonic_increase(self, *args, **kwargs)
 
-    def define_eep_stages(self, track, plot_dir=None, diag_plot=True,
-                          debug=False):
+    def define_eep_stages(self, track, debug=False):
         """
         Define all eeps (add as track.iptcri)
 
@@ -90,14 +89,11 @@ class DefineEeps(Eep):
         ----------
         track : object
             padova_track.tracks.Track object
-        plot_dir : str
-            loction to put plots (if diag_plot)
         diag_plot : bool
             make diagnostic plots
         """
         self.debug = self.debug or debug
-        if track.hb:
-            self.pdict = self.pdict_hb
+        self.attach_eeps(track)
 
         # TP-AGB tracks
         fin = len(track.data[logL]) - 1
@@ -131,7 +127,7 @@ class DefineEeps(Eep):
         he_beg = self.add_he_beg(track)
 
         if he_beg == 0:
-            ihe_beg = self.pdict['HE_BEG']
+            ihe_beg = track.pdict['HE_BEG']
             irest = [self.eep_list[i] for i in
                      np.arange(ihe_beg, len(self.eep_list))]
             [self.add_eep(track, i, 0, message=track.info['HE_BEG'],
@@ -141,7 +137,7 @@ class DefineEeps(Eep):
 
     def low_mass_eeps(self, track):
         """low mass eeps = nothing past MSTO"""
-        ims_beg = track.iptcri[self.pdict['MS_BEG']]
+        ims_beg = track.iptcri[track.pdict['MS_BEG']]
         ims_to = self.add_eep_by_age(track, 'MS_TO', max_age)
         age_ = track.data[age][ims_to]
         ims_tmin = self.add_eep_by_age(track, 'MS_TMIN', (age_ / 2.))
@@ -164,7 +160,7 @@ class DefineEeps(Eep):
         inds, = np.nonzero((lx > 0.999) & (track.data[xcen] > xcen_evo))
 
         if len(inds) == 0:
-            pms_beg = track.iptcri[self.pdict['PMS_BEG']]
+            pms_beg = track.iptcri[track.pdict['PMS_BEG']]
             # Tc \propto (mu mH / k) (G M / R)
             tc = (10 ** track.data.LOG_R) / track.data[mass]
             ams_beg = pms_beg + np.argmin(tc[pms_beg:])
@@ -217,7 +213,7 @@ class DefineEeps(Eep):
 
     def add_rg_tip(self, track):
         """Add trgb"""
-        ms_to = track.iptcri[self.pdict['MS_TO']]
+        ms_to = track.iptcri[track.pdict['MS_TO']]
         ycen_ = track.data[ycen][ms_to] - 0.01
         inds = ms_to + np.nonzero(track.data[ycen][ms_to:] >= ycen_)[0]
         ilmax = np.argmax(track.data[logL][inds])
@@ -249,7 +245,7 @@ class DefineEeps(Eep):
             hebeg = 0
         else:
             msg = ''
-            itrgb = track.iptcri[self.pdict['RG_TIP']]
+            itrgb = track.iptcri[track.pdict['RG_TIP']]
             ycen_ = track.data[ycen][itrgb] - 0.03
             inds, = np.nonzero(track.data[ycen][itrgb:] > ycen_) + itrgb
             tc = (10 ** track.data.LOG_R) / track.data[mass]
@@ -266,7 +262,7 @@ class DefineEeps(Eep):
         tpagb_start = -1
 
         if track.agb:
-            tpagb_start = track.iptcri[self.pdict['TPAGB_BEG']]
+            tpagb_start = track.iptcri[track.pdict['TPAGB_BEG']]
 
         end_cheb = np.argmin(np.abs(track.data[ycen][:tpagb_start] - 1e-4))
         self.add_eep(track, 'END_CHEB', end_cheb, message='YCEN=1e-4')
@@ -290,10 +286,10 @@ class DefineEeps(Eep):
         return iage
 
     def add_eep(self, track, eep_name, ind, message=None, loud=False):
-        '''Add or replace track.iptcri value based on self.pdict[eep_name]'''
+        '''Add or replace track.iptcri value based on track.pdict[eep_name]'''
         message = message or ''
 
-        track.iptcri[self.pdict[eep_name]] = ind
+        track.iptcri[track.pdict[eep_name]] = ind
         track.__setattr__('i{:s}'.format(eep_name.lower()), ind)
 
         if len(message) > 0:

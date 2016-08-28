@@ -150,8 +150,10 @@ def interpolate_along_track(track, inds, nticks, zcol=None, mess=None,
                   'Hopefully it\'s not important: not interpolating mass.')
 
     if track.agb and 'TPAGB' in mess.split('=')[0]:
-        return interpolate_tpagb(track, inds, nticks, mess=mess, zcol=zcol,
-                                 zmsg=zmsg, **tpagb_kw)
+        track.get_tps()
+        if len(track.tps) > 1:
+            return interpolate_tpagb(track, inds, nticks, mess=mess, zcol=zcol,
+                                     zmsg=zmsg, **tpagb_kw)
 
     agediff = np.diff([np.log10(track.data[age][inds[0]]),
                        np.log10(track.data[age][inds[-1]])])
@@ -311,12 +313,12 @@ def interpolate_tpagb(track, inds, nticks, mess=None, zcol=None,
 
     # Divide up nticks between each TP in a way that maintains morphology.
     # get_tps sets up indices between each TP
-    track.get_tps()
     age_ = track.data[age]
     tpage_ = age_[inds]
     # Approximate time step
     dt = (tpage_[-1] - tpage_[0]) / nticks
     # About how many points to have to set up equal time steps per TP
+
     dtp = [(age_[track.tps[j][-1]] - age_[track.tps[j][0]]) / dt
            for j in range(len(track.tps))]
 
@@ -330,8 +332,11 @@ def interpolate_tpagb(track, inds, nticks, mess=None, zcol=None,
         off = nticks - sum(dtpr)
         if off < 0:
             # too many interpolation points but don't take away from 3.
-            idx, = np.nonzero(dtpr[dtpr > 3])
-            ishift = np.argmax(dtpr[idx])
+            idx, = np.nonzero(dtpr > 3)
+            if len(idx) > 1:
+                ishift = np.argmax(dtpr[idx])
+            else:
+                ishift = idx
             shift = dtpr[ishift]
             frac = np.abs(1 - (shift + off) / shift)
             # don't decrease the number of points by more than 10%
@@ -407,4 +412,4 @@ def interpolate_tpagb(track, inds, nticks, mess=None, zcol=None,
         fig.savefig(outfile)
         fig1.savefig(outfile.replace('.png', '_hrd.png'))
         plt.close('all')
-    return lagenews, lnews, tenews, massnews
+    return np.log10(lagenews), lnews, tenews, massnews

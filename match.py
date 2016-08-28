@@ -52,7 +52,7 @@ class TracksForMatch(TrackSet, DefineEeps):
         if hasattr(self, 'hbtracks'):
             self.hblogfmt = 'match_interp_hb_{0:s}.log'
 
-    def match_interpolation(self, hb=False):
+    def match_interpolation(self):
         """
         Call the MATCH interpolator, make diagnostic plots
 
@@ -64,17 +64,13 @@ class TracksForMatch(TrackSet, DefineEeps):
         info_dict = {}
         self.mtracks = []
 
-        tracks = self.tracks
         filename = self.logfmt
-        if hb:
-            tracks = self.hbtracks
-            filename = self.hblogfmt
 
         tpagb_plotdir = os.path.join(self.plot_dir, 'tpagb')
         fileio.ensure_dir(tpagb_plotdir)
         tpagb_kw = {'diag': self.track_diag_plot, 'outdir': tpagb_plotdir}
 
-        for track in tracks:
+        for track in self.tracks:
             mkey = 'M{0:.3f}'.format(track.mass)
             flag_dict[mkey] = track.flag
 
@@ -85,14 +81,13 @@ class TracksForMatch(TrackSet, DefineEeps):
                 continue
 
             # interpolate tracks for match
-            mfn = self.intpfmt.format(os.path.splitext(track.name)[0])
+            mfn = self.intpfmt.format(track.name)
             outfile = os.path.join(self.outfile_dir, mfn)
 
             if not self.overwrite_match and os.path.isfile(outfile):
                 print('not overwriting {0:s}'.format(outfile))
                 continue
-            match_track = self.process_track(track, outfile, hb=hb,
-                                             tpagb_kw=tpagb_kw)
+            match_track = self.process_track(track, outfile, tpagb_kw=tpagb_kw)
 
             info_dict[mkey] = track.info
 
@@ -108,16 +103,17 @@ class TracksForMatch(TrackSet, DefineEeps):
             self.mtracks.append(match_track)
 
         if self.diag_plot:
-            dp_kw = {'hb': hb, 'plot_dir': self.plot_dir,
+            dp_kw = {'plot_dir': self.plot_dir,
                      'match_tracks': self.mtracks}
-            plot_tracks(tracks, **dp_kw)
+            plot_tracks(self.tracks, hb=False, **dp_kw)
+            plot_tracks(self.tracks, hb=True, **dp_kw)
 
         logfile = os.path.join(self.log_dir,
                                filename.format(self.prefix.lower()))
         write_log(logfile, info_dict)
-        return self.check_tracks(tracks, flag_dict)
+        return self.check_tracks(flag_dict)
 
-    def process_track(self, track, outfile, hb=False, tpagb_kw=None):
+    def process_track(self, track, outfile, tpagb_kw=None):
         """
         Do MATCH interpolation, save files
 
@@ -138,11 +134,11 @@ class TracksForMatch(TrackSet, DefineEeps):
         tpagb_kw = tpagb_kw or {}
         header = 'logAge Mass logTe Mbol logg C/O'
         msg = '{:.3f} {:s}={:d} {:s}={:d}'
-        nticks = self.nticks
-        if hb:
-            nticks = self.nticks_hb
+        pdict = track.pdict
 
-        pdict = self.pdict
+        nticks = self.nticks
+        if track.hb:
+            nticks = self.nticks_hb
 
         logte = np.array([])
         logl = np.array([])
@@ -228,11 +224,11 @@ class TracksForMatch(TrackSet, DefineEeps):
             pdb.set_trace()
 
         to_write = np.column_stack([logage, mass_, logte, mbol, logg, co])
-        np.savetxt(outfile, to_write, header=header, fmt='%.8f')
+        np.savetxt(outfile, to_write, header=header, fmt='%.10f')
         return Track(outfile, track_data=to_write, match=True,
                      debug=self.debug)
 
-    def check_tracks(self, tracks, flag_dict):
+    def check_tracks(self, flag_dict):
         """
         Check the tracks for identical and non-monotontically increasing ages
 
@@ -247,17 +243,16 @@ class TracksForMatch(TrackSet, DefineEeps):
         tracks: list of padova_tracks.Track objects
         """
         self.match_info = {}
-        for t in tracks:
+        for t in self.mtracks:
             key = 'M{0:.3f}'.format(t.mass)
 
             if key not in flag_dict.keys():
-                print('check_tracks: No {:s} in flag dict, skipping.'
-                      .format(key))
+                print('No {:s} in flag dict, skipping.'.format(key))
                 continue
 
             if flag_dict[key] is not None:
-                print('check_tracks: skipping {0:s}: {1:s}'.format(t.mass,
-                                                                   t.flag))
+                print('skipping {0:g} {1:.3f}: {2:s}'.format(t.Z, t.mass,
+                                                             flag_dict[key]))
                 continue
 
             test = np.diff(t.data[age]) > 0

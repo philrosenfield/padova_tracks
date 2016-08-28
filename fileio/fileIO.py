@@ -26,28 +26,30 @@ def find_ptcri(prefix, ptcrifile_loc=os.getcwd()):
     return retv
 
 
-def save_ptcri(line, filename=None, loc=None, prefix=None,
-               hb=False):
+def save_ptcri(line, loc=None, prefix=None):
     '''save parsec2match EEPs in similar format as sandro's'''
     import operator
     from ..eep.critical_point import Eep
+    print('fileio.save_ptcri is broken.')
+    return
     loc == loc or os.getcwd()
     prefix = prefix or ''
     if len(prefix) > 0:
         prefix = '_{0:s}'.format(prefix)
-    if filename is None:
-        filename = os.path.join(loc, 'p2m_{0:s}'.format(prefix))
-        if hb:
-            filename = filename.replace('p2m', 'p2m_hb')
 
-    pdict = Eep().pdict
+    filename = os.path.join(loc, 'p2m_{0:s}'.format(prefix))
+    eep_list = Eep().eep_list
+
+    if hb:
+        filename = filename.replace('p2m', 'p2m_hb')
+
     if hb:
         pdict = Eep().pdict_hb
 
     # sort the dictionary by values (which are ints)
     sorted_keys, _ = zip(*sorted(pdict.items(), key=operator.itemgetter(1)))
 
-    cols = ' '.join(list(sorted_keys))
+    cols = ' '.join(list(eep_list))
     header = '# EEPs defined by sandro, basti, mist, and phil \n'
     header += '# M Z {0:s}\n'.format(cols)
     linefmt = '{0:s} \n'

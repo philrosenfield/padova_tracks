@@ -31,7 +31,9 @@ class AGBTrack(object):
         if 'hb' in self.name.lower():
             self.hb = True
         self.load_agbtrack(filename)
+
         if not self.match:
+            self.get_tps()
             # period is either P0 or P1 based on value of Pmod
             period = np.zeros(len(self.data)) * np.nan
             for i, p in enumerate(self.data['Pmod']):
@@ -40,8 +42,6 @@ class AGBTrack(object):
         try:
             self.mass = float(self.name.split('agb_')[1].split('_')[0])
         except:
-            # self.mass = float(self.name.upper()
-            #                   .split('M')[1].replace('.DAT', ''))
             self.mass = float('.'.join(self.name.upper()
                               .split('_M')[1].split('.')[:2]))
         try:
@@ -124,21 +124,21 @@ class AGBTrack(object):
         untp, itps = np.unique(ntp, return_index=True)
         itps += itpagb[0]
         if untp.size == 1:
-            print('only one themal pulse.')
+            self.info['init'] = 'only one themal pulse.'
             self.tps = untp
         else:
             # The indices each TP is just filling values between the iTPs
             # and the final grid point
             itps = np.append(itps, len(ntp) + itpagb[0])
             tps = [np.arange(itps[i], itps[i+1]) for i in range(len(itps)-1)]
+            # when attaching to PARSEC, could be missing lots of a TP.
+            tps = [tp for tp in tps if len(tp) > 1]
             self.tps = tps
 
     def get_quiescents(self):
-        '''
-        The quiescent phase, Qs,  is the the max phase in each TP,
-        i.e., closest to 1.
-        '''
-        if 'tps' not in self.__dict__.keys():
+        '''get the indices of the quiescent phases the logl min of each TP'''
+        # The quiescent phase is the the max phase in each TP and closest to 1.
+        if not hasattr(self, 'tps'):
             self.get_tps()
         phi = self.data['PHI_TP']
         logl = self.data['logL']
@@ -147,10 +147,7 @@ class AGBTrack(object):
 
     def vw93_plot(self, agescale=1e5, outfile=None, xlim=None, ylims=None,
                   fig=None, axs=None, annotate=True, annotation=None):
-        """
-        Make a plot similar to Vassiliadis and Wood 1993. Instead of Vesc,
-        I plot C/O.
-        """
+        """Make a plot similar to Vassiliadis and Wood 1993."""
         import seaborn as sns
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
@@ -254,6 +251,7 @@ class Track(AGBTrack):
                 self.load_iptcri(ptcri_file)
 
     def load_iptcri(self, ptcri_file):
+        """Load EEP indices"""
         if isinstance(ptcri_file, str):
             ptcri = CriticalPoint(ptcri_file)
         else:
@@ -348,48 +346,36 @@ class Track(AGBTrack):
         return self.mass
 
     def calc_Mbol(self, z_sun=4.77):
-        '''
-        Uses Z_sun = 4.77 adds self.Mbol and returns Mbol
-        '''
+        '''calulate bolometric magnitude.'''
         self.Mbol = z_sun - 2.5 * self.data[logL]
         return self.Mbol
 
     def calc_logg(self):
-        '''
-        cgs constant is -10.616 adds self.logg and returns logg
-        '''
-        self.logg = -10.616 + np.log10(self.mass) + 4.0 * self.data[logT] - \
-            self.data[logL]
+        '''caclulate log g'''
+        self.logg = -10.616 + np.log10(self.data[mass]) + \
+            4.0 * self.data[logT] - self.data[logL]
         return self.logg
 
     def calc_core_mu(self):
-        '''
-        Uses X, Y, C, and O.
-        '''
+        '''Caclulate central mean molecular weight, assume fully ionized'''
         xi = np.array([xcen, ycen, xc_cen, xo_cen])
         ai = np.array([1., 4., 12., 16.])
         # fully ionized
-        qi = ai/2.
-        try:
-            self.muc = 1. / (np.sum((self.data[xi[i]] / ai[i]) * (1 + qi[i])
-                                    for i in range(len(xi))))
-        except:
-            xi = np.array([xcen, ycen, xc_cen, xo_cen])
-            self.muc = 1. / (np.sum((self.data[xi[i]] / ai[i]) * (1 + qi[i])
-                                    for i in range(len(xi))))
+        qi = ai / 2.
+        self.muc = 1. / (np.sum((self.data[xi[i]] / ai[i]) * (1 + qi[i])
+                                for i in range(len(xi))))
         return self.muc
 
     def calc_lifetimes(self):
+        '''Calculate hydrogyn and helium burning lifetimes'''
         self.tau_he = np.sum(self.data.Dtime[self.data['LY'] > 0])
-        coreh, = np.nonzero((self.data['LX'] > 0) & (self.data[xcen] > 0))
 
+        coreh, = np.nonzero((self.data['LX'] > 0) & (self.data[xcen] > 0))
         self.tau_h = np.sum(self.data.Dtime[coreh])
         return
 
     def filename_info(self):
-        '''
-        # get Z, Y into attrs: 'Z0.0002Y0.4OUTA1.74M2.30'
-        '''
+        '''load Z, Y, ALFOV, and ZAHB core mass or Final core mass'''
         self.Z, self.Y = get_zy(self.name)
 
         if hasattr(self, 'header') and len(self.header) > 1:
@@ -409,7 +395,7 @@ class Track(AGBTrack):
         load the match interpolated tracks into a record array.
         the file contains Mbol, but it is converted to LOG_L on read.
         LOG_L = (4.77 - Mbol) / 2.5
-        names = 'logAge', 'mass', 'LOG_TE', 'LOG_L', 'logg', 'CO'
+        column names = 'logAge', 'mass', 'LOG_TE', 'LOG_L', 'logg', 'CO'
         '''
         def mbol2logl(m):
             try:
@@ -453,6 +439,8 @@ class Track(AGBTrack):
 
         if no footers are found will add message to self.info
         '''
+        # ALFO0 files are intermediate calculations used to determine the value
+        # of low mass core overshooting.
         if 'ALFO0' in filename:
             print('Warning: loading an ALFO0 track. {}'.format(filename))
 

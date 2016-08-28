@@ -30,43 +30,14 @@ class TrackSet(object):
             # assume we're in a set directory
             tracks_dir = self.tracks_dir or os.getcwd()
             self.tracks_base = os.path.join(tracks_dir, self.prefix)
-
-            if not self.match:
-                self.ptcrifile_loc = self.ptcrifile_loc or \
-                    os.path.join(os.path.split(tracks_dir)[0], 'data')
-
-                if not os.path.isdir(self.tracks_base) or \
-                   not os.path.isdir(self.ptcrifile_loc):
-                    # can't guess directory structure ... give up now!
-                    print('can not guess dir structure')
-                    self.prefix = ''
-                    return
-
-                self.track_search_term = self.track_search_term or '*F7_*PMS'
-                self.hbtrack_search_term = self.hbtrack_search_term or \
-                    track_search_term + '.HB'
-                ignore = None
-            else:
-                self.track_search_term = '*dat'
-                self.hbtrack_search_term = '*HB.dat'
-
-            self.find_tracks(ignore='HB')
-            self.find_tracks(hb=True)
-
-        if self.prefix is not None:
-            self.parse_prefix()
+            self.find_tracks()
+            filename_data(self.prefix, skip=0)
         return
 
-    def parse_prefix(self):
-        self.prefix_dict = filename_data(self.prefix, skip=0)
-        return
+    def find_tracks(self):
+        track_names = get_files(self.tracks_base, '*.*')
 
-    def find_masses(self, track_search_term, ignore='ALFO0'):
-        track_names = get_files(self.tracks_base, track_search_term)
-        if ignore is not None:
-            track_names = [t for t in track_names if ignore not in t]
         mstr = '_M'
-
         # mass array
         mass = np.array(['.'.join(os.path.split(t)[1]
                                   .split(mstr)[1].split('.')[:2])
@@ -80,69 +51,42 @@ class TrackSet(object):
         track_names = np.array(track_names)[cut_mass][morder]
         mass = mass[cut_mass][morder]
 
-        err = 'No tracks found: {0:s}'.format(os.path.join(self.tracks_base,
-                                                           track_search_term))
-        assert len(track_names) != 0, err
-        assert len(mass) != 0, err
-
-        return track_names, mass
-
-    def find_tracks(self, ignore='ALFO0', hb=False):
-        '''
-        loads tracks or hb tracks and their masses as attributes
-        can load subset if masses (list, float, or string) is set.
-        If masses is string, it must be have format like:
-        '%f < 40' and it will use masses that are less 40.
-        '''
-
-        track_search_term = self.track_search_term
-        if hb:
-            hbf = 'hb{0:s}'
-            track_search_term = self.hbtrack_search_term
-            if 'hb' not in track_search_term.lower():
-                print('warning, hb attribute assigned without hb in filename.')
-
-        track_names, mass = self.find_masses(track_search_term, ignore=ignore)
-
         # only do a subset of masses
-        masses = self.masses
+        masses = self.masses or None
         if masses is not None:
-            if type(masses) == float:
+            if isinstance(masses, float):
                 inds = [masses]
-            elif type(masses) == str:
+            elif isinstance(masses, str):
                 inds = [i for i in range(len(mass)) if eval(masses % mass[i])]
-            if type(masses) == list or type(masses) == np.ndarray:
+            if isinstance(masses, list) or isinstance(masses, np.ndarray):
                 inds = np.array([], dtype=np.int)
                 for m in masses:
                     try:
                         inds = np.append(inds, list(mass).index(m))
                     except ValueError:
-                        # this mass is missing
+                        # mass is missing from the input list
                         pass
         else:
             inds = np.argsort(mass)
 
-        track_str = 'track'
-        mass_str = 'masses'
-        ptcri_file = self.ptcri_file
-        maxmass_str = 'maxmass'
-        if hb:
-            track_str = hbf.format(track_str)
-            mass_str = hbf.format(mass_str)
-            ptcri_file = self.hbptcri_file
-            maxmass_str = hbf.format(maxmass_str)
+        track_names = track_names[inds]
+        masses = mass[inds]
 
-        tattr = '{0:s}s'.format(track_str)
-        self.__setattr__('{0:s}_names'.format(track_str), track_names[inds])
-        trks = [Track(t, match=self.match) for t in track_names[inds]]
-        if len(trks) == 0:
-            print('No tracks found.')
-        self.__setattr__(tattr, trks)
-        self.__setattr__('{0:s}'.format(mass_str),
-                         np.array([t.mass for t in self.__getattribute__(tattr)
-                                  if t.flag is None], dtype=np.float))
-        self.__setattr__('{0:s}'.format(maxmass_str),
-                         np.max(self.__getattribute__(mass_str)))
+        trks_ = [Track(t, match=self.match) for t in track_names]
+        trks = [t for t in trks_ if t.flag is None]
+        masses = np.unique([t.mass for t in trks])
+
+        hbts = [t for t in trks if t.hb]
+        hbmaxmass = np.max([t.mass for t in hbts])
+
+        self.tracks = trks
+        self.masses = masses
+        self.hbmaxmass = hbmaxmass
+
+        err = 'No tracks found: {0:s}'.format(self.tracks_base)
+        assert len(self.tracks) != 0, err
+        assert len(self.masses) != 0, err
+
         return
 
     def eep_file(self, outfile=None):
