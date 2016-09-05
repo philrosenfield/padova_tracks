@@ -12,6 +12,107 @@ from ..utils import column_to_data
 seaborn.set()
 
 
+def translate_colkey(col, agescale=1.):
+    """
+    Turn COLIBRI column name into a axes label
+    """
+    def str_agescale(scale=1.):
+        """
+        Set the age unit string.
+        """
+        u = ''
+        if scale == 1e9:
+            u = 'G'
+        elif scale == 1e6:
+            u = 'M'
+        elif np.log10(scale) >= 1.:
+            u = '10^%i\ ' % int(np.log10(scale))
+        return u
+
+    tdict = {'Tbot': r'$log\ \rm{T}_{\rm{bce}}\ \rm{(K)}$',
+             logT: r'$log\ \rm{T}_{\rm{eff}}\ \rm{(K)}$',
+             logL: r'$log\ L\ (L_\odot)$',
+             'period': r'$\rm{P\ (days)}$',
+             'CO': r'$\rm{C/O}$',
+             mass: r'$\rm{M}\ (\rm{M}_\odot)$',
+             'logdMdt': r'$\dot{\rm{M}}\ (\rm{M}_\odot/\rm{yr})$',
+             age: r'$\rm{TP-AGB\ Age\ (%syr)}$' % str_agescale(agescale)}
+
+    new_col = col
+    if col in tdict.keys():
+        new_col = tdict[col]
+
+    return new_col
+
+
+def vw93_plot(agbtrack, agescale=1e5, outfile=None, xlim=None, ylims=None,
+              fig=None, axs=None, annotate=True, annotation=None):
+    """Make a plot similar to Vassiliadis and Wood 1993."""
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import MaxNLocator
+    from palettable.wesanderson import Darjeeling2_5
+    sns.set()
+    sns.set_context('paper')
+    plt.style.use('paper')
+
+    age = 'age'
+    ycols = [logT, 'Tbot', logL, 'CO', mass, 'logdMdt']
+    ylims = ylims or [None] * len(ycols)
+
+    if axs is None:
+        fig, axs = plt.subplots(nrows=len(ycols), sharex=True,
+                                figsize=(5.4, 10))
+        fig.subplots_adjust(hspace=0.05, right=0.97, top=0.97, bottom=0.07,
+                            left=0.2)
+
+    for i in range(len(axs)):
+        ycol = ycols[i]
+        ylim = ylims[i]
+        ax = axs[i]
+        # ax.grid(ls='-', color='k', alpha=0.1, lw=0.5)
+        ax.grid()
+        try:
+            ax.plot(agbtrack.data[age] / agescale, agbtrack.data[ycol],
+                    color='k')
+        except:
+            # period is not in the data but calculated in the init.
+            ax.plot(agbtrack.data[age] / agescale,
+                    agbtrack.__getattribute__(ycol), color='k')
+        if ycol == 'CO':
+            ax.axhline(1, linestyle='dashed', color='k', alpha=0.5, lw=1)
+        ax.set_ylabel(translate_colkey(ycol), fontsize=20)
+        ax.yaxis.set_major_locator(MaxNLocator(5, prune='upper'))
+        if ylim is not None:
+            # print ylim
+            ax.set_ylim(ylim)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    axs[0].yaxis.set_major_locator(MaxNLocator(5, prune=None))
+    ax.set_xlabel(translate_colkey(age, agescale=agescale), fontsize=20)
+    [ax.get_yaxis().set_label_coords(-.16, 0.5) for ax in axs]
+    # doesn't work with latex so well...
+    axs[3].get_yaxis().set_label_coords(-.165, 0.5)
+    [ax.get_yaxis().set_label_coords(-.17, 0.5)
+     for ax in [axs[-1], axs[2]]]
+
+    indi, indf = agbtrack.ml_regimes()
+    if None not in [indi, indf]:
+        [[ax.axvline(agbtrack.data[age][i]/agescale, ls=':', color='k',
+                     alpha=0.5, lw=0.8)
+         for ax in axs] for i in [indi, indf]]
+    if annotate:
+        if annotation is None:
+            annotation = r'$\rm{M}_i=%.2f\ \rm{M}_\odot$' % agbtrack.mass
+        axs[4].text(0.02, 0.05, annotation, ha='left', fontsize=16,
+                    transform=axs[4].transAxes)
+
+    if outfile is not None:
+        plt.tight_layout()
+        plt.savefig(outfile)
+    return fig, axs
+
+
 def hrd(track, ax=None, inds=None, reverse=None, plt_kw=None):
     '''
     make an hrd.

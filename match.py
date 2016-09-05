@@ -149,7 +149,8 @@ class TracksForMatch(TrackSet, DefineEeps):
         if track.flag is not None:
             return
         nptcri = len(track.iptcri)
-
+        # print(track.mass, track.Z, track.hb,
+        #       np.diff(track.iptcri[track.iptcri > 0]))
         for i in range(nptcri-1):
             if track.iptcri[i+1] == 0:
                 # The end of the track
@@ -166,9 +167,9 @@ class TracksForMatch(TrackSet, DefineEeps):
                               inext_eep)
             track.info[mess] = ''
 
-            inds = np.arange(ithis_eep, inext_eep + 1)
+            inds = np.arange(ithis_eep, inext_eep)
 
-            if len(inds) < 1:
+            if len(inds) <= 1:
                 track.info[mess] += \
                     'Interp failed: {0:d} inds between eeps.'.format(len(inds))
                 continue
@@ -194,7 +195,19 @@ class TracksForMatch(TrackSet, DefineEeps):
                         fco = interp1d(np.log10(track.data[age][inds]),
                                        cocheck, bounds_error=0)
                         conew = fco(lagenew)
-
+                        if np.sum(np.isnan(conew)) > 0:
+                            binds = np.nonzero(np.isnan(conew))[0]
+                            if len(lagenew) - 1 in binds:
+                                conew[np.isnan(conew)] = \
+                                    conew[np.nonzero(np.isnan(conew))[0]-1]
+                            if len(lagenew) - 2 in binds:
+                                conew[np.isnan(conew)] = \
+                                    conew[np.nonzero(np.isnan(conew))[0]-2]
+                            if 0 in binds:
+                                conew[0] = conew[1]
+                            if np.sum(np.isnan(conew)) > 0:
+                                import pdb
+                                pdb.set_trace()
             if type(lagenew) is int:
                 import pdb
                 pdb.set_trace()
@@ -202,6 +215,11 @@ class TracksForMatch(TrackSet, DefineEeps):
             if not len(lagenew) == len(lnew) == len(tenew):
                 import pdb
                 pdb.set_trace()
+
+            if np.sum(np.isnan(massnew)) > 0:
+                import pdb
+                pdb.set_trace()
+                massnew = np.zeros(len(massnew)) + track.mass
 
             logte = np.append(logte, tenew)
             logl = np.append(logl, lnew)
@@ -223,6 +241,12 @@ class TracksForMatch(TrackSet, DefineEeps):
             import pdb
             pdb.set_trace()
 
+        for i, arr in enumerate([logage, mass_, logte, mbol, logg, co]):
+            if np.sum(np.isnan(arr)) != 0:
+                print('nans found in {} {}'.format(outfile, header.split()[i]))
+                import pdb
+                pdb.set_trace()
+
         to_write = np.column_stack([logage, mass_, logte, mbol, logg, co])
         np.savetxt(outfile, to_write, header=header, fmt='%.10f')
         return Track(outfile, track_data=to_write, match=True,
@@ -242,51 +266,38 @@ class TracksForMatch(TrackSet, DefineEeps):
         ----------
         tracks: list of padova_tracks.Track objects
         """
+        def print_bad(err, ibad):
+            edges = np.cumsum(self.nticks) - 1
+            for i in ibad:
+                near = np.argmin(np.abs(i - edges))
+                print(i, near)
+                err += '{:s}\n'.format(np.array(self.eep_list)[near])
+                err += '{:f} {:d}\n'.format(t.data[age][i-1], i-1)
+                err += '{:f} {:d}\n'.format(t.data[age][i], i)
+                err += '{:f} {:d}\n'.format(t.data[age][i+1], i+1)
+            return err
         self.match_info = {}
         for t in self.mtracks:
+            err = ''
             key = 'M{0:.3f}'.format(t.mass)
-
-            if key not in flag_dict.keys():
-                print('No {:s} in flag dict, skipping.'.format(key))
-                continue
-
-            if flag_dict[key] is not None:
-                print('skipping {0:g} {1:.3f}: {2:s}'.format(t.Z, t.mass,
-                                                             flag_dict[key]))
-                continue
-
             test = np.diff(t.data[age]) > 0
             if False in test:
+                flag_dict[key] = 'age not monotonicly increasing on track'
                 # age where does age decrease
-                bads, = np.nonzero(np.diff(t.data[age]) < 0)
-                edges = np.cumsum(self.nticks)
-                if len(bads) != 0:
-                    if key not in self.match_info:
-                        self.match_info[key] = []
-                        match_info = self.match_info[key]
-                    match_info.append('Age not monotonicly increasing near')
-                    nears = np.concatenate([np.nonzero(j - edges < 0)[0]
-                                            for j in bads])
-                    bad_inds = np.unique(nears)
-                    match_info.append([np.array(self.eep_list)[bad_inds],
-                                       t.data[age][bads]])
-                    flag_dict[key] = 'age decreases on track'
+                negs, = np.nonzero(np.diff(t.data[age]) < 0)
+                iden, = np.nonzero(np.diff(t.data[age]) == 0)
+                if len(negs) != 0:
+                    err = print_bad('Age decreasing increasing near ', negs)
                 # identical values of age
-                bads1, = np.nonzero(np.diff(t.data[age]) == 0)
-                if len(bads1) != 0:
-                    if key not in self.match_info:
-                        self.match_info[key] = []
-                        match_info = self.match_info[key]
-                    match_info.append(['{0:d} identical age values'
-                                       .format(len(bads1))])
-                    nears = np.concatenate([np.nonzero(j - edges < 0)[0]
-                                            for j in bads1])
-                    bad_inds = np.unique(nears)
-                    match_info.append(['near',
-                                       np.array(self.eep_list)[bad_inds]])
-                    match_info.append(['log ages:', t.data[age][bads1]])
-                    match_info.append(['inds:', bads1])
-        return
+                if len(iden) != 0:
+                    err = print_bad('{0:d} identical age value(s) near '
+                                    .format(len(iden)), iden)
+            if len(err) > 0:
+                print(t.mass, t.Z, 'HB?:', t.hb)
+                print(err)
+                if key not in self.match_info:
+                    self.match_info[key] = err
+        return flag_dict
 
 
 def write_log(logfile, info_dict):

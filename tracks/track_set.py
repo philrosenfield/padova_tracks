@@ -17,6 +17,7 @@ from ..eep.critical_point import CriticalPoint, Eep
 
 
 max_mass = 1000.
+min_mass = 0.10
 eep = Eep()
 
 
@@ -35,47 +36,30 @@ class TrackSet(object):
         return
 
     def find_tracks(self):
+        """
+        load all files in tracks.base as Track instances
+        also add attributes masses and hbmaxmass to self.
+        """
         track_names = get_files(self.tracks_base, '*.*')
 
         mstr = '_M'
         # mass array
-        mass = np.array(['.'.join(os.path.split(t)[1]
-                                  .split(mstr)[1].split('.')[:2])
-                         for t in track_names], dtype=float)
+        mass_ = np.array(['.'.join(os.path.split(t)[1]
+                                   .split(mstr)[1].split('.')[:2])
+                          for t in track_names], dtype=float)
 
-        # inds of the masses to use and the correct order
-        cut_mass, = np.nonzero(mass <= max_mass)
-        morder = np.argsort(mass[cut_mass])
+        cut_mass, = np.nonzero((mass_ <= max_mass) & (mass_ >= min_mass))
+        morder = np.argsort(mass_[cut_mass])
 
         # reorder by mass
         track_names = np.array(track_names)[cut_mass][morder]
-        mass = mass[cut_mass][morder]
-
-        # only do a subset of masses
-        masses = self.masses or None
-        if masses is not None:
-            if isinstance(masses, float):
-                inds = [masses]
-            elif isinstance(masses, str):
-                inds = [i for i in range(len(mass)) if eval(masses % mass[i])]
-            if isinstance(masses, list) or isinstance(masses, np.ndarray):
-                inds = np.array([], dtype=np.int)
-                for m in masses:
-                    try:
-                        inds = np.append(inds, list(mass).index(m))
-                    except ValueError:
-                        # mass is missing from the input list
-                        pass
-        else:
-            inds = np.argsort(mass)
-
-        track_names = track_names[inds]
-        masses = mass[inds]
+        mass_ = mass_[cut_mass][morder]
 
         trks_ = [Track(t, match=self.match) for t in track_names]
         trks = [t for t in trks_ if t.flag is None]
         masses = np.unique([t.mass for t in trks])
 
+        # here is where one would code a mass cut for HB only...
         hbts = [t for t in trks if t.hb]
         hbmaxmass = np.max([t.mass for t in hbts])
 
@@ -86,10 +70,10 @@ class TrackSet(object):
         err = 'No tracks found: {0:s}'.format(self.tracks_base)
         assert len(self.tracks) != 0, err
         assert len(self.masses) != 0, err
-
         return
 
     def eep_file(self, outfile=None):
+        """Save track_set EEPs to file, must load ptcri first"""
         if outfile is None:
             outfile = '{}_eeptrack.dat'.format(self.prefix.replace('/', ''))
         header = True
@@ -101,7 +85,7 @@ class TrackSet(object):
             wrote = 'appended to'
         data = pd.DataFrame()
 
-        for track in np.concatenate([self.tracks, self.hbtracks]):
+        for track in self.tracks:
             offset = 0
             if 'iptcri' not in track.__dict__.keys():
                 print('no iptcri M={} {}/{} '.format(track.mass, track.base,
@@ -212,22 +196,6 @@ class TrackSet(object):
         f = scipy.interpolate.interp1d(xdata, ydata, bounds_error=False)
         self.__setattr__('_'.join((xattr, yattr, 'interp')).lower(), f)
         return f
-
-    def load_characteristics(self):
-        attrs = ['Z', 'Y', 'ALFOV']
-        for attr in attrs:
-            self.__setattr__('%ss' % attr,
-                             np.array([t.__getattribute__(attr)
-                                       for t in self.tracks], dtype=np.float))
-
-    def check_header(ts):
-        [t.check_header_arg() for t in ts.tracks]
-
-        check_list = ['AGELIMIT', 'ENV_OV', 'ALFOV', 'ISHELL']
-
-        oneline = ' '.join(header)
-        if 'RESTART' in oneline:
-            print('Track restarted')
 
     def track_summary(self, full=True):
         if hasattr(self, 'tracks') and hasattr(self, 'ptcris'):

@@ -1,16 +1,12 @@
 {
 "do_interpolation": true,
 "debug": false,
-"hb": true,
 "prefixs": null,
 "plot_dir": null,
 "outfile_dir": null,
 "diag_plot": false,
-"overwrite_ptcri": true,
 "overwrite_match": true,
 "prepare_makemod": false,
 "track_diag_plot": false,
-"hb_age_offset_fraction": 0.0,
-"log_dir": null,
-"both": false
+"log_dir": null
 }

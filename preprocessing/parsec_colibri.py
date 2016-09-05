@@ -30,50 +30,17 @@ class FirstTP(object):
             self.data = np.genfromtxt(filename, names=names)
 
 
-def check(fname):
-    t = AGBTrack(fname)
-    fig, ax = plt.subplots()
-    x = t.data[logT]
-    y = t.data[logL]
-
-    itp = np.nonzero(np.isfinite(t.data['status']))[0][0]
-
-    ax.plot(x, y)
-    ax.plot(x[:itp], y[:itp])
-    ax.plot(x[itp:], y[itp:])
-    ax.plot(x[itp], y[itp], 'o')
-
-    xoff = 0.005
-    yoff = 0.1
-    ax.set_xlim(x[itp] - xoff, x[itp] + xoff)
-    ax.set_ylim(y[itp] - yoff, y[itp] + yoff)
-    ax.set_title('{:.4f} {:.3f}'.format(t.Z, t.mass))
-    plt.draw()
-
-
 def getpmasses(strings):
     """get PARSEC mass"""
-    snames = [os.path.split(s)[1] for s in strings]
-    return np.array(['.'.join(s.split('_M')[1].split('.')[:2])
-                     for s in snames], dtype=float)
+    sn = [os.path.split(s)[1] for s in strings]
+    return np.array(['.'.join(s.split('_M')[1].split('.')[:2]) for s in sn],
+                    dtype=float)
 
 
 def getcmasses(strings):
     """get COLIBRI mass"""
-    snames = [os.path.split(s)[1] for s in strings]
-    return np.array([s.split('_')[1] for s in snames], dtype=float)
-
-
-def _getptcri(ptcri_loc, z):
-    """get ptcri file names (HB and non HB) at a given Z"""
-    try:
-        ptcri_files = get_files(ptcri_loc, 'p2m*{:g}Y*'.format(z))
-    except ValueError:
-        print(sys.exc_info()[1])
-
-    ptcri_filepms, = [p for p in ptcri_files if 'hb' not in p.lower()]
-    ptcri_filehb, = [p for p in ptcri_files if 'hb' in p.lower()]
-    return ptcri_filepms, ptcri_filehb
+    sn = [os.path.split(s)[1] for s in strings]
+    return np.array([s.split('_')[1] for s in sn], dtype=float)
 
 
 def _getagbtracks(agb_track_loc, z):
@@ -108,8 +75,7 @@ def _getparsectracks(prc_track_loc, z, maxmass):
 
 
 def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
-                           first_tp_loc=None, ptcri_loc=None, outputloc=None,
-                           overwrite=False):
+                           first_tp_loc=None, outputloc=None, overwrite=False):
     """Combine PARSEC and COLIRBI (call attach)"""
     line = ''
     firsttps = get_files(first_tp_loc, '*.INP')
@@ -118,9 +84,6 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
         if onetp.Z == 0.05:
             # (Currently no PARSEC models at Z=0.05)
             continue
-
-        # get the ptcri files
-        ptcri_filepms, ptcri_filehb = _getptcri(ptcri_loc, onetp.Z)
 
         # get the agb tracks
         all_agb_tracks = _getagbtracks(agb_track_loc, onetp.Z)
@@ -156,14 +119,11 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
             parsec_track = prc_tracks[iprc]
             colibri_track = all_agb_tracks[iagb]
             onetpm = onetp.data[iotp]
-            ptcri_file = ptcri_filepms
 
             output = os.path.join(new_track_dir, parsec_track + '.TPAGB')
             if os.path.isfile(output) and not overwrite:
                 print('not overwriting {}'.format(output))
                 continue
-            if 'hb' in parsec_track.lower():
-                ptcri_file = ptcri_filehb
 
             # load PARSEC Track
             try:
@@ -184,6 +144,7 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
 
 
 def radius(x1, y1, x2, y2):
+    """dist = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) return argmin, min."""
     dist = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
     return np.argmin(dist), np.min(dist)
 
@@ -196,11 +157,8 @@ def attach(parsec, colibri, onetpm, output, diag=True):
     line = ''
     assert parsec.Z == colibri.Z == onetpm['z0'], 'Metallicity mismatch'
     assert parsec.mass == colibri.mass, 'Mass mismatch'
-    try:
-        ifin = np.max(parsec.iptcri)  # final track eep
-    except AttributeError as e:
-        ifin = -1
-
+    ifin = -1
+    print('parsec: {0:s} + colibri: {1:s}'.format(parsec.name, colibri.name))
     ipmatch, _ = radius(parsec.data[:ifin][logT], parsec.data[:ifin][logL],
                         onetpm[logT], onetpm[logL])
 
@@ -228,12 +186,21 @@ def attach(parsec, colibri, onetpm, output, diag=True):
         return err
     ptrack = pd.DataFrame(parsec.data[:ipmatch - 1])
     ctrack = pd.DataFrame(colibri.data.iloc[icmatch:])
+    # This allows pandas properly append the mass column.
+    # (Done in tracks.track.Track.load_track)
+    ctrack[mass] = ctrack['M']
 
     all_data = pd.DataFrame()
     all_data = all_data.append(ptrack, ignore_index=True)
     all_data = all_data.append(ctrack, ignore_index=True)
+    columns = ptrack.columns
+    columns = np.concatenate([columns, ['step', 'status', 'NTP', 'M_c',
+                                        'PHI_TP', 'C/O', 'Pmod', 'P1', 'P0']])
+    assert np.sum(np.isnan(all_data[mass])) == 0, \
+        'nans in the {0:s} column. Would write to: {1:s}'.format(mass, output)
 
-    all_data.to_csv(output, sep=' ', na_rep='nan', index=False)
+    all_data.to_csv(output, sep=' ', na_rep='nan', columns=columns,
+                    index=False)
     # print('wrote to {}'.format(output))
     if diag:
         # print('PARSEC idx: {} COLIBRI idx: {}'.format(ipmatch, icmatch))
@@ -246,6 +213,7 @@ def attach(parsec, colibri, onetpm, output, diag=True):
 
 def plot_hrd(all_data, colibri, parsec, icmatch, ipmatch, onetpm, output,
              outdir=None, lmatch=None, tmatch=None):
+    """diagnostic HRD of the parsec and colibri attach point"""
     if outdir is None:
         outdir = 'colibi_parsec'
     if not os.path.isdir(outdir):
@@ -279,11 +247,12 @@ def plot_hrd(all_data, colibri, parsec, icmatch, ipmatch, onetpm, output,
     ax.set_ylabel(ycol)
     plt.legend(loc='best')
     plt.savefig(output + '.png')
-    print('wrote {}.png'.format(output))
+    # print('wrote {}.png'.format(output))
     plt.close()
 
 
 def print_diffs(cval, pval):
+    """print logL and logT differences"""
     fmt = '{:.4f} {:.4f} {:.5f} {:.5f}\n'
     dlogl = cval[logL] - pval[logL]
     dlogt = cval[logT] - pval[logT]
@@ -291,7 +260,7 @@ def print_diffs(cval, pval):
 
 
 def main(argv):
-
+    """main function for combine_parsec_colibri"""
     parser = argparse.ArgumentParser(description="Attach COLIBRI to PARSEC")
 
     parser.add_argument('agb_track_loc', type=str, default=os.getcwd(),
@@ -302,9 +271,6 @@ def main(argv):
 
     parser.add_argument('first_tp_loc', type=str, default=os.getcwd(),
                         help='path to 1TP files')
-
-    parser.add_argument('ptcri_loc', type=str, default=os.getcwd(),
-                        help='path to ptcri files')
 
     parser.add_argument('--outputloc', type=str,
                         help='output location (default first_tp_loc)')
@@ -329,7 +295,6 @@ def main(argv):
     combine_parsec_colibri(agb_track_loc=args.agb_track_loc,
                            prc_track_loc=args.prc_track_loc,
                            first_tp_loc=args.first_tp_loc,
-                           ptcri_loc=args.ptcri_loc,
                            outputloc=args.outputloc,
                            diag=args.diag,
                            overwrite=args.overwrite)

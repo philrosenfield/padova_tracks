@@ -412,4 +412,5 @@ def interpolate_tpagb(track, inds, nticks, mess=None, zcol=None,
         fig.savefig(outfile)
         fig1.savefig(outfile.replace('.png', '_hrd.png'))
         plt.close('all')
+
     return np.log10(lagenews), lnews, tenews, massnews

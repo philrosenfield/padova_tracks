@@ -250,7 +250,7 @@ class DefineEeps(Eep):
             inds, = np.nonzero(track.data[ycen][itrgb:] > ycen_) + itrgb
             tc = (10 ** track.data.LOG_R) / track.data[mass]
             hebeg = inds[np.argmin(tc[inds])]
-            if hebeg == itrgb:
+            if hebeg - itrgb < 3:
                 hebeg += 3
                 msg = 'Tmin while YCEN > YCEN at RGB_TIP - 0.03 +3 step offset'
 
