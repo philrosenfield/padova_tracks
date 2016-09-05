@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import scipy
 
-from ..fileio import get_files, get_dirs, ts_indict, find_ptcri
+from ..fileio import get_files, get_dirs, ts_indict
 from ..utils import sort_dict, filename_data
 
 from .track import Track

@@ -57,6 +57,7 @@ def format_ptcriHB(filename, nptcri=5):
 
 
 def main(argv):
+    """main function for format_ptcriHB"""
     parser = argparse.ArgumentParser(
         description="convert a dbert HB file to a data HB file")
 

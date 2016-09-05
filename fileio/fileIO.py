@@ -10,20 +10,7 @@ import logging
 
 __all__ = ['ensure_dir', 'ensure_file', 'get_files', 'load_input', 'get_dirs',
            'load_eepdefs', 'replace_ext', 'tfm_indict', 'ts_indict',
-           'find_ptcri', 'save_ptcri']
-
-
-def find_ptcri(prefix, ptcrifile_loc=os.getcwd()):
-    search_term = 'p2m*{0:s}*Y*dat'.format(prefix.split('Y')[0])
-    ptcris = get_files(ptcrifile_loc, search_term)
-    print(search_term, ptcris)
-    try:
-        ptcri_file, = [p for p in ptcris if 'hb' not in p]
-        hbptcri_file, = [p for p in ptcris if 'hb' in p]
-        retv = [ptcri_file, hbptcri_file]
-    except:
-        retv = []
-    return retv
+           'save_ptcri']
 
 
 def save_ptcri(line, loc=None, prefix=None):
@@ -31,7 +18,6 @@ def save_ptcri(line, loc=None, prefix=None):
     import operator
     from ..eep.critical_point import Eep
     print('fileio.save_ptcri is broken.')
-    return
     loc == loc or os.getcwd()
     prefix = prefix or ''
     if len(prefix) > 0:
