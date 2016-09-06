@@ -63,37 +63,29 @@
 <tr><td> 200 </td><td> Beginning of Main Sequence (MS)<sup>*</sup><td></tr>
 <tr><td> 400 </td><td> <code>log Teff</code> minimum on the Main Sequence<sup>*</sup><td></tr>
 <tr><td> 600 </td><td> Main Sequence turn off (MSTO)<sup>*</sup><td></tr>
-<tr><td> 1100 </td><td> RG tip: Tip of the RGB (TRGB) defined in 3 ways:
-                 <ol><li> If the last track model (line of file) has <code>YCEN > 0.1</code>
-                    the TRGB is either the minimum <code>log Teff</code> or the last model, which
-                    ever comes first. (low masses)</li>
-                 <li>If <code>YCEN = 0.0</code> at the last track
-                    model, TRGB is the minimum <code>log Teff</code> where <code>YCEN > 1-Z-0.1.</code></li>
-                <li> If there is still Hydrogen in the center (very low mass),
-                    TRGB is the final track model point.
-                    </li></ol><td></tr>
+<tr><td> 1100 </td><td> RG tip: Tip of the RGB (TRGB)<sup>*</sup><td></tr>
 <tr><td> 1130 </td><td>Beginning Core He Fusion: Start central He-burning phase<sup>*</sup><td></tr>
 <tr><td> 1630 </td><td>End of Core He Fusion<sup>*</sup><td></tr>
 <tr><td> 1730 </td><td>Beginning of TP-AGB (if the star has the a phase) <sup>**</sup><td></tr>
 </tbody>
 </table>
 
-<p><sup>*</sup>: EEP definitions followed <a href="http://adsabs.harvard.edu/abs/2016ApJS..222....8D">Dotter 2016</a> as close as possible</p>
-<p><sup>**</sup>: <a href="abs/2013MNRAS.434..488M">Marigo 2015</a> </p>
+<p><sup>*</sup> EEP definitions followed <a href="http://adsabs.harvard.edu/abs/2016ApJS..222....8D">Dotter 2016</a> as close as possible<br>
+<sup>**</sup> <a href="abs/2013MNRAS.434..488M">Marigo 2015</a> </p>
 
 <p>Helium burning phases take place from 1130 on. There are six different track lengths:</p>
 <ol><li>600: Up to the MS turn off (low mass) </li>
 <li>1100: Up to the TRGB (He-flash stars that will continue onto the horizontal branch) </li>
 <li>1730: All phases (that are too massive for TP-AGB)</li>
 <li>1930: All phases (including the 200 points on the TP-AGB)</li>
-<li>600: Only Helium burning phases (Horizontal Branch tracks <code>*HB.dat</code>) </li></ol>
+<li>600: Only Helium burning phases (Horizontal Branch tracks <code>*HB.dat</code>) </li>
 <li>800: Only Helium burning phases + TPAGB (Horizontal Branch tracks <code>*HB.dat</code>) </li></ol>
 <p><i>Model number = line number + 1. (Model number does not include header line of the file)</i></p>
 
 <h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
 
 <p>Within each metallicity set (directory) there are a number of tracks (files). The file names are formatted by initial metallicity, helium, and mass (Z{}_Y{}_M{}.extension). Horizontal branch tracks are calculated separately and have extension <code>.HB.dat</code> all other tracks have only the <code>.dat</code> extension</p>
-<p>Each file has six columns: <code>log Age, Mass, log Teff, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity (cgs), and unit less.</p>
+<p>Each file has six columns: <code>log Age, Mass, log Teff, Mbol, log g, C/O</code> in units yrs, Msun, K, bolometric mag, solar surface gravity (cgs), and unitless.</p>
 <p>Notes on column formats:</p>
 <p>
 <ul>
@@ -106,9 +98,13 @@
 <h3>
 <a id="how-to-cite" class="anchor" href="#references" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>How to Cite</h3>
 
-<p>Use of PARSEC V1.2S tracks should at least reference <a href="http://adsabs.harvard.edu/abs/2012MNRAS.427..127B">Bressan et al. 2012</a>.
-If you are using TP-AGB tracks also reference <a href="http://adsabs.harvard.edu/abs/2016ApJ...822...73R">Rosenfield et al. 2016</a>.
-If you are using high mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Tang et al. 2014</a>. If you are using low mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Chen et al. 2014</a>.</p>
+<p>Use of PARSEC V1.2S tracks should at least reference <a href="http://adsabs.harvard.edu/abs/2012MNRAS.427..127B">Bressan et al. 2012</a> 
+and if you are using TP-AGB tracks please reference <a href="http://adsabs.harvard.edu/abs/2016ApJ...822...73R">Rosenfield et al. 2016</a>.</p>
+<p> High mass tracks were updated from Bressan 2012 by <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Tang et al. 2014</a>.
+<p> Low mass tracks were updated from Bressan 2012 by <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Chen et al. 2014</a>.</p>
+
+<a id="old-version" class="anchor" href="#old" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Older Versions</h3>
+<p> The previous version of these tracks (without TP-AGB) are still available <a href="pcv1.html">here</a> </p>
 
 <p>If you use these tracks please also cite: <br> <a href="http://dx.doi.org/10.5281/zenodo.48123"><img src="https://zenodo.org/badge/doi/10.5281/zenodo.48123.svg" alt="10.5281/zenodo.48123"></a></p>
       </section>
@@ -120,7 +116,5 @@ If you are using high mass tracks also reference <a href="http://adsabs.harvard.
     </div>
     <script src="javascripts/scale.fix.js"></script>
 
-<a id="old-version" class="anchor" href="#old" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Older Versions</h3>
-<p> The previous version of these tracks (without TP-AGB) are still available <a href="pcv1.html">here</a> </p>
   </body>
 </html>
