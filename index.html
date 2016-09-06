@@ -26,8 +26,9 @@
 <a id="download-tracks" class="anchor" href="#download-tracks" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Download Interpolated PARSEC Tracks</h3>
 
 <p>PARSEC V1.2S Tracks were downloaded Jan 2016 from <a href="http://people.sissa.it/~sbressan/parsec.html">Alessandro Bressan's Home Page</a></p>
+<p>TP-AGB Tracks were calculated for and presented in <a href="http://adsabs.harvard.edu/abs/2016ApJ...822...73R">Rosenfield et al. 2016</a></p>
 <p>For isochrones please use <a href="http://stev.oapd.inaf.it/cgi-bin/cmd">Leo Girardi's web interface</a></p>
-<p> Tracks were run using <a href="https://github.com/philrosenfield/padova_tracks/blob/master/parsec2match.py">parsec2match.py</a> on 2016-02-02 11:05:27 (git hash <code>ab24083</code>).</p>
+<p> Tracks were run using <a href="https://github.com/philrosenfield/padova_tracks/blob/master/parsec2match.py">parsec2match.py</a> on 2016-09-05 (git hash <code>b196c81</code>).</p>
       <p>Download all tracks: <a href="https://www.cfa.harvard.edu/~prosenfi/parsec/alltracks.tar.gz">All Tracks</a></p>
 <p>Or download individual metallicity sets:
   <a href="https://www.cfa.harvard.edu/~prosenfi/parsec/Z0.0001_Y0.249.tar.gz">Z=0.0001 Y=0.249</a>,
@@ -53,7 +54,7 @@
 <table>
 <thead>
 <tr>
-<th>Model number*</th>
+<th>Model number</th>
 <th>EEP Notes</th>
 </tr>
 </thead>
@@ -80,14 +81,14 @@
 <p><sup>*</sup>: EEP definitions followed <a href="http://adsabs.harvard.edu/abs/2016ApJS..222....8D">Dotter 2016</a> as close as possible</p>
 <p><sup>**</sup>: <a href="abs/2013MNRAS.434..488M">Marigo 2015</a> </p>
 
-<p>Helium burning phases take place from 1130 on. There are four different track lengths:</p>
+<p>Helium burning phases take place from 1130 on. There are six different track lengths:</p>
 <ol><li>600: Up to the MS turn off (low mass) </li>
 <li>1100: Up to the TRGB (He-flash stars that will continue onto the horizontal branch) </li>
 <li>1730: All phases (that are too massive for TP-AGB)</li>
 <li>1930: All phases (including the 200 points on the TP-AGB)</li>
-<li>600: Only Helium burning phases (Horizontal Branch tracks) </li></ol>
-<li>800: Only Helium burning phases + TPAGB (Horizontal Branch tracks) </li></ol>
-<p><i>* Model number = line number + 1. Model number does not include header line of the file</i></p>
+<li>600: Only Helium burning phases (Horizontal Branch tracks <code>*HB.dat</code>) </li></ol>
+<li>800: Only Helium burning phases + TPAGB (Horizontal Branch tracks <code>*HB.dat</code>) </li></ol>
+<p><i>Model number = line number + 1. (Model number does not include header line of the file)</i></p>
 
 <h3><a id="file-format" class="anchor" href="#file-format" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>File Format</h3>
 
@@ -106,7 +107,7 @@
 <a id="how-to-cite" class="anchor" href="#references" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>How to Cite</h3>
 
 <p>Use of PARSEC V1.2S tracks should at least reference <a href="http://adsabs.harvard.edu/abs/2012MNRAS.427..127B">Bressan et al. 2012</a>.
-If you are using TP-AGB tracks also reference <a href="http://adsabs.harvard.edu/abs/2016ApJ...822...73R">Rosenfield et al. 2016</a>
+If you are using TP-AGB tracks also reference <a href="http://adsabs.harvard.edu/abs/2016ApJ...822...73R">Rosenfield et al. 2016</a>.
 If you are using high mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Tang et al. 2014</a>. If you are using low mass tracks also reference <a href="http://adsabs.harvard.edu/abs/2014MNRAS.444.2525C">Chen et al. 2014</a>.</p>
 
 <p>If you use these tracks please also cite: <br> <a href="http://dx.doi.org/10.5281/zenodo.48123"><img src="https://zenodo.org/badge/doi/10.5281/zenodo.48123.svg" alt="10.5281/zenodo.48123"></a></p>
