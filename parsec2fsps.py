@@ -73,7 +73,7 @@ def isoch_for_fsps():
                 # stick in the header after each isochrone
                 outp.write(header)
                 np.savetxt(outp, tab[keys][idx], fmt=fmt)
-        print('wrote {}'.format(outfile))
+        print(('wrote {}'.format(outfile)))
     return
 
 

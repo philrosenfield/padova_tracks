@@ -1,7 +1,7 @@
 import argparse
 import sys
 import numpy as np
-from StringIO import StringIO
+from io import StringIO
 
 
 def parse_plist(plist):
@@ -53,7 +53,7 @@ def format_ptcriHB(filename, nptcri=5):
     fmt = '%i %f %i ' + ' '.join('%i' * len(ptcrinames))
 
     np.savetxt(outfile, data, header=header, fmt=fmt)
-    print('wrote {}'.format(outfile))
+    print(('wrote {}'.format(outfile)))
 
 
 def main(argv):

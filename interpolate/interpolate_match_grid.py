@@ -131,7 +131,7 @@ def interp_mhefs(isodirs, outfile=None):
 
     with open(outfile, 'w') as outf:
         outf.write(line)
-    print('wrote %s' % outfile)
+    print(('wrote %s' % outfile))
     return outfile
 
 
@@ -201,10 +201,10 @@ def interpolate_between_sets(match_dir1, match_dir2, outdir, mhef,
             if mass <= mhef:
                 # keep the track short.
                 track = (t1 + t2[:nt1]) / frac
-                print 'tuncating HB', mass, nt1, nt2, i
+                print('tuncating HB', mass, nt1, nt2, i)
             else:
                 # add HB to track 1
-                print 'adding HB', mass, len(t1s[i]), len(t2s[i])
+                print('adding HB', mass, len(t1s[i]), len(t2s[i]))
                 thb, = [t for t in thbs if 'M%.2f' % mass in t]
                 thb = np.genfromtxt(thb)
                 twithhb = rg_tip_heb_transition(thb, t1)

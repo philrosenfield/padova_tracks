@@ -106,10 +106,10 @@ def kippenhahn(track, col_keys=None, heb_only=True, ptcri=None,
 
     # white underneath
     [ax.plot(xdata, track.data[column][inds], lw=5, color='white')
-     for column in khd_dict.keys()]
+     for column in list(khd_dict.keys())]
 
     zorder += 10
-    for col, color in khd_dict.items():
+    for col, color in list(khd_dict.items()):
         ax.plot(xdata, track.data[col][inds], ls=plot_linestyles(col),
                 lw=3, color=color, label=plot_labels(col), zorder=zorder)
         zorder += 10
@@ -152,7 +152,7 @@ def plot_labels(column):
     elif 'L' in column and len(column) == 2:
         lab = '$%s$' % '_'.join(column)
     else:
-        print('%s label format not supported' % column)
+        print(('%s label format not supported' % column))
         lab = column
     return lab
 
@@ -169,6 +169,6 @@ def plot_linestyles(column):
     elif 'L' in column and len(column) == 2:
         ls = '--'
     else:
-        print('%s line_style format not supported' % column)
+        print(('%s line_style format not supported' % column))
         ls = '-'
     return ls

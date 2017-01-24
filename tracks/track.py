@@ -1,7 +1,7 @@
 '''
 padova track files
 '''
-from __future__ import print_function
+
 import os
 import sys
 
@@ -25,7 +25,7 @@ class AGBTrack(object):
         Read in track, set mass and period.
         """
         self.match = False
-        if 'match' in self.__dict__.keys() or 'match' in filename:
+        if 'match' in list(self.__dict__.keys()) or 'match' in filename:
             self.match = True
         self.base, self.name = os.path.split(filename)
 
@@ -70,8 +70,8 @@ class AGBTrack(object):
         '''
         Load COLIRBI track and make substitutions to column headings.
         '''
-        rdict = {u'#': u'', u'M_*': mass, u'lg ': u'log', u'_*': u'',
-                 u'age/yr': age}
+        rdict = {'#': '', 'M_*': mass, 'lg ': 'log', '_*': '',
+                 'age/yr': age}
         with open(filename, 'r') as f:
             line = f.readline()
             names = replace_(line, rdict).strip().split()
@@ -104,7 +104,7 @@ class AGBTrack(object):
     def tauc_m(self):
         '''lifetimes of c and m stars'''
 
-        if 'cstar' not in self.__dict__.keys():
+        if 'cstar' not in list(self.__dict__.keys()):
             self.m_cstars()
         try:
             tauc = np.sum(self.data['dt'][self.cstar]) / 1e6
@@ -526,10 +526,10 @@ class Track(AGBTrack):
 
         def parse_args(header_line):
             header_line = header_line.replace('*', '')
-            k, v = zip(*[a.split('=') for a in
+            k, v = list(zip(*[a.split('=') for a in
                        [l for l in header_line.split()
-                        if '=' in l and 'RESTART' not in l]])
-            arg_dict = dict(zip(k, map(float, map(rep, v))))
+                        if '=' in l and 'RESTART' not in l]]))
+            arg_dict = dict(list(zip(k, list(map(float, list(map(rep, v)))))))
             return arg_dict
 
         def update_args(header_line, old_dict):

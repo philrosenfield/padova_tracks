@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import os
 from scipy.signal import argrelextrema
 

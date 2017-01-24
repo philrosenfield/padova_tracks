@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import numpy as np
 import sys
@@ -41,7 +41,7 @@ class Eep(object):
     def attach_eeps(self, track):
         """set pdict attribute to track instance of dictionary eep, index"""
         def eepdict(elist):
-            return dict(zip(elist, range(len(elist))))
+            return dict(list(zip(elist, list(range(len(elist))))))
 
         elist = self.eep_list
         if track.hb:
@@ -120,7 +120,7 @@ class CriticalPoint(object):
         all_keys = lines[1].replace('#', '').strip().split()
         col_keys = all_keys[3:-1]
         # ptcri file has filename as col #19 so skip the last column
-        usecols = range(0, len(all_keys) - 1)
+        usecols = list(range(0, len(all_keys) - 1))
         data = np.genfromtxt(filename, usecols=usecols, skip_header=2,
                              invalid_raise=False)
         self.data = data

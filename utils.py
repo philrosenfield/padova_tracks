@@ -1,5 +1,5 @@
 """ General untilities used throughout the package """
-from __future__ import print_function, division
+
 from scipy.interpolate import splev, splprep
 import numpy as np
 
@@ -201,7 +201,7 @@ def get_zy(string):
 
 
 def replace_(s, rdict):
-    for k, v in rdict.items():
+    for k, v in list(rdict.items()):
         s = s.replace(k, v)
     return s
 

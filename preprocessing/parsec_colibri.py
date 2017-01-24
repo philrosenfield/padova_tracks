@@ -122,14 +122,14 @@ def combine_parsec_colibri(diag=False, agb_track_loc=None, prc_track_loc=None,
 
             output = os.path.join(new_track_dir, parsec_track + '.TPAGB')
             if os.path.isfile(output) and not overwrite:
-                print('not overwriting {}'.format(output))
+                print(('not overwriting {}'.format(output)))
                 continue
 
             # load PARSEC Track
             try:
                 parsec = Track(parsec_track)
             except ValueError as e:
-                print('Problem with {}'.format(parsec_track))
+                print(('Problem with {}'.format(parsec_track)))
                 print(e)
                 continue
             # Load COLIBRI Track
@@ -158,7 +158,7 @@ def attach(parsec, colibri, onetpm, output, diag=True):
     assert parsec.Z == colibri.Z == onetpm['z0'], 'Metallicity mismatch'
     assert parsec.mass == colibri.mass, 'Mass mismatch'
     ifin = -1
-    print('parsec: {0:s} + colibri: {1:s}'.format(parsec.name, colibri.name))
+    print(('parsec: {0:s} + colibri: {1:s}'.format(parsec.name, colibri.name)))
     ipmatch, _ = radius(parsec.data[:ifin][logT], parsec.data[:ifin][logL],
                         onetpm[logT], onetpm[logL])
 
@@ -173,8 +173,8 @@ def attach(parsec, colibri, onetpm, output, diag=True):
 
     ntp = colibri.data['NTP'][icmatch]
     if icmatch != 0 and ntp > 1.:
-        print('Warning: might be missing some TP-AGB: ',
-              'Colibri matched index={}, NTP={}'.format(icmatch, ntp))
+        print(('Warning: might be missing some TP-AGB: ',
+              'Colibri matched index={}, NTP={}'.format(icmatch, ntp)))
 
     lmatch = parsec.data[logL][ipmatch] - colibri.data[logL].iloc[icmatch]
     tmatch = 10 ** parsec.data[logT][ipmatch] - \

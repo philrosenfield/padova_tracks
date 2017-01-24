@@ -88,7 +88,7 @@ def interpolate_(track, inds, xcol=logT, ycol=logL, paracol=age,
 
     ((tckp, u), fp, ier, msg) = splprep(arr, s=s, k=k, full_output=1)
     if ier > 0:
-        print(fp, ier, msg)
+        print((fp, ier, msg))
     return tckp, non_dupes
 
 
@@ -144,10 +144,10 @@ def interpolate_along_track(track, inds, nticks, zcol=None, mess=None,
         if frac_mloss >= 0.25:
             zcol = mass
         else:
-            print('interpolate_along_track: {0:s} frac mloss, mi, mf: ',
+            print(('interpolate_along_track: {0:s} frac mloss, mi, mf: ',
                   '{1:g} {2:g} {3:g}'.format(mess, frac_mloss,
                                              mass_[0], mass_[-1]),
-                  'Hopefully it\'s not important: not interpolating mass.')
+                  'Hopefully it\'s not important: not interpolating mass.'))
 
     if track.agb and 'TPAGB' in mess.split('=')[0]:
         track.get_tps()

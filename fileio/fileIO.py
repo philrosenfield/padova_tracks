@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import os
 import glob
 import json
@@ -33,7 +33,7 @@ def save_ptcri(line, loc=None, prefix=None):
         pdict = Eep().pdict_hb
 
     # sort the dictionary by values (which are ints)
-    sorted_keys, _ = zip(*sorted(pdict.items(), key=operator.itemgetter(1)))
+    sorted_keys, _ = list(zip(*sorted(list(pdict.items()), key=operator.itemgetter(1))))
 
     cols = ' '.join(list(eep_list))
     header = '# EEPs defined by sandro, basti, mist, and phil \n'
@@ -69,7 +69,7 @@ def load_eepdefs():
     with open(inp_par, 'r') as inp:
         indict = json.load(inp, object_pairs_hook=collections.OrderedDict)
 
-    eep_list, eep_lengths = zip(*indict.items())
+    eep_list, eep_lengths = list(zip(*list(indict.items())))
 
     eep_list = list(eep_list)
     eep_lengths = list(eep_lengths)[:-1]
@@ -129,7 +129,7 @@ def load_input(filename, comment_char='#', list_sep=',', default_dict=None):
         d[key] = is_numeric(val.replace(' ', ''))
 
     # check the values
-    for key in d.keys():
+    for key in list(d.keys()):
         # is_numeric already got the floats and ints
         if isinstance(d[key], float) or isinstance(d[key], int) or \
            isinstance(d[key], bool) or d[key] is None:

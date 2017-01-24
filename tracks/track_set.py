@@ -1,7 +1,7 @@
 '''
 a container of track
 '''
-from __future__ import print_function
+
 import argparse
 import sys
 import os
@@ -26,7 +26,7 @@ class TrackSet(object):
     def __init__(self, **kwargs):
         default_dict = ts_indict()
         default_dict.update(kwargs)
-        [self.__setattr__(k, v) for k, v in default_dict.items()]
+        [self.__setattr__(k, v) for k, v in list(default_dict.items())]
         if self.prefix is not None:
             # assume we're in a set directory
             tracks_dir = self.tracks_dir or os.getcwd()
@@ -87,7 +87,7 @@ class TrackSet(object):
 
         for track in self.tracks:
             offset = 0
-            if 'iptcri' not in track.__dict__.keys():
+            if 'iptcri' not in list(track.__dict__.keys()):
                 print('no iptcri M={} {}/{} '.format(track.mass, track.base,
                                                      track.name))
                 if track.mass > 0.6:
@@ -102,7 +102,7 @@ class TrackSet(object):
 
             df['iptcri'] = inds + offset
             df['hb'] = track.hb * 1
-            for k, v in self.prefix_dict.items():
+            for k, v in list(self.prefix_dict.items()):
                 df[k] = v
             data = data.append(df, ignore_index=True)
 
@@ -179,10 +179,10 @@ class TrackSet(object):
             self._load_ptcri(ptcri_loc, hb=hb,
                              search_extra=ptcri_search_extra)
         ieeps = self.all_inds_of_eep(eep_name, hb=hb)
-        xdata, ydata = zip(*[(self.tracks[i].data[xattr][ieeps[i]],
+        xdata, ydata = list(zip(*[(self.tracks[i].data[xattr][ieeps[i]],
                               self.tracks[i].data[yattr][ieeps[i]])
                              for i in range(len(self.tracks))
-                             if ieeps[i] != -1])
+                             if ieeps[i] != -1]))
         isort = np.argsort(xdata)
         xdata = np.array(xdata)[isort]
         ydata = np.array(ydata)[isort]

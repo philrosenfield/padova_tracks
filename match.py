@@ -1,5 +1,5 @@
 """Interpolate tracks for match and check the interpolations"""
-from __future__ import print_function
+
 import numpy as np
 import os
 
@@ -304,8 +304,8 @@ def write_log(logfile, info_dict):
     """write interpolation dictionary to file"""
     def sortbyval(d):
         """sortes keys and values of dict by mass values"""
-        keys, vals = zip(*d.items())
-        mkeys = np.array([k.replace('M', '') for k in d.keys()],
+        keys, vals = list(zip(*list(d.items())))
+        mkeys = np.array([k.replace('M', '') for k in list(d.keys())],
                          dtype=float)
         ikeys = np.argsort(mkeys)
         skeys = np.array(keys)[ikeys]
@@ -314,7 +314,7 @@ def write_log(logfile, info_dict):
 
     def sortbyeep(d, eep):
         """sorts the eep names by eep.eep_list index order"""
-        keys, vals = zip(*d.items())
+        keys, vals = list(zip(*list(d.items())))
         all_inds = np.arange(len(keys))
         # eep.eep_list has hb eeps as well as non-hb eeps.
         inds = np.argsort([eep.eep_list.index(k) for k in keys

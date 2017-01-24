@@ -5,7 +5,7 @@ This code calls padova_tracks:
 2) Interpolates the tracks so they all have the same number of points between
    defined EEPs.
 '''
-from __future__ import print_function, division
+
 import argparse
 import numpy as np
 import os
