@@ -159,25 +159,35 @@ class DefineEeps(Eep):
         xcen_evo = track.data[xcen][0] - 0.0015
         inds, = np.nonzero((lx > 0.999) & (track.data[xcen] > xcen_evo))
 
-        if len(inds) == 0:
+        if len(inds) <= 1:
             pms_beg = track.iptcri[track.pdict['PMS_BEG']]
             # Tc \propto (mu mH / k) (G M / R)
-            tc = (10 ** track.data.LOG_R) / track.data[mass]
-            ams_beg = pms_beg + np.argmin(tc[pms_beg:])
-            amsg = 'min Tc'
+            try:
+                tc = track.data[mass] / (10 ** track.data.LOG_R)
+            except AttributeError:
+                try:
+                    tc = track.data[mass] / track.data.Rstar
+                except AttributeError:
+                    tc = track.data.LOG_Tc
+            ams_beg = pms_beg + np.argmax(tc[pms_beg:])
+            amsg = 'max Tc'
 
             # LX > 0.999 may be too high.
             inds, = np.nonzero(track.data[xcen][pms_beg:] > xcen_evo)
-            inds += pms_beg
-            bms_beg = inds[np.argmax(track.data['LX'][inds])]
-            bmsg = 'max LX criterion LX={}' \
-                .format(track.data['LX'][bms_beg])
-            if ams_beg != bms_beg:
-                ms_beg = np.min([ams_beg, bms_beg])
-                msg += '{0:s} or {1:s}'.format(amsg, bmsg)
-            else:
+            if len(inds) == 0:
                 ms_beg = ams_beg
-                msg += '{0:s}/{1:s}'.format(amsg, bmsg)
+                msg += amsg
+            else:
+                inds += pms_beg
+                bms_beg = inds[np.argmax(lx[inds])]
+                bmsg = 'max LX criterion LX={}' \
+                    .format(track.data['LX'][bms_beg])
+                if ams_beg != bms_beg:
+                    ms_beg = np.min([ams_beg, bms_beg])
+                    msg += '{0:s} or {1:s}'.format(amsg, bmsg)
+                else:
+                    ms_beg = ams_beg
+                    msg += '{0:s}/{1:s}'.format(amsg, bmsg)
         else:
             ms_beg = inds[0]
 

@@ -8,5 +8,6 @@
 "overwrite_match": true,
 "prepare_makemod": false,
 "track_diag_plot": false,
-"log_dir": null
+"log_dir": null,
+"tracks_dir": null
 }

@@ -1,24 +1,23 @@
-'''
+"""
 Interpolate PARSEC tracks for use in MATCH.
+
 This code calls padova_tracks:
 1) Redefines some equivalent evolutionary points (EEPs) from PARSEC
 2) Interpolates the tracks so they all have the same number of points between
    defined EEPs.
-'''
+"""
 
 import argparse
-import numpy as np
 import os
 import sys
 
-from .fileio import load_input, tfm_indict, save_ptcri
+from .fileio import load_input, tfm_indict
 from .match import TracksForMatch
-from .prepare_makemod import prepare_makemod
 from .utils import add_version_info
 
 
 def parsec2match(infile, loud=False):
-    '''do an entire set and make the plots'''
+    """Do an entire set and make the plots."""
     if loud:
         print('setting prefixs')
     indict = load_parsec2match_inp(infile)
@@ -47,14 +46,15 @@ def parsec2match(infile, loud=False):
                 print('doing match interpolation')
             indict['flag_dict'] = tfm.match_interpolation()
 
-    return prefixs
+    return indict
 
 
 def load_parsec2match_inp(infile):
-    '''
-    find which prefixes (Z, Y mixes) to run based on inputs.prefix or
-    inputs.prefixs.
-    '''
+    """
+    Find which prefixes (Z, Y mixes) to run.
+
+    based on inputs.prefix or inputs.prefixs.
+    """
     # Prefixs = track sub directory names
     indict = load_input(infile, default_dict=tfm_indict())
     prefs = indict['prefixs']
@@ -81,23 +81,20 @@ def load_parsec2match_inp(infile):
 
 
 def define_eeps(tfm, hb=False):
-    '''add the ptcris to the tracks'''
-    line = ''
+    """Add the ptcris to the tracks."""
+    [tfm.define_eep_stages(track) for track in tfm.tracks]
+    # line = ''
 
     # define the eeps
-    line = ' '.join([tfm.define_eep_stages(track) for track in tfm.tracks])
+    # line = ' '.join([tfm.define_eep_stages(track) for track in tfm.tracks])
 
     # save_ptcri(line, loc=tfm.tracks_dir.replace('tracks', 'data'),
     #            prefix=tfm.prefix)
     return tfm
 
 
-def call_prepare_makemod(inputs):
-    prefixs = get_track_subdirectories(inputs, harsh=False)
-    prepare_makemod(prefixs, inputs.tracks_dir)
-
-
 def main(argv):
+    """Main caller for parsec2match."""
     parser = argparse.ArgumentParser(description="parsec2match")
 
     parser.add_argument('-v', '--loud', action='store_true',
@@ -106,12 +103,29 @@ def main(argv):
     parser.add_argument('infile', type=str,
                         help='input file')
 
+    parser.add_argument('-i', '--input', action='store_true',
+                        help='print an input file')
+
     args = parser.parse_args(argv)
 
-    indict = parsec2match(args.infile, loud=args.loud)
+    if args.input:
+        indict = tfm_indict()
+        # if you are lazy and don't edit inputs/tracks4match.json
+        for k, v in indict.items():
+            if k.endswith('dir'):
+                indict[k] = os.getcwd()
+        indict['prefixs'] = [l for l in os.listdir('.') if os.path.isdir(l)]
 
-    if indict['prepare_makemod']:
-        call_prepare_makemod(indict)
+        lines = ''.join(['{0:s}   {1!s}\n'.format(k, v)
+                         for k, v in indict.items()])
+
+        if not os.path.isfile(args.infile):
+            with open(args.infile, 'w') as inp:
+                inp.write(lines)
+        else:
+            print(lines)
+        return
+    indict = parsec2match(args.infile, loud=args.loud)
 
     fname = add_version_info(args.infile)
     os.system('mv {} {}'.format(fname,

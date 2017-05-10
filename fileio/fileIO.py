@@ -119,7 +119,7 @@ def load_input(filename, comment_char='#', list_sep=',', default_dict=None):
     d = default_dict.copy()
     with open(filename) as f:
         # skip comment_char, empty lines, strip out []
-        lines = [l.strip().replace('[', '').replace(']', '')
+        lines = [l.strip().replace('[', '').replace(']', '').replace('\'', '')
                  for l in f.readlines() if not l.startswith(comment_char) and
                  len(l.strip()) > 0]
 

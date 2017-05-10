@@ -13,9 +13,9 @@ ycen = 'YCEN'
 MODE = 'MODE'
 
 # PARSEC online (Sandro's website)
-xcen = 'H_CEN'
-ycen = 'HE_CEN'
-MODE = 'MODELL'
+# xcen = 'H_CEN'
+# ycen = 'HE_CEN'
+# MODE = 'MODELL'
 
 # only used in tracks.track.calc_core_mu
 xc_cen = 'XC_cen'

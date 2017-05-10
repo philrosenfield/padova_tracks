@@ -95,6 +95,7 @@ def interp_mhefs(isodirs, outfile=None):
 
     line = ''
     mhefs = np.array([])
+    nmhefs = np.array([])
     ovs = np.array([])
     zs = np.array([])
     for isodir in isodirs:
