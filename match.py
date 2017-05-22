@@ -212,6 +212,10 @@ class TracksForMatch(TrackSet, DefineEeps):
                 import pdb
                 pdb.set_trace()
 
+            if np.sum(lagenew) > 0:
+                import pdb
+                pdb.set_trace()
+
             if not len(lagenew) == len(lnew) == len(tenew):
                 import pdb
                 pdb.set_trace()

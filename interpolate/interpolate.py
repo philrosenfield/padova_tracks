@@ -17,7 +17,7 @@ def interpolate_(track, inds, xcol=logT, ycol=logL, paracol=age,
     of duplicate values.
 
     if parametric is True use age with logT and logL
-       if linear is False use log10 Age
+    if linear is False use log10 Age
 
     Parameters
     ----------
@@ -147,7 +147,7 @@ def interpolate_along_track(track, inds, nticks, zcol=None, mess=None,
             print(('interpolate_along_track: {0:s} frac mloss, mi, mf: ',
                   '{1:g} {2:g} {3:g}'.format(mess, frac_mloss,
                                              mass_[0], mass_[-1]),
-                  'Hopefully it\'s not important: not interpolating mass.'))
+                   'Hopefully it\'s not important: not interpolating mass.'))
 
     if track.agb and 'TPAGB' in mess.split('=')[0]:
         track.get_tps()
@@ -195,7 +195,7 @@ def interpolate_along_track(track, inds, nticks, zcol=None, mess=None,
         # np.array or pd.DataFrame
         try:
             massnew = np.repeat(mass_[0], len(lagenew))
-        except:
+        except KeyError:
             massnew = np.repeat(mass_.iloc[0], len(lagenew))
 
     if linear:
@@ -245,7 +245,7 @@ def call_interp1d(track, inds, nticks, mess=None, linear=False):
     # np.array or pd.DataFrame
     try:
         lagenew = np.linspace(lage[0], lage[-1], nticks)
-    except:
+    except KeyError:
         lagenew = np.linspace(lage.iloc[0], lage.iloc[-1], nticks)
 
     # arbitrary threshold to care about mass loss on the track.
@@ -258,7 +258,7 @@ def call_interp1d(track, inds, nticks, mess=None, linear=False):
         # np.array or pd.DataFrame
         try:
             massnew = np.repeat(mass_.iloc[0], len(lagenew))
-        except:
+        except KeyError:
             massnew = np.repeat(mass_[0], len(lagenew))
 
     if len(np.nonzero(np.diff(logl))[0]) == 0:
